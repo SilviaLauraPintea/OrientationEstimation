@@ -1,0 +1,110 @@
+\hypertarget{classannotationsHandle}{
+\section{annotationsHandle Class Reference}
+\label{classannotationsHandle}\index{annotationsHandle@{annotationsHandle}}
+}
+
+
+Class for annotating both positions and poses of the people in the images.  
+
+
+\subsection*{Data Structures}
+\begin{DoxyCompactItemize}
+\item 
+struct \hyperlink{structannotationsHandle_1_1ANNOTATION}{ANNOTATION}
+\begin{DoxyCompactList}\small\item\em A structure that stores a single annotation for a specific person. \item\end{DoxyCompactList}\item 
+struct \hyperlink{structannotationsHandle_1_1ASSIGNED}{ASSIGNED}
+\begin{DoxyCompactList}\small\item\em Shows which id from the old annotations is assigned to which id from the new annotations based on what minimal distance. \item\end{DoxyCompactList}\item 
+struct \hyperlink{structannotationsHandle_1_1FULL__ANNOTATIONS}{FULL\_\-ANNOTATIONS}
+\begin{DoxyCompactList}\small\item\em Structure containing a vector of annotations for each image. \item\end{DoxyCompactList}\end{DoxyCompactItemize}
+\subsection*{Public Types}
+\begin{DoxyCompactItemize}
+\item 
+enum \hyperlink{classannotationsHandle_a7a9e324ff6c85eeb2c2bd91b2b8cbdba}{POSE} \{ {\bfseries SITTING}, 
+{\bfseries STANDING}, 
+{\bfseries BENDING}, 
+{\bfseries ORIENTATION}
+ \}
+\begin{DoxyCompactList}\small\item\em All considered poses. \item\end{DoxyCompactList}\end{DoxyCompactItemize}
+\subsection*{Static Public Member Functions}
+\begin{DoxyCompactItemize}
+\item 
+\hypertarget{classannotationsHandle_a2c3529417ce5c15e00e8bd8679a4db27}{
+static void \hyperlink{classannotationsHandle_a2c3529417ce5c15e00e8bd8679a4db27}{mouseHandlerAnn} (int event, int x, int y, int flags, void $\ast$param)}
+\label{classannotationsHandle_a2c3529417ce5c15e00e8bd8679a4db27}
+
+\begin{DoxyCompactList}\small\item\em Mouse handler for annotating people's positions and poses. \item\end{DoxyCompactList}\item 
+\hypertarget{classannotationsHandle_a2510d1948d3138df3331c91ddcd49b95}{
+static void \hyperlink{classannotationsHandle_a2510d1948d3138df3331c91ddcd49b95}{showMenu} (cv::Point center)}
+\label{classannotationsHandle_a2510d1948d3138df3331c91ddcd49b95}
+
+\begin{DoxyCompactList}\small\item\em Draws the \char`\"{}menu\char`\"{} of possible poses for the current position. \item\end{DoxyCompactList}\item 
+static int \hyperlink{classannotationsHandle_a226e4ef5f47790d98002d2567659a62e}{runAnn} (int argc, char $\ast$$\ast$argv)
+\begin{DoxyCompactList}\small\item\em Starts the annotation of the images. \item\end{DoxyCompactList}\item 
+\hypertarget{classannotationsHandle_ac8d0365f010294def2757bf31ba1207f}{
+static void \hyperlink{classannotationsHandle_ac8d0365f010294def2757bf31ba1207f}{trackbar\_\-callback} (int position, void $\ast$param)}
+\label{classannotationsHandle_ac8d0365f010294def2757bf31ba1207f}
+
+\begin{DoxyCompactList}\small\item\em The \char`\"{}on change\char`\"{} handler for the track-\/bars. \item\end{DoxyCompactList}\item 
+\hypertarget{classannotationsHandle_a6449c025574a5b0aae30a9b38fe598d6}{
+static void \hyperlink{classannotationsHandle_a6449c025574a5b0aae30a9b38fe598d6}{trackBarHandleFct} (int position, void $\ast$param)}
+\label{classannotationsHandle_a6449c025574a5b0aae30a9b38fe598d6}
+
+\begin{DoxyCompactList}\small\item\em A function that starts a new thread which handles the track-\/bar event. \item\end{DoxyCompactList}\item 
+\hypertarget{classannotationsHandle_a85794f6ce173c1109237e357b85fb884}{
+static void \hyperlink{classannotationsHandle_a85794f6ce173c1109237e357b85fb884}{loadAnnotations} (char $\ast$filename, vector$<$ \hyperlink{structannotationsHandle_1_1FULL__ANNOTATIONS}{FULL\_\-ANNOTATIONS} $>$ \&loadedAnno)}
+\label{classannotationsHandle_a85794f6ce173c1109237e357b85fb884}
+
+\begin{DoxyCompactList}\small\item\em Load annotations from file. \item\end{DoxyCompactList}\item 
+\hypertarget{classannotationsHandle_a04cf8b0e62ecb0b9f4556e489f126195}{
+static void \hyperlink{classannotationsHandle_a04cf8b0e62ecb0b9f4556e489f126195}{annoDifferences} (vector$<$ \hyperlink{structannotationsHandle_1_1FULL__ANNOTATIONS}{FULL\_\-ANNOTATIONS} $>$ \&train, vector$<$ \hyperlink{structannotationsHandle_1_1FULL__ANNOTATIONS}{FULL\_\-ANNOTATIONS} $>$ \&test, double \&avgDist, double \&Ndiff, double avgOrientDiff, double poseDiff)}
+\label{classannotationsHandle_a04cf8b0e62ecb0b9f4556e489f126195}
+
+\begin{DoxyCompactList}\small\item\em Computes the average distance from the predicted location and the annotated one, the number of unpredicted people in each image and the differences in the pose estimation. \item\end{DoxyCompactList}\item 
+\hypertarget{classannotationsHandle_aa710024aca2550b64d0c76020888c6ab}{
+static void \hyperlink{classannotationsHandle_aa710024aca2550b64d0c76020888c6ab}{correltateLocs} (vector$<$ \hyperlink{structannotationsHandle_1_1ANNOTATION}{ANNOTATION} $>$ \&annoOld, vector$<$ \hyperlink{structannotationsHandle_1_1ANNOTATION}{ANNOTATION} $>$ \&annoNew, vector$<$ \hyperlink{structannotationsHandle_1_1ASSIGNED}{ASSIGNED} $>$ \&idAssignedTo)}
+\label{classannotationsHandle_aa710024aca2550b64d0c76020888c6ab}
+
+\begin{DoxyCompactList}\small\item\em Correlate annotations' from locations in {\ttfamily annoOld} to locations in {\ttfamily annoNew} through IDs. \item\end{DoxyCompactList}\item 
+\hypertarget{classannotationsHandle_a82a7f09d712d49ea099b3e9c9ffc04c5}{
+static bool \hyperlink{classannotationsHandle_a82a7f09d712d49ea099b3e9c9ffc04c5}{canBeAssigned} (vector$<$ \hyperlink{structannotationsHandle_1_1ASSIGNED}{ASSIGNED} $>$ \&idAssignedTo, short int id, double newDist, short int to)}
+\label{classannotationsHandle_a82a7f09d712d49ea099b3e9c9ffc04c5}
+
+\begin{DoxyCompactList}\small\item\em Checks to see if a location can be assigned to a specific ID given the new distance. \item\end{DoxyCompactList}\item 
+\hypertarget{classannotationsHandle_a86d06efe7aa6e013a5739a625bed6726}{
+static void \hyperlink{classannotationsHandle_a86d06efe7aa6e013a5739a625bed6726}{displayFullAnns} (vector$<$ \hyperlink{structannotationsHandle_1_1FULL__ANNOTATIONS}{FULL\_\-ANNOTATIONS} $>$ \&fullAnns)}
+\label{classannotationsHandle_a86d06efe7aa6e013a5739a625bed6726}
+
+\begin{DoxyCompactList}\small\item\em Displays the complete annotations for all images. \item\end{DoxyCompactList}\item 
+static int \hyperlink{classannotationsHandle_ac3568b677d066530fd771952492293c3}{runEvaluation} (int argc, char $\ast$$\ast$argv)
+\begin{DoxyCompactList}\small\item\em Starts the annotation of the images. \item\end{DoxyCompactList}\end{DoxyCompactItemize}
+
+
+\subsection{Member Function Documentation}
+\hypertarget{classannotationsHandle_a226e4ef5f47790d98002d2567659a62e}{
+\index{annotationsHandle@{annotationsHandle}!runAnn@{runAnn}}
+\index{runAnn@{runAnn}!annotationsHandle@{annotationsHandle}}
+\subsubsection[{runAnn}]{\setlength{\rightskip}{0pt plus 5cm}int runAnn (
+\begin{DoxyParamCaption}
+\item[{int}]{ argc, }
+\item[{char $\ast$$\ast$}]{ argv}
+\end{DoxyParamCaption}
+)\hspace{0.3cm}{\ttfamily  \mbox{[}static\mbox{]}}}}
+\label{classannotationsHandle_a226e4ef5f47790d98002d2567659a62e}
+The parameters that need to be indicated are:
+
+\begin{DoxyItemize}
+\item argv\mbox{[}1\mbox{]} -\/-\/ the file contains the list of image names (relative paths) \item argv\mbox{[}2\mbox{]} -\/-\/ the file contains the calibration data of the camera \item argv\mbox{[}3\mbox{]} -\/-\/ the file in which the annotation data needs to be stored \end{DoxyItemize}
+\hypertarget{classannotationsHandle_ac3568b677d066530fd771952492293c3}{
+\index{annotationsHandle@{annotationsHandle}!runEvaluation@{runEvaluation}}
+\index{runEvaluation@{runEvaluation}!annotationsHandle@{annotationsHandle}}
+\subsubsection[{runEvaluation}]{\setlength{\rightskip}{0pt plus 5cm}int runEvaluation (
+\begin{DoxyParamCaption}
+\item[{int}]{ argc, }
+\item[{char $\ast$$\ast$}]{ argv}
+\end{DoxyParamCaption}
+)\hspace{0.3cm}{\ttfamily  \mbox{[}static\mbox{]}}}}
+\label{classannotationsHandle_ac3568b677d066530fd771952492293c3}
+The parameters that need to be indicated are:
+
+\begin{DoxyItemize}
+\item argv\mbox{[}1\mbox{]} -\/-\/ train file with the correct annotations; \item argv\mbox{[}2\mbox{]} -\/-\/ test file with predicted annotations; \end{DoxyItemize}

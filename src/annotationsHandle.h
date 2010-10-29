@@ -24,7 +24,7 @@ class annotationsHandle {
 		/** A structure that stores a single annotation for a specific person.
  		 */
 		struct ANNOTATION {
-			unsigned int id;
+			short int id;
 			cv::Point location;
 			vector<unsigned int> poses;
 		};
@@ -36,9 +36,12 @@ class annotationsHandle {
 			vector<ANNOTATION> annos;
 		};
 
+		/** Shows which id from the old annotations is assigned to which id from
+		 * the new annotations based on what minimal distance.
+		 */
 		struct ASSIGNED {
-			unsigned int id;
-			unsigned int to;
+			short int id;
+			short int to;
 			double dist;
 		};
 
@@ -55,7 +58,12 @@ class annotationsHandle {
 		 */
 		static void showMenu(cv::Point center);
 
-		/** Starts the annotation of the images.
+		/** Starts the annotation of the images. The parameters that need to be indicated
+		 * are:
+		 *
+		 * \li argv[1] -- the file contains the list of image names (relative paths)
+		 * \li argv[2] -- the file contains the calibration data of the camera
+		 * \li argv[3] -- the file in which the annotation data needs to be stored
 		 */
 		static int runAnn(int argc, char **argv);
 
@@ -66,9 +74,11 @@ class annotationsHandle {
 		/** A function that starts a new thread which handles the track-bar event.
 		 */
 		static void trackBarHandleFct(int position,void *param);
+
 		/** Load annotations from file.
 		 */
 		static void loadAnnotations(char* filename, vector<FULL_ANNOTATIONS> &loadedAnno);
+
 		/** Computes the average distance from the predicted location and the
 		 * annotated one, the number of unpredicted people in each image and
 		 * the differences in the pose estimation.
@@ -76,17 +86,30 @@ class annotationsHandle {
 		static void annoDifferences(vector<FULL_ANNOTATIONS> &train, \
 			vector<FULL_ANNOTATIONS> &test, double &avgDist, double &Ndiff, \
 			double avgOrientDiff, double poseDiff);
+
 		/** Correlate annotations' from locations in \c annoOld to locations in
 		 * \c annoNew through IDs.
 		 */
 		static void correltateLocs(vector<ANNOTATION> &annoOld, vector<ANNOTATION> \
-			&annoNew,vector<ASSIGNED> &idAssignedTo,vector<bool> &assignedSoFar);
+			&annoNew,vector<ASSIGNED> &idAssignedTo);
+
 		/** Checks to see if a location can be assigned to a specific ID given the
 		 * new distance.
 		 */
-		static bool canBeAssigned(vector<ASSIGNED> &idAssignedTo, unsigned int id, \
-			double newDist, unsigned int to, vector<bool> &assignedSoFar, \
-			bool &isHere);
+		static bool canBeAssigned(vector<ASSIGNED> &idAssignedTo, short int id, \
+			double newDist, short int to);
+
+		/** Displays the complete annotations for all images.
+		 */
+		static void displayFullAnns(vector<FULL_ANNOTATIONS> &fullAnns);
+
+		/** Starts the annotation of the images. The parameters that need to be indicated
+		 * are:
+		 *
+		 * \li argv[1] -- train file with the correct annotations;
+		 * \li argv[2] -- test file with predicted annotations;
+		 */
+		static int runEvaluation(int argc, char **argv);
 	private:
 		/** @var image
 		 * The currently processed image.

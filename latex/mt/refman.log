@@ -1,4 +1,4 @@
-This is pdfTeX, Version 3.1415926-1.40.10 (TeX Live 2009/Debian) (format=pdflatex 2010.9.1)  27 OCT 2010 21:52
+This is pdfTeX, Version 3.1415926-1.40.10 (TeX Live 2009/Debian) (format=pdflatex 2010.9.1)  29 OCT 2010 17:28
 entering extended mode
  restricted \write18 enabled.
  %&-line parsing enabled.
@@ -685,7 +685,44 @@ Package: fontenc 2005/09/27 v1.99g Standard LaTeX package
 (/usr/share/texmf-texlive/tex/latex/base/t1enc.def
 File: t1enc.def 2005/09/27 v1.99g Standard LaTeX file
 LaTeX Font Info:    Redeclaring font encoding T1 on input line 43.
-)))
+))
+(/usr/share/texmf-texlive/tex/latex/kurier/kurier.sty
+Package: kurier 2005/10/03 v.1.2 Kurier package (MW)
+\c@mv@kurier=\count116
+\c@mv@kurierbold=\count117
+LaTeX Font Info:    Overwriting symbol font `operators' in version `kurier'
+(Font)                  OT1/cmr/m/n --> OT1/kurierlcm/m/n on input line 59.
+LaTeX Font Info:    Overwriting symbol font `letters' in version `kurier'
+(Font)                  OML/cmm/m/it --> OML/kurierlc/m/it on input line 60.
+LaTeX Font Info:    Overwriting symbol font `symbols' in version `kurier'
+(Font)                  OMS/cmsy/m/n --> OMS/kurierlc/m/n on input line 61.
+LaTeX Font Info:    Overwriting symbol font `largesymbols' in version `kurier'
+(Font)                  OMX/cmex/m/n --> OMX/kurierlc/m/n on input line 62.
+LaTeX Font Info:    Overwriting symbol font `operators' in version `kurierbold'
+
+(Font)                  OT1/cmr/m/n --> OT1/kurierlcm/b/n on input line 63.
+LaTeX Font Info:    Overwriting symbol font `letters' in version `kurierbold'
+(Font)                  OML/cmm/m/it --> OML/kurierlc/b/it on input line 64.
+LaTeX Font Info:    Overwriting symbol font `symbols' in version `kurierbold'
+(Font)                  OMS/cmsy/m/n --> OMS/kurierlc/b/n on input line 65.
+LaTeX Font Info:    Overwriting symbol font `largesymbols' in version `kurierbo
+ld'
+(Font)                  OMX/cmex/m/n --> OMX/kurierlc/b/n on input line 66.
+LaTeX Font Info:    Overwriting math alphabet `\mathbf' in version `kurier'
+(Font)                  OT1/cmr/bx/n --> OT1/kurierlc/bx/n on input line 68.
+LaTeX Font Info:    Overwriting math alphabet `\mathsf' in version `kurier'
+(Font)                  OT1/cmss/m/n --> OT1/kurierlc/m/n on input line 69.
+LaTeX Font Info:    Overwriting math alphabet `\mathit' in version `kurier'
+(Font)                  OT1/cmr/m/it --> OT1/kurierlc/m/it on input line 70.
+LaTeX Font Info:    Overwriting math alphabet `\mathtt' in version `kurier'
+(Font)                  OT1/cmtt/m/n --> OT1/kurierlc/m/n on input line 71.
+LaTeX Font Info:    Overwriting math alphabet `\mathsf' in version `kurierbold'
+
+(Font)                  OT1/cmss/m/n --> OT1/kurierlc/bx/n on input line 72.
+LaTeX Font Info:    Overwriting math alphabet `\mathit' in version `kurierbold'
+
+(Font)                  OT1/cmr/m/it --> OT1/kurierlc/bx/it on input line 73.
+))
 (/usr/share/texmf-texlive/tex/latex/listings/lstlang1.sty
 File: lstlang1.sty 2004/09/05 1.3 listings language file
 )
@@ -725,25 +762,26 @@ LaTeX Font Info:    Checking defaults for PD1/pdf/m/n on input line 35.
 LaTeX Font Info:    ... okay on input line 35.
 LaTeX Font Info:    Checking defaults for PU/pdf/m/n on input line 35.
 LaTeX Font Info:    ... okay on input line 35.
-LaTeX Font Info:    Try loading font information for T1+ptm on input line 35.
+LaTeX Font Info:    Try loading font information for T1+kurierlc on input line 
+35.
 
-(/usr/share/texmf-texlive/tex/latex/psnfss/t1ptm.fd
-File: t1ptm.fd 2001/06/04 font definitions for T1/ptm.
+(/usr/share/texmf-texlive/tex/latex/kurier/t1kurierlc.fd
+File: t1kurierlc.fd 2005/10/03 v1.2 font definition file for T1/kurierlc (MW)
 )
 (/usr/share/texmf-texlive/tex/context/base/supp-pdf.mkii
 [Loading MPS to PDF converter (version 2006.09.02).]
-\scratchcounter=\count116
+\scratchcounter=\count118
 \scratchdimen=\dimen124
 \scratchbox=\box56
-\nofMPsegments=\count117
-\nofMParguments=\count118
+\nofMPsegments=\count119
+\nofMParguments=\count120
 \everyMPshowfont=\toks24
-\MPscratchCnt=\count119
+\MPscratchCnt=\count121
 \MPscratchDim=\dimen125
-\MPnumerator=\count120
+\MPnumerator=\count122
 \everyMPtoPDFconversion=\toks25
 )
-\c@lstlisting=\count121
+\c@lstlisting=\count123
 Package hyperref Info: Link coloring ON on input line 35.
  (/usr/share/texmf-texlive/tex/latex/hyperref/nameref.sty
 Package: nameref 2007/05/29 v2.31 Cross-referencing by name of section
@@ -751,7 +789,7 @@ Package: nameref 2007/05/29 v2.31 Cross-referencing by name of section
 (/usr/share/texmf-texlive/tex/latex/oberdiek/refcount.sty
 Package: refcount 2008/08/11 v3.1 Data extraction from references (HO)
 )
-\c@section@level=\count122
+\c@section@level=\count124
 )
 LaTeX Info: Redefining \ref on input line 35.
 LaTeX Info: Redefining \pageref on input line 35.
@@ -768,17 +806,34 @@ Package hyperref Info: Option `pageanchor' set `false' on input line 36.
 {/var/lib/texmf/fonts/map/pdftex/updmap/pdftex.map}] [2
 
 ]
-LaTeX Font Info:    Font shape `T1/ptm/bx/n' in size <24.88> not available
-(Font)              Font shape `T1/ptm/b/n' tried instead on input line 49.
-
 (./refman.toc
-LaTeX Font Info:    Font shape `T1/ptm/bx/n' in size <10> not available
-(Font)              Font shape `T1/ptm/b/n' tried instead on input line 1.
-LaTeX Font Info:    External font `cmex10' loaded for size
-(Font)              <7> on input line 2.
-LaTeX Font Info:    External font `cmex10' loaded for size
-(Font)              <5> on input line 2.
+LaTeX Font Info:    Try loading font information for OT1+kurierlcm on input lin
+e 2.
+ (/usr/share/texmf-texlive/tex/latex/kurier/ot1kurierlcm.fd
+File: ot1kurierlcm.fd 2005/10/03 v1.2 font definition file for OT1/kurierlcm (M
+W)
 )
+LaTeX Font Info:    Try loading font information for OML+kurierlc on input line
+ 2.
+
+(/usr/share/texmf-texlive/tex/latex/kurier/omlkurierlc.fd
+File: omlkurierlc.fd 2005/10/03 v1.2 font definition file for OML/kurierlc (MW)
+
+)
+LaTeX Font Info:    Try loading font information for OMS+kurierlc on input line
+ 2.
+
+(/usr/share/texmf-texlive/tex/latex/kurier/omskurierlc.fd
+File: omskurierlc.fd 2005/10/03 v1.2 font definition file for OMS/kurierlc (MW)
+
+)
+LaTeX Font Info:    Try loading font information for OMX+kurierlc on input line
+ 2.
+
+(/usr/share/texmf-texlive/tex/latex/kurier/omxkurierlc.fd
+File: omxkurierlc.fd 2005/10/03 v1.2 font definition file for OMX/kurierlc (MW)
+
+))
 \tf@toc=\write5
 \openout5 = `refman.toc'.
 
@@ -790,48 +845,55 @@ LaTeX Font Info:    External font `cmex10' loaded for size
 Package hyperref Info: Option `pageanchor' set `true' on input line 52.
 
 Chapter 1.
-LaTeX Font Info:    Font shape `T1/ptm/bx/n' in size <20.74> not available
-(Font)              Font shape `T1/ptm/b/n' tried instead on input line 53.
-(./classannotatePosPose.tex
-LaTeX Font Info:    Font shape `T1/ptm/bx/n' in size <14.4> not available
-(Font)              Font shape `T1/ptm/b/n' tried instead on input line 4.
-LaTeX Font Info:    Font shape `T1/ptm/bx/n' in size <12> not available
-(Font)              Font shape `T1/ptm/b/n' tried instead on input line 10.
-LaTeX Font Info:    Try loading font information for TS1+ptm on input line 13.
+(./structannotationsHandle_1_1ANNOTATION.tex
+LaTeX Font Info:    Try loading font information for TS1+kurierlc on input line
+ 13.
 
-(/usr/share/texmf-texlive/tex/latex/psnfss/ts1ptm.fd
-File: ts1ptm.fd 2001/06/04 font definitions for TS1/ptm.
+(/usr/share/texmf-texlive/tex/latex/kurier/ts1kurierlc.fd
+File: ts1kurierlc.fd 2005/10/03 v1.2 font definition file for TS1/kurierlc (MW)
+
 ))
-(./structannotatePosPose_1_1ANNOTATION.tex [1
+(./classannotationsHandle.tex [1
 
-]) (./refman.ind
-LaTeX Font Info:    Font shape `T1/ptm/bx/n' in size <7> not available
-(Font)              Font shape `T1/ptm/b/n' tried instead on input line 1.
- [2] [3
+]
+LaTeX Font Info:    Try loading font information for T1+pcr on input line 67.
+
+(/usr/share/texmf-texlive/tex/latex/psnfss/t1pcr.fd
+File: t1pcr.fd 2001/06/04 font definitions for T1/pcr.
+)
+LaTeX Font Info:    Font shape `T1/pcr/m/it' in size <9> not available
+(Font)              Font shape `T1/pcr/m/sl' tried instead on input line 67.
+ [2])
+(./structannotationsHandle_1_1ASSIGNED.tex)
+(./structannotationsHandle_1_1FULL__ANNOTATIONS.tex) (./refman.ind [3] [4
 
 
 ])
 (./refman.aux) ) 
 Here is how much of TeX's memory you used:
- 8246 strings out of 495061
- 113577 string characters out of 1182622
- 205665 words of memory out of 3000000
- 11251 multiletter control sequences out of 15000+50000
- 41407 words of font info for 42 fonts, out of 3000000 for 9000
+ 8549 strings out of 495061
+ 120593 string characters out of 1182622
+ 212562 words of memory out of 3000000
+ 11512 multiletter control sequences out of 15000+50000
+ 66393 words of font info for 47 fonts, out of 3000000 for 9000
  28 hyphenation exceptions out of 8191
- 38i,11n,58p,320b,343s stack positions out of 5000i,500n,10000p,200000b,50000s
-pdfTeX warning (dest): name{classannotatePosPose_a7a9e324ff6c85
-eeb2c2bd91b2b8cbdba} has been referenced but does not exist, replaced by a fixe
-d one
+ 38i,11n,58p,436b,490s stack positions out of 5000i,500n,10000p,200000b,50000s
+pdfTeX warning (dest): name{classannotationsHandle_a7a9e324ff6c
+85eeb2c2bd91b2b8cbdba} has been referenced but does not exist, replaced by a fi
+xed one
 
-{/usr/share/texmf-texlive/fonts/enc/dvips/base/8r.enc}</usr/share/texmf-texlive
-/fonts/type1/public/amsfonts/cm/cmmi10.pfb></usr/share/texmf-texlive/fonts/type
-1/public/amsfonts/cm/cmsy10.pfb></usr/share/texmf-texlive/fonts/type1/urw/times
-/utmb8a.pfb></usr/share/texmf-texlive/fonts/type1/urw/times/utmr8a.pfb></usr/sh
-are/texmf-texlive/fonts/type1/urw/times/utmri8a.pfb>
-Output written on refman.pdf (7 pages, 71011 bytes).
+{/usr/share/texmf-texlive/fonts/enc/dvips/base/8r.enc}{/usr/share/texmf-texlive
+/fonts/enc/dvips/kurier/kurier-ec.enc}{/usr/share/texmf-texlive/fonts/enc/dvips
+/kurier/kurier-sy.enc}{/usr/share/texmf-texlive/fonts/enc/dvips/kurier/kurier-m
+i.enc}{/usr/share/texmf-texlive/fonts/enc/dvips/kurier/kurier-ts1.enc}</usr/sha
+re/texmf-texlive/fonts/type1/public/kurier/kuriercl.pfb></usr/share/texmf-texli
+ve/fonts/type1/public/kurier/kuriercli.pfb></usr/share/texmf-texlive/fonts/type
+1/public/kurier/kuriercm.pfb></usr/share/texmf-texlive/fonts/type1/public/kurie
+r/kuriercmi.pfb></usr/share/texmf-texlive/fonts/type1/urw/courier/ucrb8a.pfb></
+usr/share/texmf-texlive/fonts/type1/urw/courier/ucrro8a.pfb>
+Output written on refman.pdf (8 pages, 122142 bytes).
 PDF statistics:
- 98 PDF objects out of 1000 (max. 8388607)
- 22 named destinations out of 1000 (max. 500000)
- 25 words of extra memory for PDF output out of 10000 (max. 10000000)
+ 186 PDF objects out of 1000 (max. 8388607)
+ 44 named destinations out of 1000 (max. 500000)
+ 65 words of extra memory for PDF output out of 10000 (max. 10000000)
 

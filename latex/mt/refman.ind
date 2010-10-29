@@ -1,6 +1,18 @@
 \begin{theindex}
 
-  \item {annotatePosPose}, \hyperpage{1}
-  \item {annotatePosPose::ANNOTATION}, \hyperpage{2}
+  \item {annotationsHandle}, \hyperpage{1}
+    \subitem {runAnn}, \hyperpage{2}
+    \subitem {runEvaluation}, \hyperpage{2}
+  \item {annotationsHandle::ANNOTATION}, \hyperpage{1}
+  \item {annotationsHandle::ASSIGNED}, \hyperpage{3}
+  \item {annotationsHandle::FULL\_\discretionary {-}{}{}ANNOTATIONS}, 
+		\hyperpage{3}
+
+  \indexspace
+
+  \item {runAnn}
+    \subitem {annotationsHandle}, \hyperpage{2}
+  \item {runEvaluation}
+    \subitem {annotationsHandle}, \hyperpage{2}
 
 \end{theindex}

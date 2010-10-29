@@ -145,7 +145,12 @@ void annotationsHandle::trackbar_callback(int position,void *param){
 	trackbarHandle->join();
 }
 
-/** Starts the annotation of the images.
+/** Starts the annotation of the images. The parameters that need to be indicated
+ * are:
+ *
+ * \li argv[1] -- the file contains the list of image names (relative paths)
+ * \li argv[2] -- the file contains the calibration data of the camera
+ * \li argv[3] -- the file in which the annotation data needs to be stored
  */
 int annotationsHandle::runAnn(int argc, char **argv){
 	choice = 'c';
@@ -292,19 +297,13 @@ void annotationsHandle::loadAnnotations(char* filename, vector<FULL_ANNOTATIONS>
 /** Checks to see if a location can be assigned to a specific ID given the
  * new distance.
  */
-bool annotationsHandle::canBeAssigned(vector<ASSIGNED> &idAssignedTo, unsigned int \
-	id, double newDist, unsigned int to, vector<bool> &assignedSoFar, \
-	bool &isHere){
-	isHere = false;
+bool annotationsHandle::canBeAssigned(vector<ASSIGNED> &idAssignedTo, short int \
+	id, double newDist, short int to){
+	bool isHere = false;
 	for(unsigned int i=0; i<idAssignedTo.size(); i++){
 		if(idAssignedTo[i].id == id){
 			isHere = true;
 			if(idAssignedTo[i].dist>newDist){
-				try{
-					assignedSoFar.at(idAssignedTo[i].to) = false;
-				} catch(std::exception &e) {
-					cerr<<e.what();
-				}
 				idAssignedTo[i].to   = to;
 				idAssignedTo[i].dist = newDist;
 				return true;
@@ -312,12 +311,30 @@ bool annotationsHandle::canBeAssigned(vector<ASSIGNED> &idAssignedTo, unsigned i
 		}
 	}
 	if(!isHere){
-		ASSIGNED temp;
-		temp.id   = id;
-		temp.to   = to;
-		temp.dist = newDist;
-		idAssignedTo.push_back(temp);
-		return true;
+		bool alreadyTo = false;
+		for(unsigned i=0;i<idAssignedTo.size();i++){
+			if(idAssignedTo[i].to == to){
+				alreadyTo = true;
+				if(idAssignedTo[i].dist>newDist){
+					//assigned the id to this one and un-assign the old one
+					ASSIGNED temp;
+					temp.id   = id;
+					temp.to   = to;
+					temp.dist = newDist;
+					idAssignedTo.push_back(temp);
+					idAssignedTo.erase(idAssignedTo.begin()+i);
+					return true;
+				}
+			}
+		}
+		if(!alreadyTo){
+			ASSIGNED temp;
+			temp.id   = id;
+			temp.to   = to;
+			temp.dist = newDist;
+			idAssignedTo.push_back(temp);
+			return true;
+		}
 	}
 	return false;
 }
@@ -326,8 +343,7 @@ bool annotationsHandle::canBeAssigned(vector<ASSIGNED> &idAssignedTo, unsigned i
  * annoNew through IDs.
  */
 void annotationsHandle::correltateLocs(vector<ANNOTATION> &annoOld, \
-	vector<ANNOTATION> &annoNew, vector<ASSIGNED> &idAssignedTo, \
-	vector<bool> &assignedSoFar){
+	vector<ANNOTATION> &annoNew, vector<ASSIGNED> &idAssignedTo){
 	vector< vector<double> > distMatrix;
 
 	//1. compute the distances between all annotations
@@ -346,22 +362,32 @@ void annotationsHandle::correltateLocs(vector<ANNOTATION> &annoOld, \
 		for(unsigned k=0;k<distMatrix.size();k++){ //for each row in new
 			double minDist = (double)INFINITY;
 			for(unsigned l=0;l<distMatrix[k].size();l++){ // loop over all old
-				bool isThere;
 				if(distMatrix[k][l]<minDist && canBeAssigned(idAssignedTo, \
-					annoOld[l].id, distMatrix[k][l], annoNew[k].id, \
-					assignedSoFar, isThere)){
-					annoNew[k].id = annoOld[l].id;
-					try{
-						assignedSoFar.at(annoNew[k].id) = true;
-					}catch(std::exception &e){
-						cerr<<e.what();
-					}
-					minDist   =	distMatrix[k][l];
-					canAssign = true;
+					annoOld[l].id, distMatrix[k][l], annoNew[k].id)){
+					minDist       =	distMatrix[k][l];
+					canAssign     = true;
 				}
 			}
 		}
 	}
+
+	//3. update the ids to the new one to correspond to the ids of the old one!!
+	for(unsigned i=0;i<annoNew.size();i++){
+		for(unsigned n=0;n<idAssignedTo.size();n++){
+			if(annoNew[i].id == idAssignedTo[n].to){
+				if(idAssignedTo[n].to != idAssignedTo[n].id){
+					for(unsigned j=0;j<annoNew.size();j++){
+						if(annoNew[j].id == idAssignedTo[n].id){
+							annoNew[j].id = -1;
+						}
+					}
+				}
+				annoNew[i].id = idAssignedTo[n].id;
+				break;
+			}
+		}
+	}
+
 }
 
 /** Computes the average distance from the predicted location and the annotated
@@ -380,9 +406,10 @@ void annotationsHandle::annoDifferences(vector<FULL_ANNOTATIONS> &train, \
 		/* the images might not be in the same ordered so they need to be assigned
 		 * to the closest one to them */
 		vector<ASSIGNED> idAssignedTo;
-		vector<bool> assignedSoFar(test[i].annos.size(),false);
-		correltateLocs(train[i].annos, test[i].annos,idAssignedTo,assignedSoFar);
-
+		//0. if one of them is 0 then no correlation can be done
+		if(train[i].annos.size()!=0 && test[i].annos.size()!=0){
+			correltateLocs(train[i].annos, test[i].annos,idAssignedTo);
+		}
 		//1. update average difference for the current image
 		for(unsigned l=0; l<idAssignedTo.size(); l++){
 			cout<<idAssignedTo[l].id<<" assigned to "<<idAssignedTo[l].to<<endl;
@@ -397,8 +424,9 @@ void annotationsHandle::annoDifferences(vector<FULL_ANNOTATIONS> &train, \
 			Ndiff += abs((double)train[i].annos.size() - \
 				(double)test[i].annos.size());
 		}
+
 		//3. update the poses estimation differences
-		unsigned int nrCorresp = 0;
+		unsigned int noCorresp = 0;
 		for(unsigned int l=0;l<train[i].annos.size();l++){
 			for(unsigned int k=0;k<test[i].annos.size();k++){
 				if(train[i].annos[l].id == test[i].annos[k].id){
@@ -409,14 +437,15 @@ void annotationsHandle::annoDifferences(vector<FULL_ANNOTATIONS> &train, \
 					}
 					avgOrientDiff += abs((double)train[i].annos[l].poses[3] - \
 						(double)test[i].annos[k].poses[3]);
-					nrCorresp++;
+					noCorresp++;
 					break;
 				}
 			}
 		}
-		if(nrCorresp>0){
-			avgOrientDiff /= nrCorresp;
+		if(noCorresp>0){
+			avgOrientDiff /= noCorresp;
 		}
+		cout<<endl;
 	}
 	cout<<"avgDist: "<<avgDist<<endl;
 	cout<<"Ndiff: "<<Ndiff<<endl;
@@ -427,6 +456,51 @@ void annotationsHandle::annoDifferences(vector<FULL_ANNOTATIONS> &train, \
 	avgDist /= train.size();
 }
 
+/** Displays the complete annotations for all images.
+ */
+void annotationsHandle::displayFullAnns(vector<FULL_ANNOTATIONS> &fullAnns){
+	for(unsigned int i=0; i<fullAnns.size();i++){
+		cout<<"Image name: "<<fullAnns[i].imgFile<<endl;
+		for(unsigned int j=0; j<fullAnns[i].annos.size();j++){
+			cout<<"Annotation Id:"<<fullAnns[i].annos[j].id<<\
+				"_____________________________________________"<<endl;
+			cout<<"Location: ["<<fullAnns[i].annos[j].location.x<<","\
+				<<fullAnns[i].annos[j].location.y<<"]"<<endl;
+			cout<<"Pose: (Sitting: "<<fullAnns[i].annos[j].poses[0]<<\
+				"),(Standing: "<<fullAnns[i].annos[j].poses[1]<<\
+				"),(Bending: "<<fullAnns[i].annos[j].poses[2]<<\
+				"),(Orientation: "<<fullAnns[i].annos[j].poses[3]<<")"<<endl;
+		}
+		cout<<endl;
+	}
+}
+
+/** Starts the annotation of the images. The parameters that need to be indicated
+ * are:
+ *
+ * \li argv[1] -- train file with the correct annotations;
+ * \li argv[2] -- test file with predicted annotations;
+ */
+int annotationsHandle::runEvaluation(int argc, char **argv){
+	if(argc != 3){
+		cerr<<"usage: cmmd <train_annotations.txt> <train_annotations.txt>\n"<< \
+		"<train_annotations.txt> => file containing correct annotations\n"<< \
+		"<test_annotations.txt>  => file containing predicted annotations\n"<<endl;
+		exit(-1);
+	}
+
+	vector<FULL_ANNOTATIONS> allAnnoTrain;
+	vector<FULL_ANNOTATIONS> allAnnoTest;
+	loadAnnotations(argv[1],allAnnoTrain);
+	loadAnnotations(argv[2],allAnnoTest);
+
+	displayFullAnns(allAnnoTrain);
+
+	double avgDist = 0, Ndiff = 0, avgOrientDiff = 0, poseDiff = 0;
+	annoDifferences(allAnnoTrain, allAnnoTest, avgDist, Ndiff, avgOrientDiff, \
+		poseDiff);
+}
+
 char annotationsHandle::choice;
 boost::mutex annotationsHandle::trackbarMutex;
 IplImage *annotationsHandle::image;
@@ -434,27 +508,5 @@ vector<annotationsHandle::ANNOTATION> annotationsHandle::annotations;
 
 int main(int argc, char **argv){
 	//annotationsHandle::runAnn(argc,argv);
-	vector<annotationsHandle::FULL_ANNOTATIONS> allAnnoTrain;
-	vector<annotationsHandle::FULL_ANNOTATIONS> allAnnoTest;
-
-	annotationsHandle::loadAnnotations(argv[1],allAnnoTrain);
-
-	/*
-	for(unsigned int i=0; i<allAnnoTrain.size();i++){
-		cout<<allAnnoTrain[i].imgFile<<endl;
-		for(unsigned int j=0; j<allAnnoTrain[i].annos.size();j++){
-			cout<<"id:"<<allAnnoTrain[i].annos[j].id<<endl;
-			cout<<"loc:"<<allAnnoTrain[i].annos[j].location.x<<","\
-				<<allAnnoTrain[i].annos[j].location.y<<endl;
-			cout<<"pose: (0:"<<allAnnoTrain[i].annos[j].poses[0]<<"),(1:"\
-				<<allAnnoTrain[i].annos[j].poses[1]<<"),(2:"\
-				<<allAnnoTrain[i].annos[j].poses[2]<<"),(3:"\
-				<<allAnnoTrain[i].annos[j].poses[3]<<")"<<endl;
-		}
-	}*/
-	annotationsHandle::loadAnnotations(argv[2],allAnnoTest);
-
-	double avgDist = 0, Ndiff = 0, avgOrientDiff = 0, poseDiff = 0;
-	annotationsHandle::annoDifferences(allAnnoTrain, allAnnoTest, avgDist, \
-		Ndiff, avgOrientDiff, poseDiff);
+	annotationsHandle::runEvaluation(argc,argv);
 }

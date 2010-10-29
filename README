@@ -6,8 +6,10 @@ In order to manage crowds, plan building infrastructure, evaluate the positionin
 This project will use stereo cameras to capture videos of large crowds, and will use probabilistic models of (local) appearance and motion (such as linear dynamical systems, Kalman filters or particle filters) to solve the problem of association over multiple frames (which pixels belong to what person?) and of ingress and egress detection. The resulting tracks will then be used to compute global appearance features that can be used to solve the problem of association between different cameras.
 
 Steps:
--> Annotate the positions and poses and evaluate
--> Track people
+-> Annotate the positions and poses and evaluate => ≈ done!
+-> Track people:
+		1. Read images from directory instead of file!
+		2. Track (images & stream) combined + with threading & !location prior
 -> Estimate the poses
 -> Improve ...
 -> 

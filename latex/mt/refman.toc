@@ -1,3 +1,8 @@
 \contentsline {chapter}{\numberline {1}Data Structure Documentation}{1}{chapter.1}
-\contentsline {section}{\numberline {1.1}annotatePosPose Class Reference}{1}{section.1.1}
-\contentsline {section}{\numberline {1.2}annotatePosPose::ANNOTATION Struct Reference}{2}{section.1.2}
+\contentsline {section}{\numberline {1.1}annotationsHandle::ANNOTATION Struct Reference}{1}{section.1.1}
+\contentsline {section}{\numberline {1.2}annotationsHandle Class Reference}{1}{section.1.2}
+\contentsline {subsection}{\numberline {1.2.1}Member Function Documentation}{2}{subsection.1.2.1}
+\contentsline {subsubsection}{\numberline {1.2.1.1}runAnn}{2}{subsubsection.1.2.1.1}
+\contentsline {subsubsection}{\numberline {1.2.1.2}runEvaluation}{3}{subsubsection.1.2.1.2}
+\contentsline {section}{\numberline {1.3}annotationsHandle::ASSIGNED Struct Reference}{3}{section.1.3}
+\contentsline {section}{\numberline {1.4}annotationsHandle::FULL\_\discretionary {-}{}{}ANNOTATIONS Struct Reference}{3}{section.1.4}
