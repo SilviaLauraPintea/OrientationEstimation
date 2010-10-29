@@ -2,7 +2,19 @@ Probabilistic Tracking using Stereo Cameras
 
 Short Description:
 
-In order to manage crowds, plan building infrastructure, evaluate the positioning of utilities in public spaces, etc, it is necessary to be able to track the motion of individual people over long distances and multiple cameras. Modern algorithms begin to solve this problem, but require a precise representation of the appearance of the individuals. Obtaining this is a challenging task, because it requires detecting when a person enters the field of view of a camera, identifying all pixels that correspond to that person over all frames where that person is visible, dealing with occlusions, and detecting when the person has left the field of view.
-This project will use stereo cameras to capture videos of large crowds, and will use probabilistic models of (local) appearance and motion (such as linear dynamical systems, Kalman filters or particle filters) to solve the problem of association over multiple frames (which pixels belong to what person?) and of ingress and egress detection. The resulting tracks will then be used to compute global appearance features that can be used to solve the problem of association between different cameras.
+In order to manage crowds, plan building infrastructure, evaluate the positioning of 
+utilities in public spaces, etc, it is necessary to be able to track the motion of 
+individual people over long distances and multiple cameras. Modern algorithms begin 
+to solve this problem, but require a precise representation of the appearance of the 
+individuals. Obtaining this is a challenging task, because it requires detecting when 
+a person enters the field of view of a camera, identifying all pixels that correspond 
+to that person over all frames where that person is visible, dealing with occlusions, 
+and detecting when the person has left the field of view.
+This project will use stereo cameras to capture videos of large crowds, and will use 
+probabilistic models of (local) appearance and motion (such as linear dynamical systems, 
+Kalman filters or particle filters) to solve the problem of association over multiple 
+frames (which pixels belong to what person?) and of ingress and egress detection. 
+The resulting tracks will then be used to compute global appearance features that can 
+be used to solve the problem of association between different cameras.
 
 
