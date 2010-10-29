@@ -35,6 +35,7 @@ ADD_LIBRARY(helpers
   ${EIGEN_SRC}/Background.cc
   ${EIGEN_SRC}/ImgProducer.cc
   ${EIGEN_SRC}/annotatepos.cc
+  ${MT_SRC}/Auxiliary.cpp
   )
 
 ADD_LIBRARY(calib
@@ -50,11 +51,7 @@ TARGET_LINK_LIBRARIES( findPersonStream helpers highgui  cmn tools iberty vnl_al
 #_________________________________________________________________________________________________________________________________________
 # FROM NOW ON MY FILES WILL COME
 
-ADD_EXECUTABLE(annotatePosPose  ${MT_SRC}/annotatePosPose.cpp)
-TARGET_LINK_LIBRARIES(annotatePosPose helpers cv highgui cmn tools iberty vnl_algo vnl v3p_netlib boost_date_time-mt boost_thread-mt ${XML2_LDFLAGS})
-
-
-#ADD_EXECUTABLE( runProject  ${MT_SRC}/runProject.cpp)
-#TARGET_LINK_LIBRARIES(runProject cv highgui vepl vil1 ${XML2_LDFLAGS})
+ADD_EXECUTABLE(annotationsHandle ${MT_SRC}/annotationsHandle.cpp)
+TARGET_LINK_LIBRARIES(annotationsHandle helpers cv highgui cmn tools iberty vnl_algo vnl v3p_netlib boost_date_time-mt boost_thread-mt ${XML2_LDFLAGS})
 
 

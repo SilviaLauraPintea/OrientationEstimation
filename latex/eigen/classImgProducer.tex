@@ -1,0 +1,37 @@
+\hypertarget{classImgProducer}{
+\section{ImgProducer Class Reference}
+\label{classImgProducer}\index{ImgProducer@{ImgProducer}}
+}
+
+
+The {\ttfamily \hyperlink{classImgProducer}{ImgProducer}} class is used to read images from either a video stream or from a local directory.  
+
+
+\subsection*{Public Member Functions}
+\begin{DoxyCompactItemize}
+\item 
+\hypertarget{classImgProducer_adea70514206a6a2f7c35b9cb48663c5f}{
+\hyperlink{classImgProducer_adea70514206a6a2f7c35b9cb48663c5f}{ImgProducer} (const char $\ast$filename)}
+\label{classImgProducer_adea70514206a6a2f7c35b9cb48663c5f}
+
+\begin{DoxyCompactList}\small\item\em The constructor of the class -\/-\/ initializes the variables to the given values; if there is a video available, then it uses the capture from file (OpenCv), else it uses the files from the {\ttfamily filelist}. \item\end{DoxyCompactList}\item 
+\hypertarget{classImgProducer_a3874d48fa5613c7ed22ab89132b3a5c6}{
+IplImage $\ast$ \hyperlink{classImgProducer_a3874d48fa5613c7ed22ab89132b3a5c6}{getFrame} ()}
+\label{classImgProducer_a3874d48fa5613c7ed22ab89132b3a5c6}
+
+\begin{DoxyCompactList}\small\item\em If the {\ttfamily sourcetype} is {\ttfamily CAPTURE} then it reads the next frame of the video, else if it is  it loads the next image and returns it. \item\end{DoxyCompactList}\item 
+\hypertarget{classImgProducer_a9e0315d8ff2f35e0a752c01ab57166fa}{
+const std::string \& \hyperlink{classImgProducer_a9e0315d8ff2f35e0a752c01ab57166fa}{getSource} () const }
+\label{classImgProducer_a9e0315d8ff2f35e0a752c01ab57166fa}
+
+\begin{DoxyCompactList}\small\item\em Returns either 'Not a file' or (in the case when the image names are read from the {\ttfamily filelist}) the name of the next image to be processed. \item\end{DoxyCompactList}\item 
+\hypertarget{classImgProducer_a14aa046347f577fb0f772b1b79fdcaca}{
+void \hyperlink{classImgProducer_a14aa046347f577fb0f772b1b79fdcaca}{forward} (unsigned frames)}
+\label{classImgProducer_a14aa046347f577fb0f772b1b79fdcaca}
+
+\begin{DoxyCompactList}\small\item\em It updates the value of the variable {\ttfamily nextFrame} -\/-\/ with respect to the source type used (CAPTURE or FILELIST) -\/-\/ such that the index of the next frame will indicate to the image position at {\ttfamily frames} forward from the current one. \item\end{DoxyCompactList}\item 
+\hypertarget{classImgProducer_a615974ed466627d8b2ab498f7e8b0c7f}{
+void \hyperlink{classImgProducer_a615974ed466627d8b2ab498f7e8b0c7f}{backward} (unsigned frames)}
+\label{classImgProducer_a615974ed466627d8b2ab498f7e8b0c7f}
+
+\begin{DoxyCompactList}\small\item\em It updates the value of the variable {\ttfamily nextFrame} -\/-\/ with respect to the source type used (CAPTURE or FILELIST) -\/-\/ such that the index of the next frame will indicate to the image position at {\ttfamily frames} backward from the current one. \item\end{DoxyCompactList}\end{DoxyCompactItemize}

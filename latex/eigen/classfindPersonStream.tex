@@ -1,0 +1,234 @@
+\hypertarget{classfindPersonStream}{
+\section{findPersonStream Class Reference}
+\label{classfindPersonStream}\index{findPersonStream@{findPersonStream}}
+}
+
+
+Class used for tracking/finding people in the input images.  
+
+
+\subsection*{Public Member Functions}
+\begin{DoxyCompactItemize}
+\item 
+\hypertarget{classfindPersonStream_a124341c8b0d81ff0682ab7585f1c15a4}{
+{\bfseries findPersonStream} (unsigned nVal)}
+\label{classfindPersonStream_a124341c8b0d81ff0682ab7585f1c15a4}
+
+\item 
+\hypertarget{classfindPersonStream_adad9d68d77b07e9fe42a0bafd02afa08}{
+void \hyperlink{classfindPersonStream_adad9d68d77b07e9fe42a0bafd02afa08}{stic} ()}
+\label{classfindPersonStream_adad9d68d77b07e9fe42a0bafd02afa08}
+
+\begin{DoxyCompactList}\small\item\em Initializes {\ttfamily usec} to the current value -\/-\/ starts the timer. \item\end{DoxyCompactList}\item 
+\hypertarget{classfindPersonStream_ae8e079ae9b7283ccefaea08319f56ec0}{
+unsigned long long \hyperlink{classfindPersonStream_ae8e079ae9b7283ccefaea08319f56ec0}{stoc} ()}
+\label{classfindPersonStream_ae8e079ae9b7283ccefaea08319f56ec0}
+
+\begin{DoxyCompactList}\small\item\em Shows the number of milliseconds passed since the timer was started. \item\end{DoxyCompactList}\item 
+\hypertarget{classfindPersonStream_a3ae972ba6df1daf5dc3313e00b4d19c4}{
+FLOAT \hyperlink{classfindPersonStream_a3ae972ba6df1daf5dc3313e00b4d19c4}{logGaus} (FLOAT sqDiff, FLOAT lpv2, FLOAT pv2)}
+\label{classfindPersonStream_a3ae972ba6df1daf5dc3313e00b4d19c4}
+
+\begin{DoxyCompactList}\small\item\em Return the log-\/gaussian value for the input. \item\end{DoxyCompactList}\item 
+\hypertarget{classfindPersonStream_a75c79495f6bea5917afce73830352a4c}{
+void \hyperlink{classfindPersonStream_a75c79495f6bea5917afce73830352a4c}{buildMasks} ()}
+\label{classfindPersonStream_a75c79495f6bea5917afce73830352a4c}
+
+\begin{DoxyCompactList}\small\item\em Initializes the variable {\ttfamily masks} with a corresponding mask centered at each pixel in the image. \item\end{DoxyCompactList}\item 
+\hypertarget{classfindPersonStream_a6b95d49b3823153588b59dbbda5c8949}{
+FLOAT \hyperlink{classfindPersonStream_a6b95d49b3823153588b59dbbda5c8949}{logMaskProb} (const vnl\_\-vector$<$ FLOAT $>$ \&logSumPixelBGProb, FLOAT bgSum, const vector$<$ \hyperlink{structscanline__t}{scanline\_\-t} $>$ \&mask)}
+\label{classfindPersonStream_a6b95d49b3823153588b59dbbda5c8949}
+
+\begin{DoxyCompactList}\small\item\em Computes the difference between the sum of pixels probabilities for foreground and the sum of pixel probabilities for background. \item\end{DoxyCompactList}\item 
+\hypertarget{classfindPersonStream_aaf033810455a87eb5f32cfed75b5519e}{
+bool \hyperlink{classfindPersonStream_aaf033810455a87eb5f32cfed75b5519e}{overlap} (const vector$<$ unsigned $>$ \&existing, int x, int y)}
+\label{classfindPersonStream_aaf033810455a87eb5f32cfed75b5519e}
+
+\begin{DoxyCompactList}\small\item\em Checks to see if two ground planes of a new mask and another existing mask overlap. \item\end{DoxyCompactList}\item 
+\hypertarget{classfindPersonStream_aeaa599e1b4d6636083ef059bd029539b}{
+void \hyperlink{classfindPersonStream_aeaa599e1b4d6636083ef059bd029539b}{scanRest} (vector$<$ unsigned $>$ \&existing, vector$<$ \hyperlink{structscanline__t}{scanline\_\-t} $>$ \&existingMask, unsigned res, const vnl\_\-vector$<$ FLOAT $>$ \&logSumPixelBGProb, vector$<$ vnl\_\-vector$<$ FLOAT $>$ $>$ \&logPosProb, vector$<$ FLOAT $>$ \&marginal, FLOAT lSum)}
+\label{classfindPersonStream_aeaa599e1b4d6636083ef059bd029539b}
+
+\begin{DoxyCompactList}\small\item\em Recursively scan the image for a number of existing people that can be in the image; it chooses the location that increases the likelihood taking into account the existing positions. \item\end{DoxyCompactList}\item 
+\hypertarget{classfindPersonStream_ac8da170ee071392aeef5385795d4bc3e}{
+cv::Point \hyperlink{classfindPersonStream_ac8da170ee071392aeef5385795d4bc3e}{cvPoint} (unsigned pos)}
+\label{classfindPersonStream_ac8da170ee071392aeef5385795d4bc3e}
+
+\begin{DoxyCompactList}\small\item\em Returns an Opencv point corresponding to the position with $ x = (x mod width)$ and $ y = (y div width)$. \item\end{DoxyCompactList}\item 
+\hypertarget{classfindPersonStream_a400f30b8f239fae9c9b767fb6ecc1d3f}{
+FLOAT \hyperlink{classfindPersonStream_a400f30b8f239fae9c9b767fb6ecc1d3f}{dist} (const CvPoint \&p1, const CvPoint \&p2)}
+\label{classfindPersonStream_a400f30b8f239fae9c9b767fb6ecc1d3f}
+
+\begin{DoxyCompactList}\small\item\em Computes the euclidean distance between two points. \item\end{DoxyCompactList}\item 
+\hypertarget{classfindPersonStream_abbe593e6141fbed267f5c2cac102edfe}{
+void \hyperlink{classfindPersonStream_abbe593e6141fbed267f5c2cac102edfe}{plotTrack} (IplImage $\ast$img, const \hyperlink{structtrack__t}{track\_\-t} \&t, const unsigned idx, unsigned w)}
+\label{classfindPersonStream_abbe593e6141fbed267f5c2cac102edfe}
+
+\begin{DoxyCompactList}\small\item\em Function that plots the tracks from the tracking structure in the image. \item\end{DoxyCompactList}\item 
+\hypertarget{classfindPersonStream_a1637d37496d22236ac356d63ced3a67c}{
+void \hyperlink{classfindPersonStream_a1637d37496d22236ac356d63ced3a67c}{doFindPerson} (unsigned imgNum, IplImage $\ast$src, const vnl\_\-vector$<$ FLOAT $>$ \&imgVec, vnl\_\-vector$<$ FLOAT $>$ \&bgVec, const FLOAT logBGProb, const vnl\_\-vector$<$ FLOAT $>$ \&logSumPixelBGProb)}
+\label{classfindPersonStream_a1637d37496d22236ac356d63ced3a67c}
+
+\begin{DoxyCompactList}\small\item\em Finds all possible locations containing people in a given image. \item\end{DoxyCompactList}\item 
+\hypertarget{classfindPersonStream_aa51b2586e2fc41b010b6d4b1a4c4beb4}{
+void \hyperlink{classfindPersonStream_aa51b2586e2fc41b010b6d4b1a4c4beb4}{plotHull} (IplImage $\ast$img, vector$<$ CvPoint $>$ \&hull)}
+\label{classfindPersonStream_aa51b2586e2fc41b010b6d4b1a4c4beb4}
+
+\begin{DoxyCompactList}\small\item\em Plots the hull indicated by the parameter {\ttfamily hull} on the given image. \item\end{DoxyCompactList}\item 
+\hypertarget{classfindPersonStream_a72cf6436254b05714b2c4064f47bb8f3}{
+void \hyperlink{classfindPersonStream_a72cf6436254b05714b2c4064f47bb8f3}{updateTracks} (unsigned imgNum, const vector$<$ unsigned $>$ \&positions)}
+\label{classfindPersonStream_a72cf6436254b05714b2c4064f47bb8f3}
+
+\begin{DoxyCompactList}\small\item\em Given a set of new positions for a specific image, it assigns the best positions to the tracks. \item\end{DoxyCompactList}\item 
+\hypertarget{classfindPersonStream_ae110e88d8686a64f9acaef610ffdb866}{
+void \hyperlink{classfindPersonStream_ae110e88d8686a64f9acaef610ffdb866}{initStaticProbs} ()}
+\label{classfindPersonStream_ae110e88d8686a64f9acaef610ffdb866}
+
+\begin{DoxyCompactList}\small\item\em Initialize the prior probability over the number of people and the sum of pixels probabilities of the foreground pixels. \item\end{DoxyCompactList}\item 
+\hypertarget{classfindPersonStream_a2be01bae31610ac2b220e7cd2110c090}{
+void \hyperlink{classfindPersonStream_a2be01bae31610ac2b220e7cd2110c090}{computeBGProb} (const vnl\_\-vector$<$ FLOAT $>$ \&img, const vnl\_\-vector$<$ FLOAT $>$ \&bg, vnl\_\-vector$<$ FLOAT $>$ \&sumPixelProb, FLOAT \&total)}
+\label{classfindPersonStream_a2be01bae31610ac2b220e7cd2110c090}
+
+\begin{DoxyCompactList}\small\item\em Computes the sum of background pixels' probabilities for the input image given a background model. \item\end{DoxyCompactList}\item 
+\hypertarget{classfindPersonStream_add3549b9288a1f35499754c8e938a534}{
+void \hyperlink{classfindPersonStream_add3549b9288a1f35499754c8e938a534}{decode\_\-stream} ()}
+\label{classfindPersonStream_add3549b9288a1f35499754c8e938a534}
+
+\begin{DoxyCompactList}\small\item\em Reads frames from an input streams, computes their background model and stores them in the buffer at the index indicated by the {\ttfamily currentIndex}. \item\end{DoxyCompactList}\item 
+\hypertarget{classfindPersonStream_ade2bcd483c68176ec877de1512ea55e6}{
+void \hyperlink{classfindPersonStream_ade2bcd483c68176ec877de1512ea55e6}{synchronous\_\-decode\_\-stream} ()}
+\label{classfindPersonStream_ade2bcd483c68176ec877de1512ea55e6}
+
+\begin{DoxyCompactList}\small\item\em Reads frames from an input streams, computes their background model and stores them in the buffer at the indexes 0 and 1. \item\end{DoxyCompactList}\item 
+\hypertarget{classfindPersonStream_a6f6d1ff94897f3f932c76d532016aa2a}{
+void \hyperlink{classfindPersonStream_a6f6d1ff94897f3f932c76d532016aa2a}{showCopies} ()}
+\label{classfindPersonStream_a6f6d1ff94897f3f932c76d532016aa2a}
+
+\begin{DoxyCompactList}\small\item\em Read the image at the index {\ttfamily currentIndex} from the buffer and \char`\"{}consumes\char`\"{} the image by storing it as the currently processed image and displaying its background model. \item\end{DoxyCompactList}\item 
+\hypertarget{classfindPersonStream_a95f10ceda3a2c431e9f7ef666fcdb33a}{
+void \hyperlink{classfindPersonStream_a95f10ceda3a2c431e9f7ef666fcdb33a}{trackPeople} ()}
+\label{classfindPersonStream_a95f10ceda3a2c431e9f7ef666fcdb33a}
+
+\begin{DoxyCompactList}\small\item\em Read the image from the buffer at the position indicated by {\ttfamily currentIndex} \char`\"{}consumes\char`\"{} the image by finding people's locations in the image and building the background model if needed. \item\end{DoxyCompactList}\item 
+\hypertarget{classfindPersonStream_ab5d313e592f412ed1539af7ee2539bf8}{
+void \hyperlink{classfindPersonStream_ab5d313e592f412ed1539af7ee2539bf8}{synchronous\_\-trackPeople} ()}
+\label{classfindPersonStream_ab5d313e592f412ed1539af7ee2539bf8}
+
+\begin{DoxyCompactList}\small\item\em It processed the images from the buffer as follows: it first reads the image on the position 0 in the buffer and processes it by finding people in it and building the background model if needed and then it does the same thing for the image on position 1 in the buffer. \item\end{DoxyCompactList}\item 
+int \hyperlink{classfindPersonStream_ac1f545534cdaab9094198a5dc2c2a79f}{run} (int argc, char $\ast$$\ast$argv)
+\begin{DoxyCompactList}\small\item\em Tracks people in a video stream using a buffer in which it stores the frames that were not yet processed. \item\end{DoxyCompactList}\end{DoxyCompactItemize}
+\subsection*{Data Fields}
+\begin{DoxyCompactItemize}
+\item 
+\hypertarget{classfindPersonStream_ae8b515cceb310a575b6c2677ba93ea7e}{
+\hyperlink{structImage__t}{Image\_\-t} $\ast$ \hyperlink{classfindPersonStream_ae8b515cceb310a575b6c2677ba93ea7e}{current}}
+\label{classfindPersonStream_ae8b515cceb310a575b6c2677ba93ea7e}
+
+\begin{DoxyCompactList}\small\item\em An instance of the structure {\ttfamily \hyperlink{structImage__t}{Image\_\-t}} containing the currently processed image. \item\end{DoxyCompactList}\item 
+\hypertarget{classfindPersonStream_a74991cfaebd95fe07277e343f45a8ee5}{
+\hyperlink{structImage__t}{Image\_\-t} \hyperlink{classfindPersonStream_a74991cfaebd95fe07277e343f45a8ee5}{buffers} \mbox{[}2\mbox{]}}
+\label{classfindPersonStream_a74991cfaebd95fe07277e343f45a8ee5}
+
+\begin{DoxyCompactList}\small\item\em A buffer containing 2 instances of the {\ttfamily \hyperlink{structImage__t}{Image\_\-t}}. \item\end{DoxyCompactList}\item 
+\hypertarget{classfindPersonStream_a8bc98f0867f04d66bd76205fa7c9efad}{
+int \hyperlink{classfindPersonStream_a8bc98f0867f04d66bd76205fa7c9efad}{currentIndex}}
+\label{classfindPersonStream_a8bc98f0867f04d66bd76205fa7c9efad}
+
+\begin{DoxyCompactList}\small\item\em The current index of the buffer in which the \char`\"{}decoded\char`\"{} images are stored. \item\end{DoxyCompactList}\item 
+\hypertarget{classfindPersonStream_a3766834d17306ee096a69ab07c430d8f}{
+boost::mutex \hyperlink{classfindPersonStream_a3766834d17306ee096a69ab07c430d8f}{imgProtect}}
+\label{classfindPersonStream_a3766834d17306ee096a69ab07c430d8f}
+
+\begin{DoxyCompactList}\small\item\em A mutex to control the access to the buffer when images are written there. \item\end{DoxyCompactList}\item 
+\hypertarget{classfindPersonStream_ac826e3afc1d969f6b91917397d161cc3}{
+boost::mutex \hyperlink{classfindPersonStream_ac826e3afc1d969f6b91917397d161cc3}{mutexA}}
+\label{classfindPersonStream_ac826e3afc1d969f6b91917397d161cc3}
+
+\begin{DoxyCompactList}\small\item\em A {\ttfamily mutex} to control the writing to the buffer in the synchronous case (when images are written on positions 1 and 0 of the buffer). \item\end{DoxyCompactList}\item 
+\hypertarget{classfindPersonStream_a7d2423f1bab03570005e017cfbd4e4de}{
+boost::mutex \hyperlink{classfindPersonStream_a7d2423f1bab03570005e017cfbd4e4de}{mutexB}}
+\label{classfindPersonStream_a7d2423f1bab03570005e017cfbd4e4de}
+
+\begin{DoxyCompactList}\small\item\em A {\ttfamily mutex} to control the writing to the buffer in the synchronous case (when images are written on positions 1 and 0 of the buffer). \item\end{DoxyCompactList}\item 
+\hypertarget{classfindPersonStream_a1a015fe02c9cea18a5cf62656e257c97}{
+bool \hyperlink{classfindPersonStream_a1a015fe02c9cea18a5cf62656e257c97}{running}}
+\label{classfindPersonStream_a1a015fe02c9cea18a5cf62656e257c97}
+
+\begin{DoxyCompactList}\small\item\em Indicates if the {\ttfamily producer} of the class {\ttfamily \hyperlink{classImgProducer}{ImgProducer}} is running (reading frames, computing their background model and storing them in the buffer). \item\end{DoxyCompactList}\item 
+\hypertarget{classfindPersonStream_aec055f0327e33fda5d4bd181196bdadd}{
+vector$<$ FLOAT $>$ \hyperlink{classfindPersonStream_aec055f0327e33fda5d4bd181196bdadd}{logNumPrior}}
+\label{classfindPersonStream_aec055f0327e33fda5d4bd181196bdadd}
+
+\begin{DoxyCompactList}\small\item\em Represents a prior over the number of people in a frame. \item\end{DoxyCompactList}\item 
+\hypertarget{classfindPersonStream_a5d52c2b63e66543818c04c097fe6ae3f}{
+vector$<$ CvPoint $>$ \hyperlink{classfindPersonStream_a5d52c2b63e66543818c04c097fe6ae3f}{priorHull}}
+\label{classfindPersonStream_a5d52c2b63e66543818c04c097fe6ae3f}
+
+\begin{DoxyCompactList}\small\item\em A prior probability over the shape of the hull for the position of a person. \item\end{DoxyCompactList}\item 
+\hypertarget{classfindPersonStream_a3ef28bb668b8c7fa599838e65c9f7796}{
+int \hyperlink{classfindPersonStream_a3ef28bb668b8c7fa599838e65c9f7796}{waitTime}}
+\label{classfindPersonStream_a3ef28bb668b8c7fa599838e65c9f7796}
+
+\begin{DoxyCompactList}\small\item\em The time the process will wait for a key to be pressed. \item\end{DoxyCompactList}\item 
+\hypertarget{classfindPersonStream_a07b7f59f003c8581fca9c1ef6d7fac33}{
+\hyperlink{classImgProducer}{ImgProducer} $\ast$ \hyperlink{classfindPersonStream_a07b7f59f003c8581fca9c1ef6d7fac33}{producer}}
+\label{classfindPersonStream_a07b7f59f003c8581fca9c1ef6d7fac33}
+
+\begin{DoxyCompactList}\small\item\em A pointer to the class {\ttfamily \hyperlink{classImgProducer}{ImgProducer}}. \item\end{DoxyCompactList}\item 
+\hypertarget{classfindPersonStream_a337c4cd7f149bc0c775c244d75ed9293}{
+vnl\_\-vector$<$ FLOAT $>$ \hyperlink{classfindPersonStream_a337c4cd7f149bc0c775c244d75ed9293}{logLocPrior}}
+\label{classfindPersonStream_a337c4cd7f149bc0c775c244d75ed9293}
+
+\begin{DoxyCompactList}\small\item\em It is a vector storing the log-\/probabilities representing the location priors. \item\end{DoxyCompactList}\item 
+\hypertarget{classfindPersonStream_a5dba19cc173c5e14c312c82893407051}{
+vnl\_\-vector$<$ FLOAT $>$ \hyperlink{classfindPersonStream_a5dba19cc173c5e14c312c82893407051}{logSumPixelFGProb}}
+\label{classfindPersonStream_a5dba19cc173c5e14c312c82893407051}
+
+\begin{DoxyCompactList}\small\item\em The sum of log-\/probabilities for the pixels being foreground. \item\end{DoxyCompactList}\item 
+\hypertarget{classfindPersonStream_a0fa099d5bc4bb08195c1d4b0cd2d3f00}{
+vector$<$ \hyperlink{structtrack__t}{track\_\-t} $>$ \hyperlink{classfindPersonStream_a0fa099d5bc4bb08195c1d4b0cd2d3f00}{tracks}}
+\label{classfindPersonStream_a0fa099d5bc4bb08195c1d4b0cd2d3f00}
+
+\begin{DoxyCompactList}\small\item\em A vector of structures storing the tracking information. \item\end{DoxyCompactList}\item 
+\hypertarget{classfindPersonStream_a8cc2e7240164328fdc3f0e5e21032c56}{
+unsigned \hyperlink{classfindPersonStream_a8cc2e7240164328fdc3f0e5e21032c56}{N}}
+\label{classfindPersonStream_a8cc2e7240164328fdc3f0e5e21032c56}
+
+\begin{DoxyCompactList}\small\item\em The maximum number of images to be stored in the vector used for building the background model. \item\end{DoxyCompactList}\item 
+\hypertarget{classfindPersonStream_a5d2a001b4866dcbf48866109c6541707}{
+\hyperlink{classBackground}{Background} \hyperlink{classfindPersonStream_a5d2a001b4866dcbf48866109c6541707}{bgModel}}
+\label{classfindPersonStream_a5d2a001b4866dcbf48866109c6541707}
+
+\begin{DoxyCompactList}\small\item\em An instance of the class {\ttfamily \hyperlink{classBackground}{Background}} -\/-\/ used to build the background/foreground model. \item\end{DoxyCompactList}\item 
+\hypertarget{classfindPersonStream_ab8a3060a5d457e6907f73cbbc25ccae0}{
+unsigned long long \hyperlink{classfindPersonStream_ab8a3060a5d457e6907f73cbbc25ccae0}{usec}}
+\label{classfindPersonStream_ab8a3060a5d457e6907f73cbbc25ccae0}
+
+\begin{DoxyCompactList}\small\item\em Stores the current number of seconds and milliseconds. \item\end{DoxyCompactList}\item 
+\hypertarget{classfindPersonStream_adad90fa030af56592ad194a41341ffcd}{
+vector$<$ vector$<$ vector$<$ \hyperlink{structscanline__t}{scanline\_\-t} $>$ $>$ $>$ \hyperlink{classfindPersonStream_adad90fa030af56592ad194a41341ffcd}{masks}}
+\label{classfindPersonStream_adad90fa030af56592ad194a41341ffcd}
+
+\begin{DoxyCompactList}\small\item\em Vector of masks (templates) for human positions. \item\end{DoxyCompactList}\item 
+\hypertarget{classfindPersonStream_ac1b0baa7d4a9b358f4ea4f2b643f174b}{
+CvScalar \hyperlink{classfindPersonStream_ac1b0baa7d4a9b358f4ea4f2b643f174b}{trackCol} \mbox{[}$\,$\mbox{]}}
+\label{classfindPersonStream_ac1b0baa7d4a9b358f4ea4f2b643f174b}
+
+\begin{DoxyCompactList}\small\item\em Colors used for different tracks. \item\end{DoxyCompactList}\end{DoxyCompactItemize}
+
+
+\subsection{Member Function Documentation}
+\hypertarget{classfindPersonStream_ac1f545534cdaab9094198a5dc2c2a79f}{
+\index{findPersonStream@{findPersonStream}!run@{run}}
+\index{run@{run}!findPersonStream@{findPersonStream}}
+\subsubsection[{run}]{\setlength{\rightskip}{0pt plus 5cm}int run (
+\begin{DoxyParamCaption}
+\item[{int}]{ argc, }
+\item[{char $\ast$$\ast$}]{ argv}
+\end{DoxyParamCaption}
+)}}
+\label{classfindPersonStream_ac1f545534cdaab9094198a5dc2c2a79f}
+The input arguments are:
+
+\begin{DoxyItemize}
+\item argv\mbox{[}1\mbox{]} -\/-\/ an stream file from which the frames are read \item argv\mbox{[}2\mbox{]} -\/-\/ a background model or a training set for the background (?) \item argv\mbox{[}3\mbox{]} -\/-\/ calibration data \item argv\mbox{[}4\mbox{]} -\/-\/ location priors and hull priors \end{DoxyItemize}

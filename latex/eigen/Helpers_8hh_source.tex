@@ -1,0 +1,83 @@
+\hypertarget{Helpers_8hh_source}{
+\section{Helpers.hh}
+}
+
+\begin{DoxyCode}
+00001 \textcolor{preprocessor}{#ifndef HELPERS\_HH}
+00002 \textcolor{preprocessor}{}\textcolor{preprocessor}{#define HELPERS\_HH}
+00003 \textcolor{preprocessor}{}
+00004 \textcolor{preprocessor}{#include <vector>}
+00005 \textcolor{preprocessor}{#include <string>}
+00006 \textcolor{preprocessor}{#include <set>}
+00007 \textcolor{preprocessor}{#include <iostream>}
+00008 \textcolor{preprocessor}{#include <opencv/cv.h>}
+00009 \textcolor{preprocessor}{#include "defines.hh"}
+00010 
+00011 \textcolor{keyword}{template} <\textcolor{keyword}{class} T> \textcolor{keyword}{class }vnl\_vector;
+00012 
+00013 \textcolor{preprocessor}{#ifndef HELPERS\_CC}
+00014 \textcolor{preprocessor}{}\textcolor{keyword}{extern} \textcolor{keywordtype}{unsigned} w, w2;
+00015 \textcolor{keyword}{extern} \textcolor{keywordtype}{unsigned} width, height, halfresX, halfresY, camPosX, camPosY;
+00016 \textcolor{keyword}{extern} \textcolor{keywordtype}{int} depth, channels;
+00017 \textcolor{keyword}{extern} \textcolor{keywordtype}{unsigned} scanres;
+00018 \textcolor{keyword}{extern} \textcolor{keywordtype}{float} camHeight, persHeight;
+00019 \textcolor{keyword}{extern} FLOAT stdev, pixelVar, pv2, lpv2;
+00020 \textcolor{keyword}{extern} FLOAT stdev1, pixelVar1, pv2\_1, lpv2\_1;
+00021 \textcolor{keyword}{extern} FLOAT stdev2, pixelVar2, pv2\_2, lpv2\_2;
+00022 \textcolor{keyword}{extern} FLOAT stdev3, pixelVar3, pv2\_3, lpv2\_3;
+00023 \textcolor{preprocessor}{#endif // HELPERS\_CC}
+00024 \textcolor{preprocessor}{}
+00025 
+00026 \textcolor{keywordtype}{void} connectedComponents(std::vector<int> &v);
+00027 \textcolor{keywordtype}{void} connectedComponentsFH(std::vector<int> &v);
+00028 \textcolor{keywordtype}{void} convexHull(\textcolor{keyword}{const} std::vector<CvPoint> &pt, std::vector<CvPoint> &hull);
+00029 \textcolor{keywordtype}{void} genTemplate(\textcolor{keyword}{const} CvPoint &pt, \textcolor{keywordtype}{float} persHeight, \textcolor{keywordtype}{float} camHeight,
+00030                  std::vector<CvPoint> &points);
+00031 \textcolor{keywordtype}{void} plotTemplate(IplImage *img, \textcolor{keyword}{const} CvPoint &pt,
+00032                   \textcolor{keywordtype}{float} persHeight, \textcolor{keywordtype}{float} camHeight, \textcolor{keyword}{const} CvScalar &colour = CV\_
+      RGB(255,255,255));
+00033 \textcolor{keywordtype}{void} genTemplate2(\textcolor{keyword}{const} CvPoint &pt, \textcolor{keywordtype}{float} persHeight, \textcolor{keywordtype}{float} camHeight,
+00034                  std::vector<CvPoint> &points);
+00035 \textcolor{keywordtype}{void} plotTemplate2(IplImage *img, \textcolor{keyword}{const} CvPoint &pt,
+00036                   \textcolor{keywordtype}{float} persHeight, \textcolor{keywordtype}{float} camHeight, \textcolor{keyword}{const} CvScalar &colour = CV\_
+      RGB(255,255,255));
+00037 CvPoint project(\textcolor{keywordtype}{float} x, \textcolor{keywordtype}{float} y, \textcolor{keywordtype}{float} z, \textcolor{keywordtype}{float} camHeight);
+00038 
+00039 \textcolor{keywordtype}{void} getMask(\textcolor{keyword}{const} CvPoint &pos, \textcolor{keywordtype}{float} persHeight, \textcolor{keywordtype}{float} camHeight, std::vector<i
+      nt> &mask);
+00040 \textcolor{keywordtype}{void} getMask(\textcolor{keyword}{const} CvPoint &pos, \textcolor{keywordtype}{float} persHeight, \textcolor{keywordtype}{float} camHeight, std::set<unsi
+      gned> &mask);
+00041 
+\hypertarget{Helpers_8hh_source_l00042}{}\hyperlink{structscanline__t}{00042} \textcolor{keyword}{struct }\hyperlink{structscanline__t}{scanline_t} \{
+00043      \textcolor{keywordtype}{unsigned} line, start, end;
+00044 \};
+00045 std::ostream &operator<<(std::ostream &os, \textcolor{keyword}{const} \hyperlink{structscanline__t}{scanline_t} &l);
+00046 \textcolor{keywordtype}{void} getMask(\textcolor{keyword}{const} CvPoint &pos, \textcolor{keywordtype}{float} persHeight, \textcolor{keywordtype}{float} camHeight, std::vector<s
+      canline\_t> &mask);
+00047 \textcolor{keywordtype}{void} mergeMasks(std::vector<scanline\_t> &v1, std::vector<scanline\_t> &v2);
+00048 \textcolor{keywordtype}{void} mergeMasksRest(std::vector<scanline\_t> &v1, std::vector<scanline\_t> &v2);
+00049 \textcolor{keywordtype}{bool} masksOverlap(\textcolor{keyword}{const} std::vector<scanline\_t> &m1, \textcolor{keyword}{const} std::vector<scanline\_t
+      > &m2);
+00050 
+00051 CvPoint toCam(CvPoint p);
+00052 CvPoint toImg(CvPoint p);
+00053 \textcolor{keywordtype}{void} listImages(\textcolor{keyword}{const} \textcolor{keywordtype}{char} *list, std::vector<std::string> &imgs);
+00054 \textcolor{keywordtype}{void} listImages(\textcolor{keyword}{const} \textcolor{keywordtype}{char} *list, std::vector< std::vector<std::string> > &imgs);
+      
+00055 \textcolor{keywordtype}{void} listImages(\textcolor{keyword}{const} \textcolor{keywordtype}{char} *list, std::vector<std::string> &imgs,std::vector<doub
+      le> &tstamps);
+00056 \textcolor{keywordtype}{void} applyMask(IplImage *img, \textcolor{keyword}{const} std::vector<int> &mask);
+00057 \textcolor{keywordtype}{float} loadPriorHull(\textcolor{keyword}{const} \textcolor{keywordtype}{char} *file, std::vector<CvPoint> &polygon);
+00058 \textcolor{keywordtype}{float} loadPrior(\textcolor{keyword}{const} \textcolor{keywordtype}{char} *file, std::vector<scanline\_t> &prior);
+00059 \textcolor{keywordtype}{void} loadPrior(\textcolor{keyword}{const} \textcolor{keywordtype}{char} *file, vnl\_vector<FLOAT> &prior);
+00060 \textcolor{keywordtype}{void} plotScanLines(IplImage *img, \textcolor{keyword}{const} std::vector<scanline\_t> &mask, \textcolor{keyword}{const} CvSc
+      alar &colour, \textcolor{keywordtype}{double} alpha);
+00061 
+00062 IplImage *vec2img(\textcolor{keyword}{const} vnl\_vector<FLOAT> &v);
+00063 \textcolor{keywordtype}{void} img2vec(\textcolor{keyword}{const} IplImage *img, vnl\_vector<FLOAT> &v);
+00064 
+00065 \textcolor{keywordtype}{void} saveCalibration(\textcolor{keyword}{const} \textcolor{keywordtype}{char} *fileName);
+00066 \textcolor{keywordtype}{void} loadCalibration(\textcolor{keyword}{const} \textcolor{keywordtype}{char} *fileName);
+00067 
+00068 \textcolor{preprocessor}{#endif  // HELPERS\_HH}
+\end{DoxyCode}

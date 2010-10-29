@@ -1,0 +1,184 @@
+\hypertarget{classfindperson}{
+\section{findperson Class Reference}
+\label{classfindperson}\index{findperson@{findperson}}
+}
+
+
+Class used for tracking/finding people in the input images.  
+
+
+\subsection*{Public Member Functions}
+\begin{DoxyCompactItemize}
+\item 
+\hypertarget{classfindperson_a4904516fd58fc28bf0acf8cc876e80eb}{
+{\bfseries findperson} (unsigned nVal)}
+\label{classfindperson_a4904516fd58fc28bf0acf8cc876e80eb}
+
+\item 
+\hypertarget{classfindperson_adad9d68d77b07e9fe42a0bafd02afa08}{
+void \hyperlink{classfindperson_adad9d68d77b07e9fe42a0bafd02afa08}{stic} ()}
+\label{classfindperson_adad9d68d77b07e9fe42a0bafd02afa08}
+
+\begin{DoxyCompactList}\small\item\em Initializes {\ttfamily usec} to the current value -\/-\/ starts the timer. \item\end{DoxyCompactList}\item 
+\hypertarget{classfindperson_ae8e079ae9b7283ccefaea08319f56ec0}{
+unsigned long long \hyperlink{classfindperson_ae8e079ae9b7283ccefaea08319f56ec0}{stoc} ()}
+\label{classfindperson_ae8e079ae9b7283ccefaea08319f56ec0}
+
+\begin{DoxyCompactList}\small\item\em Shows the number of milliseconds passed since the timer was started. \item\end{DoxyCompactList}\item 
+\hypertarget{classfindperson_aa2c5a86f3ed1ca84dbdc5099c896d5a6}{
+FLOAT \hyperlink{classfindperson_aa2c5a86f3ed1ca84dbdc5099c896d5a6}{logGaus} (FLOAT sqDiff)}
+\label{classfindperson_aa2c5a86f3ed1ca84dbdc5099c896d5a6}
+
+\begin{DoxyCompactList}\small\item\em Return the log-\/gaussian value for the input. \item\end{DoxyCompactList}\item 
+\hypertarget{classfindperson_a85a42b9ecddf18a17d67d9a484570c09}{
+void \hyperlink{classfindperson_a85a42b9ecddf18a17d67d9a484570c09}{showImage} (const char $\ast$win, const vnl\_\-vector$<$ FLOAT $>$ \&v)}
+\label{classfindperson_a85a42b9ecddf18a17d67d9a484570c09}
+
+\begin{DoxyCompactList}\small\item\em Converts the given image to the RGB color (CV\_\-Luv2BGR) and displays it. \item\end{DoxyCompactList}\item 
+\hypertarget{classfindperson_a75c79495f6bea5917afce73830352a4c}{
+void \hyperlink{classfindperson_a75c79495f6bea5917afce73830352a4c}{buildMasks} ()}
+\label{classfindperson_a75c79495f6bea5917afce73830352a4c}
+
+\begin{DoxyCompactList}\small\item\em Initializes the variable {\ttfamily masks} with a corresponding mask centered at each pixel in the image. \item\end{DoxyCompactList}\item 
+\hypertarget{classfindperson_aba30f91bb709a9ed247c80f3a4c827d5}{
+FLOAT \hyperlink{classfindperson_aba30f91bb709a9ed247c80f3a4c827d5}{logMaskProbDiff} (const vector$<$ \hyperlink{structscanline__t}{scanline\_\-t} $>$ \&(mask))}
+\label{classfindperson_aba30f91bb709a9ed247c80f3a4c827d5}
+
+\begin{DoxyCompactList}\small\item\em For each pixel in the given mask computes the difference between the probability of that pixel being foreground and that pixel being background. \item\end{DoxyCompactList}\item 
+\hypertarget{classfindperson_ab92a2618bc71cef02194adb24833c0b3}{
+FLOAT \hyperlink{classfindperson_ab92a2618bc71cef02194adb24833c0b3}{logMaskProb} (FLOAT bgSum, const vector$<$ \hyperlink{structscanline__t}{scanline\_\-t} $>$ \&mask)}
+\label{classfindperson_ab92a2618bc71cef02194adb24833c0b3}
+
+\begin{DoxyCompactList}\small\item\em Computes the difference between the sum of pixels probabilities for foreground and the sum of pixel probabilities for background. \item\end{DoxyCompactList}\item 
+\hypertarget{classfindperson_aaf033810455a87eb5f32cfed75b5519e}{
+bool \hyperlink{classfindperson_aaf033810455a87eb5f32cfed75b5519e}{overlap} (const vector$<$ unsigned $>$ \&existing, int x, int y)}
+\label{classfindperson_aaf033810455a87eb5f32cfed75b5519e}
+
+\begin{DoxyCompactList}\small\item\em Checks to see if two ground planes of a new mask and another existing mask overlap. \item\end{DoxyCompactList}\item 
+\hypertarget{classfindperson_a8611da54df0f3123597e5b09864e52ea}{
+void \hyperlink{classfindperson_a8611da54df0f3123597e5b09864e52ea}{scanRest} (vector$<$ unsigned $>$ \&existing, vector$<$ \hyperlink{structscanline__t}{scanline\_\-t} $>$ \&existingMask, unsigned res, const vector$<$ FLOAT $>$ \&logNumPrior, vector$<$ vnl\_\-vector$<$ FLOAT $>$ $>$ \&logPosProb, vector$<$ FLOAT $>$ \&marginal, FLOAT \&lSum)}
+\label{classfindperson_a8611da54df0f3123597e5b09864e52ea}
+
+\begin{DoxyCompactList}\small\item\em Recursively scan the image for a number of existing people that can be in the image; it chooses the location that increases the likelihood taking into account the existing positions. \item\end{DoxyCompactList}\item 
+\hypertarget{classfindperson_a9692104f77f753a47ee46486f33ca66c}{
+void \hyperlink{classfindperson_a9692104f77f753a47ee46486f33ca66c}{scanArea} (unsigned x1, unsigned y1, unsigned x2, unsigned y2, unsigned res, vnl\_\-vector$<$ FLOAT $>$ \&logPosProb, cv::Point \&bestPoint, FLOAT \&lSum)}
+\label{classfindperson_a9692104f77f753a47ee46486f33ca66c}
+
+\begin{DoxyCompactList}\small\item\em Searches for the positions in a given window \mbox{[}x1,x2,y1,y2\mbox{]} for the best position. \item\end{DoxyCompactList}\item 
+\hypertarget{classfindperson_ac8da170ee071392aeef5385795d4bc3e}{
+cv::Point \hyperlink{classfindperson_ac8da170ee071392aeef5385795d4bc3e}{cvPoint} (unsigned pos)}
+\label{classfindperson_ac8da170ee071392aeef5385795d4bc3e}
+
+\begin{DoxyCompactList}\small\item\em Returns an Opencv point corresponding to the position with $ x = (x mod width)$ and $ y = (y div width)$. \item\end{DoxyCompactList}\item 
+\hypertarget{classfindperson_a400f30b8f239fae9c9b767fb6ecc1d3f}{
+FLOAT \hyperlink{classfindperson_a400f30b8f239fae9c9b767fb6ecc1d3f}{dist} (const CvPoint \&p1, const CvPoint \&p2)}
+\label{classfindperson_a400f30b8f239fae9c9b767fb6ecc1d3f}
+
+\begin{DoxyCompactList}\small\item\em Computes the euclidean distance between two points. \item\end{DoxyCompactList}\item 
+\hypertarget{classfindperson_a2de4b333ccb9d7ef8251bb9e37cc1b67}{
+void \hyperlink{classfindperson_a2de4b333ccb9d7ef8251bb9e37cc1b67}{computeStats} (vnl\_\-vector$<$ FLOAT $>$ \&img, const CvPoint \&pos, FLOAT \&sumR, FLOAT \&sumR2, FLOAT \&sumG, FLOAT \&sumG2, FLOAT \&sumB, FLOAT \&sumB2, FLOAT \&nPixels)}
+\label{classfindperson_a2de4b333ccb9d7ef8251bb9e37cc1b67}
+
+\begin{DoxyCompactList}\small\item\em For a given image and a position computes the sum of the pixel values in the corresponding mask for all 3 channels (R,G,B) and the squared sum of these values. \item\end{DoxyCompactList}\item 
+\hypertarget{classfindperson_abbe593e6141fbed267f5c2cac102edfe}{
+void \hyperlink{classfindperson_abbe593e6141fbed267f5c2cac102edfe}{plotTrack} (IplImage $\ast$img, const \hyperlink{structtrack__t}{track\_\-t} \&t, const unsigned idx, unsigned w)}
+\label{classfindperson_abbe593e6141fbed267f5c2cac102edfe}
+
+\begin{DoxyCompactList}\small\item\em Function that plots the tracks from the tracking structure in the image. \item\end{DoxyCompactList}\item 
+\hypertarget{classfindperson_a9caac1c8c591b735d97d7346f3e33232}{
+void \hyperlink{classfindperson_a9caac1c8c591b735d97d7346f3e33232}{doFindPerson} (IplImage $\ast$src)}
+\label{classfindperson_a9caac1c8c591b735d97d7346f3e33232}
+
+\begin{DoxyCompactList}\small\item\em Finds all possible locations containing people in a given image. \item\end{DoxyCompactList}\item 
+int \hyperlink{classfindperson_ac1f545534cdaab9094198a5dc2c2a79f}{run} (int argc, char $\ast$$\ast$argv)
+\begin{DoxyCompactList}\small\item\em Runs the person finder. \item\end{DoxyCompactList}\end{DoxyCompactItemize}
+\subsection*{Data Fields}
+\begin{DoxyCompactItemize}
+\item 
+\hypertarget{classfindperson_a337c4cd7f149bc0c775c244d75ed9293}{
+vnl\_\-vector$<$ FLOAT $>$ \hyperlink{classfindperson_a337c4cd7f149bc0c775c244d75ed9293}{logLocPrior}}
+\label{classfindperson_a337c4cd7f149bc0c775c244d75ed9293}
+
+\begin{DoxyCompactList}\small\item\em It is a vector storing the log-\/probabilities representing the location priors. \item\end{DoxyCompactList}\item 
+\hypertarget{classfindperson_ada03328a9187736162c7277d89ef159e}{
+vector$<$ double $>$ \hyperlink{classfindperson_ada03328a9187736162c7277d89ef159e}{timestamps}}
+\label{classfindperson_ada03328a9187736162c7277d89ef159e}
+
+\begin{DoxyCompactList}\small\item\em A vector containing the time-\/stamps of the images. \item\end{DoxyCompactList}\item 
+\hypertarget{classfindperson_ac150111bafc331bafb353619452c5c5c}{
+vector$<$ vector$<$ unsigned long long $>$ $>$ \hyperlink{classfindperson_ac150111bafc331bafb353619452c5c5c}{times}}
+\label{classfindperson_ac150111bafc331bafb353619452c5c5c}
+
+\begin{DoxyCompactList}\small\item\em Stores the number of milliseconds needed to detect a a number of people. \item\end{DoxyCompactList}\item 
+\hypertarget{classfindperson_adf313582371b7197c79848aa871c700b}{
+vnl\_\-vector$<$ FLOAT $>$ \hyperlink{classfindperson_adf313582371b7197c79848aa871c700b}{logBGProb}}
+\label{classfindperson_adf313582371b7197c79848aa871c700b}
+
+\begin{DoxyCompactList}\small\item\em A vector containing the log-\/probabilities for the pixels being background. \item\end{DoxyCompactList}\item 
+\hypertarget{classfindperson_a7d55fe31445fcd7529814d4e5e1ec3ff}{
+vnl\_\-vector$<$ FLOAT $>$ \hyperlink{classfindperson_a7d55fe31445fcd7529814d4e5e1ec3ff}{logSumPixelBGProb}}
+\label{classfindperson_a7d55fe31445fcd7529814d4e5e1ec3ff}
+
+\begin{DoxyCompactList}\small\item\em The sum of log-\/probabilities for the pixels being background. \item\end{DoxyCompactList}\item 
+\hypertarget{classfindperson_a39e4b4bd141cd13605991d3c30976431}{
+vnl\_\-vector$<$ FLOAT $>$ \hyperlink{classfindperson_a39e4b4bd141cd13605991d3c30976431}{logFGProb}}
+\label{classfindperson_a39e4b4bd141cd13605991d3c30976431}
+
+\begin{DoxyCompactList}\small\item\em Log-\/probabilities for the pixels in the image being foreground. \item\end{DoxyCompactList}\item 
+\hypertarget{classfindperson_a5dba19cc173c5e14c312c82893407051}{
+vnl\_\-vector$<$ FLOAT $>$ \hyperlink{classfindperson_a5dba19cc173c5e14c312c82893407051}{logSumPixelFGProb}}
+\label{classfindperson_a5dba19cc173c5e14c312c82893407051}
+
+\begin{DoxyCompactList}\small\item\em The sum of log-\/probabilities for the pixels being foreground. \item\end{DoxyCompactList}\item 
+\hypertarget{classfindperson_af4f2a0cd670f95418534a9678456c2e3}{
+\hyperlink{structparameter__t}{parameter\_\-t} \hyperlink{classfindperson_af4f2a0cd670f95418534a9678456c2e3}{paramT}}
+\label{classfindperson_af4f2a0cd670f95418534a9678456c2e3}
+
+\begin{DoxyCompactList}\small\item\em A structure containing a pointer to an {\ttfamily IplImage}. \item\end{DoxyCompactList}\item 
+\hypertarget{classfindperson_a0fa099d5bc4bb08195c1d4b0cd2d3f00}{
+vector$<$ \hyperlink{structtrack__t}{track\_\-t} $>$ \hyperlink{classfindperson_a0fa099d5bc4bb08195c1d4b0cd2d3f00}{tracks}}
+\label{classfindperson_a0fa099d5bc4bb08195c1d4b0cd2d3f00}
+
+\begin{DoxyCompactList}\small\item\em A vector of structures storing the tracking information. \item\end{DoxyCompactList}\item 
+\hypertarget{classfindperson_a8cc2e7240164328fdc3f0e5e21032c56}{
+unsigned \hyperlink{classfindperson_a8cc2e7240164328fdc3f0e5e21032c56}{N}}
+\label{classfindperson_a8cc2e7240164328fdc3f0e5e21032c56}
+
+\begin{DoxyCompactList}\small\item\em The maximum number of images to be stored in the vector used for building the background model. \item\end{DoxyCompactList}\item 
+\hypertarget{classfindperson_a5d2a001b4866dcbf48866109c6541707}{
+\hyperlink{classBackground}{Background} \hyperlink{classfindperson_a5d2a001b4866dcbf48866109c6541707}{bgModel}}
+\label{classfindperson_a5d2a001b4866dcbf48866109c6541707}
+
+\begin{DoxyCompactList}\small\item\em An instance of the class {\ttfamily \hyperlink{classBackground}{Background}} -\/-\/ used to build the background/foreground model. \item\end{DoxyCompactList}\item 
+\hypertarget{classfindperson_ab8a3060a5d457e6907f73cbbc25ccae0}{
+unsigned long long \hyperlink{classfindperson_ab8a3060a5d457e6907f73cbbc25ccae0}{usec}}
+\label{classfindperson_ab8a3060a5d457e6907f73cbbc25ccae0}
+
+\begin{DoxyCompactList}\small\item\em Stores the current number of seconds and milliseconds. \item\end{DoxyCompactList}\item 
+\hypertarget{classfindperson_adad90fa030af56592ad194a41341ffcd}{
+vector$<$ vector$<$ vector$<$ \hyperlink{structscanline__t}{scanline\_\-t} $>$ $>$ $>$ \hyperlink{classfindperson_adad90fa030af56592ad194a41341ffcd}{masks}}
+\label{classfindperson_adad90fa030af56592ad194a41341ffcd}
+
+\begin{DoxyCompactList}\small\item\em Vector of masks (templates) for human positions. \item\end{DoxyCompactList}\item 
+\hypertarget{classfindperson_ac1b0baa7d4a9b358f4ea4f2b643f174b}{
+CvScalar \hyperlink{classfindperson_ac1b0baa7d4a9b358f4ea4f2b643f174b}{trackCol} \mbox{[}$\,$\mbox{]}}
+\label{classfindperson_ac1b0baa7d4a9b358f4ea4f2b643f174b}
+
+\begin{DoxyCompactList}\small\item\em Colors used for finding people. \item\end{DoxyCompactList}\end{DoxyCompactItemize}
+
+
+\subsection{Member Function Documentation}
+\hypertarget{classfindperson_ac1f545534cdaab9094198a5dc2c2a79f}{
+\index{findperson@{findperson}!run@{run}}
+\index{run@{run}!findperson@{findperson}}
+\subsubsection[{run}]{\setlength{\rightskip}{0pt plus 5cm}int run (
+\begin{DoxyParamCaption}
+\item[{int}]{ argc, }
+\item[{char $\ast$$\ast$}]{ argv}
+\end{DoxyParamCaption}
+)}}
+\label{classfindperson_ac1f545534cdaab9094198a5dc2c2a79f}
+The arguments that need to be given are:
+
+\begin{DoxyItemize}
+\item argv\mbox{[}1\mbox{]} -\/-\/ an xml file containing the background model \item argv\mbox{[}2\mbox{]} -\/-\/ a file containing a list of image names \item argv\mbox{[}3\mbox{]} -\/-\/ location priors \item argv\mbox{[}4\mbox{]} -\/-\/ calibration data \item argv\mbox{[}5\mbox{]} -\/-\/ the file name for the output information \end{DoxyItemize}

@@ -19,7 +19,7 @@ using namespace std;
  */
 annotationsHandle::POSE operator++(annotationsHandle::POSE &refPose, int){
 	annotationsHandle::POSE oldPose = refPose;
-	refPose                       = (annotationsHandle::POSE)(refPose + 1);
+	refPose                         = (annotationsHandle::POSE)(refPose + 1);
 	return oldPose;
 }
 
@@ -148,7 +148,7 @@ void annotationsHandle::trackbar_callback(int position,void *param){
 /** Starts the annotation of the images. The parameters that need to be indicated
  * are:
  *
- * \li argv[1] -- the file contains the list of image names (relative paths)
+ * \li argv[1] -- name of directory containing the images
  * \li argv[2] -- the file contains the calibration data of the camera
  * \li argv[3] -- the file in which the annotation data needs to be stored
  */
@@ -156,7 +156,7 @@ int annotationsHandle::runAnn(int argc, char **argv){
 	choice = 'c';
 	if(argc != 4){
 		cerr<<"usage: ./annotatepos <img_list.txt> <calib.xml> <annotation.txt>\n"<< \
-		"<img_list.txt>    => the file contains the list of image names (relative paths)\n"<< \
+		"<img_directory>   => name of directory containing the images\n"<< \
 		"<calib.xml>       => the file contains the calibration data of the camera\n"<< \
 		"<annotations.txt> => the file in which the annotation data needs to be stored\n"<<endl;
 		exit(-1);
@@ -165,17 +165,15 @@ int annotationsHandle::runAnn(int argc, char **argv){
 		"> press 'q' to quite before all the images are annotated;\n"<< \
 		"> press 's' to save the annotations for the current image and go to the next one;\n"<<endl;
 	}
-	unsigned index = 0;
-	vector<string> imgs;
-	listImages(argv[1],imgs);
-	IplImage *src = cvLoadImage(imgs[index].c_str());
+	unsigned index      = 0;
+	vector<string> imgs = readImages(argv[1]);
 	loadCalibration(argv[2]);
 
 	// set the handler of the mouse events to the method: <<mouseHandler>>
-	image = src;
+	image = cvLoadImage(imgs[index].c_str());
 	cv::namedWindow("image");
 	cvSetMouseCallback("image", mouseHandlerAnn, NULL);
-	cv::imshow("image", src);
+	cv::imshow("image", image);
 
 	// used to write the output stream to a file given in <<argv[3]>>
 	ofstream
@@ -221,22 +219,21 @@ int annotationsHandle::runAnn(int argc, char **argv){
 				imgs[index].substr(imgs[index].rfind("/")+1)\
 				<<" were successfully saved!"<<endl;
 			annotations.clear();
-			cvReleaseImage(&src);
+			cvReleaseImage(&image);
 
 			// load the next image or break if it is the last one
 			index++;
 			if(index==imgs.size()){
 				break;
 			}
-			src = cvLoadImage(imgs[index].c_str());
-			image = src;
-			cv::imshow("image", src);
+			image = cvLoadImage(imgs[index].c_str());
+			cv::imshow("image", image);
 		}else if(isalpha(key)){
 			cout<<"key pressed >>> "<<(char)key<<"["<<key<<"]"<<endl;
 		}
 	}
 	cout<<"Thank you for your time ;)!"<<endl;
-	cvReleaseImage(&src);
+	cvReleaseImage(&image);
 	return 0;
 }
 

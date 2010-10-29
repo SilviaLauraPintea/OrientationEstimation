@@ -5,6 +5,7 @@
 #include <opencv/highgui.h>
 #include "eigenbackground/src/annotatepos.hh"
 #include "eigenbackground/src/Helpers.hh"
+#include "Auxiliary.h"
 #include <boost/thread.hpp>
 #include <boost/version.hpp>
 #if BOOST_VERSION < 103500
@@ -61,7 +62,7 @@ class annotationsHandle {
 		/** Starts the annotation of the images. The parameters that need to be indicated
 		 * are:
 		 *
-		 * \li argv[1] -- the file contains the list of image names (relative paths)
+		 * \li argv[1] -- name of directory containing the images
 		 * \li argv[2] -- the file contains the calibration data of the camera
 		 * \li argv[3] -- the file in which the annotation data needs to be stored
 		 */
