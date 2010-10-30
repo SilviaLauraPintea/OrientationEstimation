@@ -2,7 +2,7 @@
 
   \item {annotationsHandle}, \hyperpage{1}
     \subitem {runAnn}, \hyperpage{2}
-    \subitem {runEvaluation}, \hyperpage{2}
+    \subitem {runEvaluation}, \hyperpage{3}
   \item {annotationsHandle::ANNOTATION}, \hyperpage{1}
   \item {annotationsHandle::ASSIGNED}, \hyperpage{3}
   \item {annotationsHandle::FULL\_\discretionary {-}{}{}ANNOTATIONS}, 
@@ -13,6 +13,6 @@
   \item {runAnn}
     \subitem {annotationsHandle}, \hyperpage{2}
   \item {runEvaluation}
-    \subitem {annotationsHandle}, \hyperpage{2}
+    \subitem {annotationsHandle}, \hyperpage{3}
 
 \end{theindex}

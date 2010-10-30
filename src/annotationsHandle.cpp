@@ -2,6 +2,7 @@
 #include <iostream>
 #include <fstream>
 #include <string>
+#include <cmath>
 #include <opencv/cv.h>
 #include <exception>
 #include <opencv/highgui.h>
@@ -62,6 +63,30 @@ void annotationsHandle::mouseHandlerAnn(int event, int x, int y, int flags, void
 	}
 }
 
+/** Shows how the selected orientation looks on the image.
+ */
+void annotationsHandle::drawOrientation(cv::Point center, unsigned int orient){
+	unsigned int length = 70;
+	double angle = (M_PI * orient)/180;
+	cv::Point point1;
+	point1.x = center.x - length * cos(angle);
+	point1.y = center.y + length * sin(angle);
+
+	cv::Point point2;
+	point2.x = center.x - length * cos(angle + M_PI);
+	point2.y = center.y + length * sin(angle + M_PI);
+
+	cv::Size imgSize(image->width,image->height);
+	cv::clipLine(imgSize,point1,point2);
+
+	cv::Mat tmpImage(cvCloneImage(image));
+	cv::line(tmpImage,point1,point2,cv::Scalar(100,225,0),2,8,0);
+	cv::circle(tmpImage,point1,3,cv::Scalar(200,155,0),2,8,0);
+	cv::circle(tmpImage,center,1,cv::Scalar(255,50,0),1,8,0);
+	cv::imshow("image", tmpImage);
+}
+
+
 /** Draws the "menu" of possible poses for the current position.
  */
 void annotationsHandle::showMenu(cv::Point center){
@@ -115,6 +140,12 @@ void annotationsHandle::trackBarHandleFct(int position,void *param){
 			lastAnno.poses.push_back(0);
 		}
 	}
+
+	//draw the orientation to see it
+	if((POSE)(*ii)==ORIENTATION){
+		drawOrientation(lastAnno.location, position);
+	}
+
 	try{
 		lastAnno.poses.at(*ii) = position;
 	}catch (std::exception &e){
@@ -504,6 +535,6 @@ IplImage *annotationsHandle::image;
 vector<annotationsHandle::ANNOTATION> annotationsHandle::annotations;
 
 int main(int argc, char **argv){
-	//annotationsHandle::runAnn(argc,argv);
-	annotationsHandle::runEvaluation(argc,argv);
+	annotationsHandle::runAnn(argc,argv);
+	//annotationsHandle::runEvaluation(argc,argv);
 }

@@ -1,6 +1,7 @@
 #ifndef ANNOTATIONSHANDLE_H_
 #define ANNOTATIONSHANDLE_H_
 #include <iostream>
+#include <cmath>
 #include <opencv/cv.h>
 #include <opencv/highgui.h>
 #include "eigenbackground/src/annotatepos.hh"
@@ -111,6 +112,10 @@ class annotationsHandle {
 		 * \li argv[2] -- test file with predicted annotations;
 		 */
 		static int runEvaluation(int argc, char **argv);
+
+		/** Shows how the selected orientation looks on the image.
+		 */
+		static void drawOrientation(cv::Point center, unsigned int orient);
 	private:
 		/** @var image
 		 * The currently processed image.

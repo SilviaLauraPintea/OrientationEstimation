@@ -1,4 +1,4 @@
-This is pdfTeX, Version 3.1415926-1.40.10 (TeX Live 2009/Debian) (format=pdflatex 2010.9.1)  29 OCT 2010 21:35
+This is pdfTeX, Version 3.1415926-1.40.10 (TeX Live 2009/Debian) (format=pdflatex 2010.9.1)  30 OCT 2010 19:38
 entering extended mode
  restricted \write18 enabled.
  %&-line parsing enabled.
@@ -746,31 +746,31 @@ LaTeX Font Info:    Overwriting math alphabet `\mathit' in version `kurierbold'
 ) (./refman.aux)
 \openout1 = `refman.aux'.
 
-LaTeX Font Info:    Checking defaults for OML/cmm/m/it on input line 39.
-LaTeX Font Info:    ... okay on input line 39.
-LaTeX Font Info:    Checking defaults for T1/cmr/m/n on input line 39.
-LaTeX Font Info:    ... okay on input line 39.
-LaTeX Font Info:    Checking defaults for OT1/cmr/m/n on input line 39.
-LaTeX Font Info:    ... okay on input line 39.
-LaTeX Font Info:    Checking defaults for OMS/cmsy/m/n on input line 39.
-LaTeX Font Info:    ... okay on input line 39.
-LaTeX Font Info:    Checking defaults for OMX/cmex/m/n on input line 39.
-LaTeX Font Info:    ... okay on input line 39.
-LaTeX Font Info:    Checking defaults for U/cmr/m/n on input line 39.
-LaTeX Font Info:    ... okay on input line 39.
-LaTeX Font Info:    Checking defaults for TS1/cmr/m/n on input line 39.
-LaTeX Font Info:    Try loading font information for TS1+cmr on input line 39.
+LaTeX Font Info:    Checking defaults for OML/cmm/m/it on input line 38.
+LaTeX Font Info:    ... okay on input line 38.
+LaTeX Font Info:    Checking defaults for T1/cmr/m/n on input line 38.
+LaTeX Font Info:    ... okay on input line 38.
+LaTeX Font Info:    Checking defaults for OT1/cmr/m/n on input line 38.
+LaTeX Font Info:    ... okay on input line 38.
+LaTeX Font Info:    Checking defaults for OMS/cmsy/m/n on input line 38.
+LaTeX Font Info:    ... okay on input line 38.
+LaTeX Font Info:    Checking defaults for OMX/cmex/m/n on input line 38.
+LaTeX Font Info:    ... okay on input line 38.
+LaTeX Font Info:    Checking defaults for U/cmr/m/n on input line 38.
+LaTeX Font Info:    ... okay on input line 38.
+LaTeX Font Info:    Checking defaults for TS1/cmr/m/n on input line 38.
+LaTeX Font Info:    Try loading font information for TS1+cmr on input line 38.
 
 (/usr/share/texmf-texlive/tex/latex/base/ts1cmr.fd
 File: ts1cmr.fd 1999/05/25 v2.5h Standard LaTeX font definitions
 )
-LaTeX Font Info:    ... okay on input line 39.
-LaTeX Font Info:    Checking defaults for PD1/pdf/m/n on input line 39.
-LaTeX Font Info:    ... okay on input line 39.
-LaTeX Font Info:    Checking defaults for PU/pdf/m/n on input line 39.
-LaTeX Font Info:    ... okay on input line 39.
+LaTeX Font Info:    ... okay on input line 38.
+LaTeX Font Info:    Checking defaults for PD1/pdf/m/n on input line 38.
+LaTeX Font Info:    ... okay on input line 38.
+LaTeX Font Info:    Checking defaults for PU/pdf/m/n on input line 38.
+LaTeX Font Info:    ... okay on input line 38.
 LaTeX Font Info:    Try loading font information for T1+kurierlc on input line 
-39.
+38.
 
 (/usr/share/texmf-texlive/tex/latex/kurier/t1kurierlc.fd
 File: t1kurierlc.fd 2005/10/03 v1.2 font definition file for T1/kurierlc (MW)
@@ -789,7 +789,7 @@ File: t1kurierlc.fd 2005/10/03 v1.2 font definition file for T1/kurierlc (MW)
 \everyMPtoPDFconversion=\toks25
 )
 \c@lstlisting=\count123
-Package hyperref Info: Link coloring ON on input line 39.
+Package hyperref Info: Link coloring ON on input line 38.
  (/usr/share/texmf-texlive/tex/latex/hyperref/nameref.sty
 Package: nameref 2007/05/29 v2.31 Cross-referencing by name of section
 
@@ -798,15 +798,15 @@ Package: refcount 2008/08/11 v3.1 Data extraction from references (HO)
 )
 \c@section@level=\count124
 )
-LaTeX Info: Redefining \ref on input line 39.
-LaTeX Info: Redefining \pageref on input line 39.
+LaTeX Info: Redefining \ref on input line 38.
+LaTeX Info: Redefining \pageref on input line 38.
  (./refman.out)
 (./refman.out)
 \@outlinefile=\write4
 \openout4 = `refman.out'.
 
 \AtBeginShipoutBox=\box57
-Package hyperref Info: Option `pageanchor' set `false' on input line 41.
+Package hyperref Info: Option `pageanchor' set `false' on input line 40.
  [1
 
 
@@ -849,7 +849,7 @@ File: omxkurierlc.fd 2005/10/03 v1.2 font definition file for OMX/kurierlc (MW)
 ] [2
 
 ]
-Package hyperref Info: Option `pageanchor' set `true' on input line 57.
+Package hyperref Info: Option `pageanchor' set `true' on input line 56.
 
 Chapter 1.
 (./structannotationsHandle_1_1ANNOTATION.tex
@@ -878,10 +878,10 @@ LaTeX Font Info:    Font shape `T1/pcr/m/it' in size <9> not available
 ])
 (./refman.aux) ) 
 Here is how much of TeX's memory you used:
- 8553 strings out of 495061
- 120793 string characters out of 1182622
+ 8555 strings out of 495061
+ 120907 string characters out of 1182622
  212665 words of memory out of 3000000
- 11512 multiletter control sequences out of 15000+50000
+ 11513 multiletter control sequences out of 15000+50000
  66393 words of font info for 47 fonts, out of 3000000 for 9000
  28 hyphenation exceptions out of 8191
  38i,11n,58p,436b,490s stack positions out of 5000i,500n,10000p,200000b,50000s
@@ -898,9 +898,9 @@ ve/fonts/type1/public/kurier/kuriercli.pfb></usr/share/texmf-texlive/fonts/type
 1/public/kurier/kuriercm.pfb></usr/share/texmf-texlive/fonts/type1/public/kurie
 r/kuriercmi.pfb></usr/share/texmf-texlive/fonts/type1/urw/courier/ucrb8a.pfb></
 usr/share/texmf-texlive/fonts/type1/urw/courier/ucrro8a.pfb>
-Output written on refman.pdf (8 pages, 122170 bytes).
+Output written on refman.pdf (8 pages, 122641 bytes).
 PDF statistics:
- 186 PDF objects out of 1000 (max. 8388607)
- 44 named destinations out of 1000 (max. 500000)
+ 188 PDF objects out of 1000 (max. 8388607)
+ 45 named destinations out of 1000 (max. 500000)
  65 words of extra memory for PDF output out of 10000 (max. 10000000)
 
