@@ -12,10 +12,10 @@
 	#include <boost/thread/detail/lock.hpp>
 #endif
 #include <boost/thread/xtime.hpp>
-#include "eigenbackground/src/annotatepos.hh"
+#include "eigenbackground/src/Annotate.hh"
 #include "eigenbackground/src/Helpers.hh"
 using namespace std;
-
+//==============================================================================
 /** Define a post-fix increment operator for the enum \c POSE.
  */
 annotationsHandle::POSE operator++(annotationsHandle::POSE &refPose, int){
@@ -23,7 +23,7 @@ annotationsHandle::POSE operator++(annotationsHandle::POSE &refPose, int){
 	refPose                         = (annotationsHandle::POSE)(refPose + 1);
 	return oldPose;
 }
-
+//==============================================================================
 /** Mouse handler for annotating people's positions and poses.
  */
 void annotationsHandle::mouseHandlerAnn(int event, int x, int y, int flags, void *param){
@@ -36,12 +36,12 @@ void annotationsHandle::mouseHandlerAnn(int event, int x, int y, int flags, void
 			if(choice == 'c'){
 				down = true;
 				cout<<"Left button down at >>> ("<<x<<","<<y<<")"<<endl;
-				AnnotatePos::plotAreaTmp(image,x,y);
+				Annotate::plotAreaTmp(image,(float)x,(float)y);
 			}
 			break;
 		case CV_EVENT_MOUSEMOVE:
 			if(down){
-				AnnotatePos::plotAreaTmp(image,x,y);
+				Annotate::plotAreaTmp(image,(float)x,(float)y);
 			}
 			break;
 		case CV_EVENT_LBUTTONUP:
@@ -54,15 +54,15 @@ void annotationsHandle::mouseHandlerAnn(int event, int x, int y, int flags, void
 				temp.id       = annotations.size();
 				annotations.push_back(temp);
 				for(unsigned i=0;i!=annotations.size(); ++i){
-					AnnotatePos::plotArea(image, annotations[i].location.x, \
-						annotations[i].location.y);
+					Annotate::plotArea(image, (float)annotations[i].location.x, \
+						(float)annotations[i].location.y);
 				}
 				showMenu(pt);
 			}
 			break;
 	}
 }
-
+//==============================================================================
 /** Shows how the selected orientation looks on the image.
  */
 void annotationsHandle::drawOrientation(cv::Point center, unsigned int orient){
@@ -85,8 +85,7 @@ void annotationsHandle::drawOrientation(cv::Point center, unsigned int orient){
 	cv::circle(tmpImage,center,1,cv::Scalar(255,50,0),1,8,0);
 	cv::imshow("image", tmpImage);
 }
-
-
+//==============================================================================
 /** Draws the "menu" of possible poses for the current position.
  */
 void annotationsHandle::showMenu(cv::Point center){
@@ -126,7 +125,7 @@ void annotationsHandle::showMenu(cv::Point center){
 	}
 	cvDestroyWindow("Poses");
 }
-
+//==============================================================================
 /** A function that starts a new thread which handles the track-bar event.
  */
 void annotationsHandle::trackBarHandleFct(int position,void *param){
@@ -166,16 +165,16 @@ void annotationsHandle::trackBarHandleFct(int position,void *param){
 	}
 	//cout<< "unlock" << *(unsigned int *)(param) << endl;
 }
+//==============================================================================
 /** The "on change" handler for the track-bars.
  */
 void annotationsHandle::trackbar_callback(int position,void *param){
 	boost::thread *trackbarHandle;
 	trackbarHandle = new boost::thread(&annotationsHandle::trackBarHandleFct,\
 		position, param);
-	//trackBarHandleFct(position, param);
 	trackbarHandle->join();
 }
-
+//==============================================================================
 /** Starts the annotation of the images. The parameters that need to be indicated
  * are:
  *
@@ -267,7 +266,7 @@ int annotationsHandle::runAnn(int argc, char **argv){
 	cvReleaseImage(&image);
 	return 0;
 }
-
+//==============================================================================
 /** Load annotations from file.
  */
 void annotationsHandle::loadAnnotations(char* filename, vector<FULL_ANNOTATIONS> \
@@ -321,7 +320,7 @@ void annotationsHandle::loadAnnotations(char* filename, vector<FULL_ANNOTATIONS>
 		annoFile.close();
 	}
 }
-
+//==============================================================================
 /** Checks to see if a location can be assigned to a specific ID given the
  * new distance.
  */
@@ -366,7 +365,7 @@ bool annotationsHandle::canBeAssigned(vector<ASSIGNED> &idAssignedTo, short int 
 	}
 	return false;
 }
-
+//==============================================================================
 /** Correlate annotations' from locations in \c annoOld to locations in \c
  * annoNew through IDs.
  */
@@ -417,14 +416,14 @@ void annotationsHandle::correltateLocs(vector<ANNOTATION> &annoOld, \
 	}
 
 }
-
+//==============================================================================
 /** Computes the average distance from the predicted location and the annotated
  * one, the number of unpredicted people in each image and the differences in the
  * pose estimation.
  */
 void annotationsHandle::annoDifferences(vector<FULL_ANNOTATIONS> &train, \
 	vector<FULL_ANNOTATIONS> &test, double &avgDist, double &Ndiff, double \
-	avgOrientDiff, double poseDiff){
+	ssdOrientDiff, double poseDiff){
 	if(train.size() != test.size()) {exit(1);}
 	for(unsigned i=0;i<train.size();i++){
 		if(train[i].imgFile != test[i].imgFile) {
@@ -459,31 +458,34 @@ void annotationsHandle::annoDifferences(vector<FULL_ANNOTATIONS> &train, \
 			for(unsigned int k=0;k<test[i].annos.size();k++){
 				if(train[i].annos[l].id == test[i].annos[k].id){
 					for(unsigned int m=0;m<train[i].annos[l].poses.size()-1;m++){
-						if(train[i].annos[l].poses[m]!=test[i].annos[k].poses[m]){
-							poseDiff += 1;
+						if((POSE)m != BENDING){
+							poseDiff += abs((double)train[i].annos[l].poses[m] - \
+									(double)test[i].annos[k].poses[m])/2.0;
+						}else{
+							poseDiff += abs((double)train[i].annos[l].poses[m] - \
+									(double)test[i].annos[k].poses[m])/2.0;
 						}
 					}
-					avgOrientDiff += abs((double)train[i].annos[l].poses[3] - \
-						(double)test[i].annos[k].poses[3]);
-					noCorresp++;
+					// SSD between the predicted values and the correct ones
+					ssdOrientDiff += pow(cos((double)train[i].annos[l].poses[3])\
+						- cos((double)test[i].annos[k].poses[3]),2) +
+						pow(sin((double)train[i].annos[l].poses[3])\
+						- sin((double)test[i].annos[k].poses[3]),2) ;
 					break;
 				}
 			}
-		}
-		if(noCorresp>0){
-			avgOrientDiff /= noCorresp;
 		}
 		cout<<endl;
 	}
 	cout<<"avgDist: "<<avgDist<<endl;
 	cout<<"Ndiff: "<<Ndiff<<endl;
 	cout<<"PoseDiff: "<<poseDiff<<endl;
-	cout<<"avgOrientDiff: "<<avgOrientDiff<<endl;
+	cout<<"ssdOrientDiff: "<<ssdOrientDiff<<endl;
 
-	avgOrientDiff /= train.size();
+	ssdOrientDiff /= train.size();
 	avgDist /= train.size();
 }
-
+//==============================================================================
 /** Displays the complete annotations for all images.
  */
 void annotationsHandle::displayFullAnns(vector<FULL_ANNOTATIONS> &fullAnns){
@@ -502,7 +504,7 @@ void annotationsHandle::displayFullAnns(vector<FULL_ANNOTATIONS> &fullAnns){
 		cout<<endl;
 	}
 }
-
+//==============================================================================
 /** Starts the annotation of the images. The parameters that need to be indicated
  * are:
  *
@@ -524,8 +526,8 @@ int annotationsHandle::runEvaluation(int argc, char **argv){
 
 	displayFullAnns(allAnnoTrain);
 
-	double avgDist = 0, Ndiff = 0, avgOrientDiff = 0, poseDiff = 0;
-	annoDifferences(allAnnoTrain, allAnnoTest, avgDist, Ndiff, avgOrientDiff, \
+	double avgDist = 0, Ndiff = 0, ssdOrientDiff = 0, poseDiff = 0;
+	annoDifferences(allAnnoTrain, allAnnoTest, avgDist, Ndiff, ssdOrientDiff, \
 		poseDiff);
 }
 
@@ -533,8 +535,9 @@ char annotationsHandle::choice;
 boost::mutex annotationsHandle::trackbarMutex;
 IplImage *annotationsHandle::image;
 vector<annotationsHandle::ANNOTATION> annotationsHandle::annotations;
+//==============================================================================
 
 int main(int argc, char **argv){
-	annotationsHandle::runAnn(argc,argv);
-	//annotationsHandle::runEvaluation(argc,argv);
+	//annotationsHandle::runAnn(argc,argv);
+	annotationsHandle::runEvaluation(argc,argv);
 }

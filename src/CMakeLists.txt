@@ -34,7 +34,7 @@ ADD_LIBRARY(helpers
   ${EIGEN_SRC}/Helpers.cc
   ${EIGEN_SRC}/Background.cc
   ${EIGEN_SRC}/ImgProducer.cc
-  ${EIGEN_SRC}/annotatepos.cc
+  ${EIGEN_SRC}/Annotate.cc
   ${MT_SRC}/Auxiliary.cpp
   )
 
@@ -43,11 +43,11 @@ ADD_LIBRARY(calib
   ${EIGEN_SRC}/sample/xmlUtil.cpp
   )
 
-ADD_EXECUTABLE( findPersonImage ${EIGEN_SRC}/findPersonImage.cc )
-TARGET_LINK_LIBRARIES( findPersonImage helpers highgui  cmn tools iberty vnl_algo vnl v3p_netlib boost_date_time-mt boost_thread-mt ${XML2_LDFLAGS})
+ADD_EXECUTABLE( Tracker ${EIGEN_SRC}/Tracker.cc )
+TARGET_LINK_LIBRARIES( Tracker helpers highgui  cmn tools iberty vnl_algo vnl v3p_netlib boost_date_time-mt boost_thread-mt ${XML2_LDFLAGS})
 
-ADD_EXECUTABLE( findPersonStream ${EIGEN_SRC}/findPersonStream.cc )
-TARGET_LINK_LIBRARIES( findPersonStream helpers highgui  cmn tools iberty vnl_algo vnl v3p_netlib boost_date_time-mt boost_thread-mt ${XML2_LDFLAGS})
+#ADD_EXECUTABLE( Annotate ${EIGEN_SRC}/Annotate.cc )
+#TARGET_LINK_LIBRARIES( Annotate helpers highgui  cmn tools iberty vnl_algo vnl v3p_netlib boost_date_time-mt boost_thread-mt ${XML2_LDFLAGS})
 #_________________________________________________________________________________________________________________________________________
 # FROM NOW ON MY FILES WILL COME
 

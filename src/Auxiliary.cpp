@@ -15,7 +15,7 @@
 #include <boost/date_time/posix_time/time_formatters.hpp>
 using namespace std;
 using namespace boost;
-
+//==============================================================================
 /** Reads images from a dir and stores them into a vector of strings.
  */
 vector<string> readImages(const char* dirName){
@@ -31,8 +31,10 @@ vector<string> readImages(const char* dirName){
 		if(imageName.find(".jpg") != string::npos || imageName.find(".JPG") != \
 			string::npos || imageName.find(".png") != string::npos || \
 			imageName.find(".PNG") != string::npos || imageName.find(".jpeg") !=\
-			string::npos || imageName.find(".JPEG") != string::npos){
-			char *tmpDirName = new char[string(dirName).size()+1];
+			string::npos || imageName.find(".JPEG") != string::npos || \
+			imageName.find(".ppm") != string::npos || imageName.find(".PPM") != \
+			string::npos){
+			char *tmpDirName = new char[string(dirName).size()+20];
 			strcpy(tmpDirName,(char*)dirName);
 			images.push_back(string(strcat(tmpDirName,imageName.c_str())));
 		}

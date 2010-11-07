@@ -4,15 +4,15 @@
 #include <cmath>
 #include <opencv/cv.h>
 #include <opencv/highgui.h>
-#include "eigenbackground/src/annotatepos.hh"
-#include "eigenbackground/src/Helpers.hh"
-#include "Auxiliary.h"
 #include <boost/thread.hpp>
 #include <boost/version.hpp>
 #if BOOST_VERSION < 103500
 	#include <boost/thread/detail/lock.hpp>
 #endif
 #include <boost/thread/xtime.hpp>
+#include "eigenbackground/src/Annotate.hh"
+#include "eigenbackground/src/Helpers.hh"
+#include "Auxiliary.h"
 using namespace std;
 
 /** Class for annotating both positions and poses of the people in the images.
@@ -46,7 +46,7 @@ class annotationsHandle {
 			short int to;
 			double dist;
 		};
-
+		//======================================================================
 		annotationsHandle(){};
 
 		virtual ~annotationsHandle(){};
@@ -60,8 +60,8 @@ class annotationsHandle {
 		 */
 		static void showMenu(cv::Point center);
 
-		/** Starts the annotation of the images. The parameters that need to be indicated
-		 * are:
+		/** Starts the annotation of the images. The parameters that need to be
+		 * indicated are:
 		 *
 		 * \li argv[1] -- name of directory containing the images
 		 * \li argv[2] -- the file contains the calibration data of the camera
@@ -79,7 +79,8 @@ class annotationsHandle {
 
 		/** Load annotations from file.
 		 */
-		static void loadAnnotations(char* filename, vector<FULL_ANNOTATIONS> &loadedAnno);
+		static void loadAnnotations(char* filename, vector<FULL_ANNOTATIONS> \
+			&loadedAnno);
 
 		/** Computes the average distance from the predicted location and the
 		 * annotated one, the number of unpredicted people in each image and
@@ -105,8 +106,8 @@ class annotationsHandle {
 		 */
 		static void displayFullAnns(vector<FULL_ANNOTATIONS> &fullAnns);
 
-		/** Starts the annotation of the images. The parameters that need to be indicated
-		 * are:
+		/** Starts the annotation of the images. The parameters that need to be
+		 * indicated are:
 		 *
 		 * \li argv[1] -- train file with the correct annotations;
 		 * \li argv[2] -- test file with predicted annotations;
@@ -116,6 +117,7 @@ class annotationsHandle {
 		/** Shows how the selected orientation looks on the image.
 		 */
 		static void drawOrientation(cv::Point center, unsigned int orient);
+		//======================================================================
 	private:
 		/** @var image
 		 * The currently processed image.
