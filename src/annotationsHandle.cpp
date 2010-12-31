@@ -67,7 +67,7 @@ void annotationsHandle::mouseHandlerAnn(int event, int x, int y, int flags, void
  */
 void annotationsHandle::drawOrientation(cv::Point center, unsigned int orient){
 	unsigned int length = 60;
-	double angle = (M_PI * orient)/180 + M_PI/2.0;
+	double angle = (M_PI * orient)/180;
 	cv::Point point1;
 	point1.x = center.x - length * cos(angle);
 	point1.y = center.y + length * sin(angle);
