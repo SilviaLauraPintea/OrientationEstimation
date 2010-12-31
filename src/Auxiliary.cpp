@@ -34,12 +34,36 @@ vector<string> readImages(const char* dirName){
 			string::npos || imageName.find(".JPEG") != string::npos || \
 			imageName.find(".ppm") != string::npos || imageName.find(".PPM") != \
 			string::npos){
-			char *tmpDirName = new char[string(dirName).size()+20];
+			char *tmpDirName = new char[string(dirName).size()+50];
 			strcpy(tmpDirName,(char*)dirName);
 			images.push_back(string(strcat(tmpDirName,imageName.c_str())));
+			delete tmpDirName;
 		}
 	}
 	closedir(dirPoint);
 	return images;
 }
 //==============================================================================
+/** Converts a pointer to an IplImage to an OpenCV Mat.
+ */
+cv::Mat ipl2mat(IplImage* ipl_image){
+	cv::Mat mat_image(ipl_image);
+	return mat_image;
+}
+//==============================================================================
+/** Converts an OpenCV Mat to a pointer to an IplImage.
+ */
+IplImage* mat2ipl(cv::Mat image){
+	IplImage* ipl_image = new IplImage(image);
+	return ipl_image;
+}
+//==============================================================================
+
+
+
+
+
+
+
+
+

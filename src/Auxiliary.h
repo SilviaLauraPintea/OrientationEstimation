@@ -21,5 +21,11 @@ using namespace boost;
 /** Reads images from a dir and stores them into a vector of strings.
  */
 vector<string> readImages(const char* dirName);
+/** Converts a pointer to an IplImage to an OpenCV Mat.
+ */
+cv::Mat ipl2mat(IplImage* ipl_image);
+/** Converts an OpenCV Mat to a pointer to an IplImage.
+ */
+IplImage* mat2ipl(cv::Mat image);
 
 #endif /* AUXILIARY_H_ */

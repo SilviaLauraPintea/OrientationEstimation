@@ -60,6 +60,10 @@ class annotationsHandle {
 		 */
 		static void showMenu(cv::Point center);
 
+		/** Plots the hull indicated by the parameter \c hull on the given image.
+		 */
+		static void plotHull(IplImage *img, vector<CvPoint> &hull);
+
 		/** Starts the annotation of the images. The parameters that need to be
 		 * indicated are:
 		 *

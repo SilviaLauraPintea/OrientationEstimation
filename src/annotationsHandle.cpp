@@ -66,8 +66,8 @@ void annotationsHandle::mouseHandlerAnn(int event, int x, int y, int flags, void
 /** Shows how the selected orientation looks on the image.
  */
 void annotationsHandle::drawOrientation(cv::Point center, unsigned int orient){
-	unsigned int length = 70;
-	double angle = (M_PI * orient)/180;
+	unsigned int length = 60;
+	double angle = (M_PI * orient)/180 + M_PI/2.0;
 	cv::Point point1;
 	point1.x = center.x - length * cos(angle);
 	point1.y = center.y + length * sin(angle);
@@ -81,7 +81,26 @@ void annotationsHandle::drawOrientation(cv::Point center, unsigned int orient){
 
 	cv::Mat tmpImage(cvCloneImage(image));
 	cv::line(tmpImage,point1,point2,cv::Scalar(100,225,0),2,8,0);
-	cv::circle(tmpImage,point1,3,cv::Scalar(200,155,0),2,8,0);
+	//cv::circle(tmpImage,point2,3,cv::Scalar(200,155,0),2,8,0);
+	cv::Point point3;
+	point3.x = center.x - length * 4/5 * cos(angle + M_PI);
+	point3.y = center.y + length * 4/5 * sin(angle + M_PI);
+
+	cv::Point point4;
+	point4.x = point3.x - 5 * cos(M_PI/2.0 + angle);
+	point4.y = point3.y + 5 * sin(M_PI/2.0 + angle);
+
+	cv::Point point5;
+	point5.x = point3.x - 5 * cos(M_PI/2.0 + angle  + M_PI);
+	point5.y = point3.y + 5 * sin(M_PI/2.0 + angle  + M_PI);
+
+	cv::Point *pts = new cv::Point[4];
+	pts[0] = point4;
+	pts[1] = point2;
+	pts[2] = point5;
+	cv::fillConvexPoly(tmpImage,pts,3,cv::Scalar(255,50,0),8,0);
+	delete pts;
+
 	cv::circle(tmpImage,center,1,cv::Scalar(255,50,0),1,8,0);
 	cv::imshow("image", tmpImage);
 }
@@ -175,6 +194,14 @@ void annotationsHandle::trackbar_callback(int position,void *param){
 	trackbarHandle->join();
 }
 //==============================================================================
+/** Plots the hull indicated by the parameter \c hull on the given image.
+ */
+void annotationsHandle::plotHull(IplImage *img, vector<CvPoint> &hull){
+	hull.push_back(hull.front());
+	for (unsigned i=1; i<hull.size(); ++i)
+		cvLine(img, hull[i-1],hull[i],CV_RGB(255,0,0),2);
+}
+//==============================================================================
 /** Starts the annotation of the images. The parameters that need to be indicated
  * are:
  *
@@ -184,10 +211,11 @@ void annotationsHandle::trackbar_callback(int position,void *param){
  */
 int annotationsHandle::runAnn(int argc, char **argv){
 	choice = 'c';
-	if(argc != 4){
+	if(argc != 5){
 		cerr<<"usage: ./annotatepos <img_list.txt> <calib.xml> <annotation.txt>\n"<< \
 		"<img_directory>   => name of directory containing the images\n"<< \
 		"<calib.xml>       => the file contains the calibration data of the camera\n"<< \
+		"<prior.txt>       => the file containing the location prior\n"<< \
 		"<annotations.txt> => the file in which the annotation data needs to be stored\n"<<endl;
 		exit(-1);
 	} else {
@@ -199,18 +227,26 @@ int annotationsHandle::runAnn(int argc, char **argv){
 	vector<string> imgs = readImages(argv[1]);
 	loadCalibration(argv[2]);
 
+	//load the priors
+	vector<CvPoint> priorHull;
+	cerr<<"Loading the location prior...."<< argv[3] << endl;
+	loadPriorHull(argv[3], priorHull);
+
+
 	// set the handler of the mouse events to the method: <<mouseHandler>>
 	image = cvLoadImage(imgs[index].c_str());
+	plotHull(image, priorHull);
 	cv::namedWindow("image");
 	cvSetMouseCallback("image", mouseHandlerAnn, NULL);
 	cv::imshow("image", image);
 
 	// used to write the output stream to a file given in <<argv[3]>>
-	ofstream
-	ofs(argv[3]);
-	if(!ofs){
-		errx(1,"Cannot open file %s", argv[3]);
+	ofstream annoOut;
+	annoOut.open(argv[4], ios::out | ios::app);
+	if(!annoOut){
+		errx(1,"Cannot open file %s", argv[4]);
 	}
+	annoOut.seekp(0, ios::end);
 
 	/* while 'q' was not pressed, annotate images and store the info in
 	 * the annotation file */
@@ -220,23 +256,23 @@ int annotationsHandle::runAnn(int argc, char **argv){
 		/* if the pressed key is 's' stores the annotated positions
 		 * for the current image */
 		if((char)key == 's'){
-			ofs<<imgs[index].substr(imgs[index].rfind("/")+1)<<" ";
+			annoOut<<imgs[index].substr(imgs[index].rfind("/")+1)<<" ";
 			for(unsigned i=0; i!=annotations.size();++i){
-				ofs <<"("<<annotations[i].location.x<<","\
+				annoOut <<"("<<annotations[i].location.x<<","\
 					<<annotations[i].location.y<<")|";
 				for(unsigned j=0;j<annotations[i].poses.size();j++){
 					switch((POSE)j){
 						case SITTING:
-							ofs<<"(SITTING:"<<annotations[i].poses[j]<<")|";
+							annoOut<<"(SITTING:"<<annotations[i].poses[j]<<")|";
 							break;
 						case STANDING:
-							ofs<<"(STANDING:"<<annotations[i].poses[j]<<")|";
+							annoOut<<"(STANDING:"<<annotations[i].poses[j]<<")|";
 							break;
 						case BENDING:
-							ofs<<"(BENDING:"<<annotations[i].poses[j]<<")|";
+							annoOut<<"(BENDING:"<<annotations[i].poses[j]<<")|";
 							break;
 						case ORIENTATION:
-							ofs<<"(ORIENTATION:"<<annotations[i].poses[j]<<") ";
+							annoOut<<"(ORIENTATION:"<<annotations[i].poses[j]<<") ";
 							break;
 						default:
 							cout<<"Unknown pose ;)";
@@ -244,7 +280,7 @@ int annotationsHandle::runAnn(int argc, char **argv){
 					}
 				}
 			}
-			ofs<<endl;
+			annoOut<<endl;
 			cout<<"Annotations for image: "<<\
 				imgs[index].substr(imgs[index].rfind("/")+1)\
 				<<" were successfully saved!"<<endl;
@@ -257,11 +293,13 @@ int annotationsHandle::runAnn(int argc, char **argv){
 				break;
 			}
 			image = cvLoadImage(imgs[index].c_str());
+			plotHull(image, priorHull);
 			cv::imshow("image", image);
 		}else if(isalpha(key)){
 			cout<<"key pressed >>> "<<(char)key<<"["<<key<<"]"<<endl;
 		}
 	}
+	annoOut.close();
 	cout<<"Thank you for your time ;)!"<<endl;
 	cvReleaseImage(&image);
 	return 0;
@@ -538,6 +576,6 @@ vector<annotationsHandle::ANNOTATION> annotationsHandle::annotations;
 //==============================================================================
 
 int main(int argc, char **argv){
-	//annotationsHandle::runAnn(argc,argv);
-	annotationsHandle::runEvaluation(argc,argv);
+	annotationsHandle::runAnn(argc,argv);
+	//annotationsHandle::runEvaluation(argc,argv);
 }
