@@ -8,6 +8,8 @@
 #include <opencv/highgui.h>
 #include <boost/thread.hpp>
 #include <boost/version.hpp>
+#include <boost/filesystem/operations.hpp>
+#include <boost/filesystem/fstream.hpp>
 #if BOOST_VERSION < 103500
 	#include <boost/thread/detail/lock.hpp>
 #endif
@@ -114,6 +116,7 @@ void annotationsHandle::showMenu(cv::Point center){
 	int pose3 = 0;
 	cv::namedWindow("Poses",CV_WINDOW_AUTOSIZE);
 	cv::imshow("Poses", cv::Mat(1, 300, CV_8UC1, cv::Scalar(255,255,255)));
+
 	for(POSE p=SITTING; p<=ORIENTATION;p++){
 		void *param = (void *) new unsigned int(p);
 		switch(p){
@@ -139,7 +142,7 @@ void annotationsHandle::showMenu(cv::Point center){
 		}
 	}
 	cout<<"Press 'c' once the annotation for poses is done."<<endl;
-	while(choice != 'c'){
+	while(choice != 'c' && choice != 'C'){
 		choice = (char)(cv::waitKey(0));
 	}
 	cvDestroyWindow("Poses");
@@ -251,7 +254,7 @@ int annotationsHandle::runAnn(int argc, char **argv){
 	/* while 'q' was not pressed, annotate images and store the info in
 	 * the annotation file */
 	int key = 0;
-	while((char)key != 'q' && index<imgs.size()) {
+	while((char)key != 'q' && (char)key != 'Q' && index<imgs.size()) {
 		key = cv::waitKey(0);
 		/* if the pressed key is 's' stores the annotated positions
 		 * for the current image */
@@ -284,6 +287,25 @@ int annotationsHandle::runAnn(int argc, char **argv){
 			cout<<"Annotations for image: "<<\
 				imgs[index].substr(imgs[index].rfind("/")+1)\
 				<<" were successfully saved!"<<endl;
+
+			//move image to a different directory to keep track of annotated images
+			// => /data/Documents/masterProject/images/
+			string currLocation = imgs[index].substr(0,imgs[index].rfind("/"));
+			cerr<<"CURR LOCATION >> "<<currLocation<<endl;
+
+			// => /data/Documents/masterProject/
+			string newLocation  = currLocation.substr(0,currLocation.rfind("/")) + \
+				"/annotated_images/";
+			if(!boost::filesystem::is_directory(newLocation)){
+				boost::filesystem::create_directory(newLocation);
+			}
+			newLocation += imgs[index].substr(imgs[index].rfind("/")+1);
+			cerr<<"NEW LOCATION >> "<<newLocation<<endl;
+
+			if(rename(imgs[index].c_str(), newLocation.c_str())){
+				perror( NULL );
+			}
+
 			annotations.clear();
 			cvReleaseImage(&image);
 
@@ -292,6 +314,7 @@ int annotationsHandle::runAnn(int argc, char **argv){
 			if(index==imgs.size()){
 				break;
 			}
+			cvReleaseImage(&image);
 			image = cvLoadImage(imgs[index].c_str());
 			plotHull(image, priorHull);
 			cv::imshow("image", image);

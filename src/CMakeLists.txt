@@ -52,6 +52,6 @@ TARGET_LINK_LIBRARIES( Tracker helpers highgui  cmn tools iberty vnl_algo vnl v3
 # FROM NOW ON MY FILES WILL COME
 
 ADD_EXECUTABLE(annotationsHandle ${MT_SRC}/annotationsHandle.cpp)
-TARGET_LINK_LIBRARIES(annotationsHandle helpers cv highgui cmn tools iberty vnl_algo vnl v3p_netlib boost_date_time-mt boost_thread-mt ${XML2_LDFLAGS})
+TARGET_LINK_LIBRARIES(annotationsHandle helpers cv highgui cmn tools iberty vnl_algo vnl v3p_netlib boost_filesystem boost_date_time-mt boost_thread-mt ${XML2_LDFLAGS})
 
 
