@@ -101,7 +101,7 @@ void annotationsHandle::drawOrientation(cv::Point center, unsigned int orient){
 	pts[1] = point2;
 	pts[2] = point5;
 	cv::fillConvexPoly(tmpImage,pts,3,cv::Scalar(255,50,0),8,0);
-	delete pts;
+	delete [] pts;
 
 	cv::circle(tmpImage,center,1,cv::Scalar(255,50,0),1,8,0);
 	cv::imshow("image", tmpImage);
@@ -115,7 +115,8 @@ void annotationsHandle::showMenu(cv::Point center){
 	int pose2 = 0;
 	int pose3 = 0;
 	cv::namedWindow("Poses",CV_WINDOW_AUTOSIZE);
-	cv::imshow("Poses", cv::Mat(1, 300, CV_8UC1, cv::Scalar(255,255,255)));
+	IplImage *tmpImg = cvCreateImage(cv::Size(300,1),8,1);
+	cv::imshow("Poses", tmpImg);//cv::Mat(1, 300, CV_8UC1, cv::Scalar(255,255,255)));
 
 	for(POSE p=SITTING; p<=ORIENTATION;p++){
 		void *param = (void *) new unsigned int(p);
@@ -145,6 +146,7 @@ void annotationsHandle::showMenu(cv::Point center){
 	while(choice != 'c' && choice != 'C'){
 		choice = (char)(cv::waitKey(0));
 	}
+	cvReleaseImage(&tmpImg);
 	cvDestroyWindow("Poses");
 }
 //==============================================================================
@@ -287,13 +289,15 @@ int annotationsHandle::runAnn(int argc, char **argv){
 			cout<<"Annotations for image: "<<\
 				imgs[index].substr(imgs[index].rfind("/")+1)\
 				<<" were successfully saved!"<<endl;
+			//clean the annotations and release the image
+			for(unsigned ind=0; ind<annotations.size(); ind++){
+				annotations[ind].poses.clear();
+			}
+			annotations.clear();
+			cvReleaseImage(&image);
 
 			//move image to a different directory to keep track of annotated images
-			// => /data/Documents/masterProject/images/
 			string currLocation = imgs[index].substr(0,imgs[index].rfind("/"));
-			cerr<<"CURR LOCATION >> "<<currLocation<<endl;
-
-			// => /data/Documents/masterProject/
 			string newLocation  = currLocation.substr(0,currLocation.rfind("/")) + \
 				"/annotated_images/";
 			if(!boost::filesystem::is_directory(newLocation)){
@@ -301,20 +305,16 @@ int annotationsHandle::runAnn(int argc, char **argv){
 			}
 			newLocation += imgs[index].substr(imgs[index].rfind("/")+1);
 			cerr<<"NEW LOCATION >> "<<newLocation<<endl;
-
+			cerr<<"CURR LOCATION >> "<<currLocation<<endl;
 			if(rename(imgs[index].c_str(), newLocation.c_str())){
-				perror( NULL );
+				perror(NULL);
 			}
-
-			annotations.clear();
-			cvReleaseImage(&image);
 
 			// load the next image or break if it is the last one
 			index++;
 			if(index==imgs.size()){
 				break;
 			}
-			cvReleaseImage(&image);
 			image = cvLoadImage(imgs[index].c_str());
 			plotHull(image, priorHull);
 			cv::imshow("image", image);
@@ -325,6 +325,7 @@ int annotationsHandle::runAnn(int argc, char **argv){
 	annoOut.close();
 	cout<<"Thank you for your time ;)!"<<endl;
 	cvReleaseImage(&image);
+	cvDestroyWindow("image");
 	return 0;
 }
 //==============================================================================

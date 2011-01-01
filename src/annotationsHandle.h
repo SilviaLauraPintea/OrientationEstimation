@@ -49,7 +49,13 @@ class annotationsHandle {
 		//======================================================================
 		annotationsHandle(){};
 
-		virtual ~annotationsHandle(){};
+		virtual ~annotationsHandle(){
+			//free annotations
+			for(unsigned ind=0; ind<annotations.size(); ind++){
+				annotations[ind].poses.clear();
+			}
+			annotations.clear();
+		};
 
 		/** Mouse handler for annotating people's positions and poses.
 		 */
