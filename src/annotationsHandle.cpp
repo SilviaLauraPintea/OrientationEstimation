@@ -83,7 +83,7 @@ void annotationsHandle::drawOrientation(cv::Point center, unsigned int orient){
 
 	cv::Mat tmpImage(cvCloneImage(image));
 	cv::line(tmpImage,point1,point2,cv::Scalar(100,225,0),2,8,0);
-	//cv::circle(tmpImage,point2,3,cv::Scalar(200,155,0),2,8,0);
+
 	cv::Point point3;
 	point3.x = center.x - length * 4/5 * cos(angle + M_PI);
 	point3.y = center.y + length * 4/5 * sin(angle + M_PI);
@@ -116,7 +116,7 @@ void annotationsHandle::showMenu(cv::Point center){
 	int pose3 = 0;
 	cv::namedWindow("Poses",CV_WINDOW_AUTOSIZE);
 	IplImage *tmpImg = cvCreateImage(cv::Size(300,1),8,1);
-	cv::imshow("Poses", tmpImg);//cv::Mat(1, 300, CV_8UC1, cv::Scalar(255,255,255)));
+	cv::imshow("Poses", tmpImg);
 
 	for(POSE p=SITTING; p<=ORIENTATION;p++){
 		void *param = (void *) new unsigned int(p);
@@ -153,7 +153,6 @@ void annotationsHandle::showMenu(cv::Point center){
 /** A function that starts a new thread which handles the track-bar event.
  */
 void annotationsHandle::trackBarHandleFct(int position,void *param){
-	//cout<< "lock" << *(unsigned int *)(param) << endl;
 	trackbarMutex.lock();
 	unsigned int *ii    = (unsigned int *)(param);
 	ANNOTATION lastAnno = annotations.back();
@@ -170,6 +169,11 @@ void annotationsHandle::trackBarHandleFct(int position,void *param){
 	}
 
 	try{
+		if((POSE)(*ii) == ORIENTATION){
+			if(position % 10 != 0){
+				position = (int)(position / 10) * 10;
+			}
+		}
 		lastAnno.poses.at(*ii) = position;
 	}catch (std::exception &e){
 		cout<<"Exception "<<e.what()<<endl;
@@ -177,17 +181,12 @@ void annotationsHandle::trackBarHandleFct(int position,void *param){
 	}
 	annotations.push_back(lastAnno);
 	trackbarMutex.unlock();
+
 	if((POSE)(*ii) == SITTING){
 		cv::setTrackbarPos("Standing", "Poses", (1-position));
 	} else if((POSE)(*ii) == STANDING){
 		cv::setTrackbarPos("Sitting", "Poses", (1-position));
-	} else if((POSE)(*ii) == ORIENTATION){
-		if(position % 10 != 0){
-			position = (position / 10) * 10;
-			cv::setTrackbarPos("Orientation", "Poses", position);
-		}
 	}
-	//cout<< "unlock" << *(unsigned int *)(param) << endl;
 }
 //==============================================================================
 /** The "on change" handler for the track-bars.
@@ -226,6 +225,7 @@ int annotationsHandle::runAnn(int argc, char **argv){
 	} else {
 		cout<<"Help info:\n"<< \
 		"> press 'q' to quite before all the images are annotated;\n"<< \
+		"> press 'n' to skip to the next image without saving the current one;\n"<< \
 		"> press 's' to save the annotations for the current image and go to the next one;\n"<<endl;
 	}
 	unsigned index      = 0;
@@ -311,6 +311,26 @@ int annotationsHandle::runAnn(int argc, char **argv){
 			}
 
 			// load the next image or break if it is the last one
+			index++;
+			if(index==imgs.size()){
+				break;
+			}
+			image = cvLoadImage(imgs[index].c_str());
+			plotHull(image, priorHull);
+			cv::imshow("image", image);
+		}else if((char)key == 'n'){
+			cout<<"Annotations for image: "<<\
+				imgs[index].substr(imgs[index].rfind("/")+1)\
+				<<" NOT saved!"<<endl;
+
+			//clean the annotations and release the image
+			for(unsigned ind=0; ind<annotations.size(); ind++){
+				annotations[ind].poses.clear();
+			}
+			annotations.clear();
+			cvReleaseImage(&image);
+
+			// skip to the next image
 			index++;
 			if(index==imgs.size()){
 				break;
