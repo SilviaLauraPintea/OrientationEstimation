@@ -54,6 +54,7 @@ void annotationsHandle::mouseHandlerAnn(int event, int x, int y, int flags, void
 				ANNOTATION temp;
 				temp.location = pt;
 				temp.id       = annotations.size();
+				temp.poses.assign(4, 0);
 				annotations.push_back(temp);
 				for(unsigned i=0;i!=annotations.size(); ++i){
 					Annotate::plotArea(image, (float)annotations[i].location.x, \
@@ -81,7 +82,7 @@ void annotationsHandle::drawOrientation(cv::Point center, unsigned int orient){
 	cv::Size imgSize(image->width,image->height);
 	cv::clipLine(imgSize,point1,point2);
 
-	cv::Mat tmpImage(cvCloneImage(image));
+	cv::Mat tmpImage = cvCloneImage(image);
 	cv::line(tmpImage,point1,point2,cv::Scalar(100,225,0),2,8,0);
 
 	cv::Point point3;
@@ -105,6 +106,7 @@ void annotationsHandle::drawOrientation(cv::Point center, unsigned int orient){
 
 	cv::circle(tmpImage,center,1,cv::Scalar(255,50,0),1,8,0);
 	cv::imshow("image", tmpImage);
+	tmpImage.release();
 }
 //==============================================================================
 /** Draws the "menu" of possible poses for the current position.
@@ -154,14 +156,12 @@ void annotationsHandle::showMenu(cv::Point center){
 /** A function that starts a new thread which handles the track-bar event.
  */
 void annotationsHandle::trackBarHandleFct(int position,void *param){
-	trackbarMutex.lock();
+	//trackbarMutex.lock();
 	unsigned int *ii    = (unsigned int *)(param);
 	ANNOTATION lastAnno = annotations.back();
 	annotations.pop_back();
 	if(lastAnno.poses.size()==0){
-		for(unsigned int i=0; i<4; i++){
-			lastAnno.poses.push_back(0);
-		}
+		lastAnno.poses.assign(4,0);
 	}
 
 	//draw the orientation to see it
@@ -181,7 +181,7 @@ void annotationsHandle::trackBarHandleFct(int position,void *param){
 		exit(1);
 	}
 	annotations.push_back(lastAnno);
-	trackbarMutex.unlock();
+	//trackbarMutex.unlock();
 
 	if((POSE)(*ii) == SITTING){
 		cv::setTrackbarPos("Standing", "Poses", (1-position));
@@ -193,18 +193,21 @@ void annotationsHandle::trackBarHandleFct(int position,void *param){
 /** The "on change" handler for the track-bars.
  */
 void annotationsHandle::trackbar_callback(int position,void *param){
-	boost::thread *trackbarHandle;
+	/*boost::thread *trackbarHandle;
 	trackbarHandle = new boost::thread(&annotationsHandle::trackBarHandleFct,\
 		position, param);
 	trackbarHandle->join();
+	delete trackbarHandle;*/
+	trackBarHandleFct(position, param);
 }
 //==============================================================================
 /** Plots the hull indicated by the parameter \c hull on the given image.
  */
 void annotationsHandle::plotHull(IplImage *img, vector<CvPoint> &hull){
 	hull.push_back(hull.front());
-	for (unsigned i=1; i<hull.size(); ++i)
+	for(unsigned i=1; i<hull.size(); ++i){
 		cvLine(img, hull[i-1],hull[i],CV_RGB(255,0,0),2);
+	}
 }
 //==============================================================================
 /** Starts the annotation of the images. The parameters that need to be indicated
