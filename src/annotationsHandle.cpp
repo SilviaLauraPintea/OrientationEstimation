@@ -128,6 +128,7 @@ void annotationsHandle::showMenu(cv::Point center){
 			case STANDING:
 				cv::createTrackbar("Standing","Poses", &pose1, 1, \
 					trackbar_callback, param);
+				cv::setTrackbarPos("Standing", "Poses", 1);
 				break;
 			case BENDING:
 				cv::createTrackbar("Bending","Poses", &pose2, 1, \
@@ -232,11 +233,10 @@ int annotationsHandle::runAnn(int argc, char **argv){
 	vector<string> imgs = readImages(argv[1]);
 	loadCalibration(argv[2]);
 
-	//load the priors
+	// load the priors
 	vector<CvPoint> priorHull;
 	cerr<<"Loading the location prior...."<< argv[3] << endl;
 	loadPriorHull(argv[3], priorHull);
-
 
 	// set the handler of the mouse events to the method: <<mouseHandler>>
 	image = cvLoadImage(imgs[index].c_str());

@@ -26,9 +26,8 @@ vector<string> readImages(const char* dirName){
 	}
 	struct dirent *dirEntry = new struct dirent;
 	vector<string> images;
-	unsigned contor = 0;
-	while(((dirEntry = readdir(dirPoint)) != NULL) && (contor < 100)){
-		contor++;
+	//unsigned contor = 0;
+	while((dirEntry = readdir(dirPoint)) != NULL){
 		string imageName = string(dirEntry->d_name);
 		if(imageName.find(".jpg") != string::npos || imageName.find(".JPG") != \
 			string::npos || imageName.find(".png") != string::npos || \
@@ -42,6 +41,7 @@ vector<string> readImages(const char* dirName){
 			delete [] tmpDirName;
 		}
 	}
+	sort(images.begin(),images.end());
 	closedir(dirPoint);
 	return images;
 }
