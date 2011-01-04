@@ -24,7 +24,7 @@ vector<string> readImages(const char* dirName){
 		cerr<<"Error("<<errno<<") opening "<<dirName<<endl;
 		exit(1);
 	}
-	struct dirent *dirEntry = new struct dirent;
+	struct dirent *dirEntry;
 	vector<string> images;
 	//unsigned contor = 0;
 	while((dirEntry = readdir(dirPoint)) != NULL){

@@ -82,7 +82,8 @@ void annotationsHandle::drawOrientation(cv::Point center, unsigned int orient){
 	cv::Size imgSize(image->width,image->height);
 	cv::clipLine(imgSize,point1,point2);
 
-	cv::Mat tmpImage = cvCloneImage(image);
+	IplImage *img = cvCloneImage(image);
+	cv::Mat tmpImage(img);
 	cv::line(tmpImage,point1,point2,cv::Scalar(100,225,0),2,8,0);
 
 	cv::Point point3;
@@ -107,6 +108,7 @@ void annotationsHandle::drawOrientation(cv::Point center, unsigned int orient){
 	cv::circle(tmpImage,center,1,cv::Scalar(255,50,0),1,8,0);
 	cv::imshow("image", tmpImage);
 	tmpImage.release();
+	cvReleaseImage(&img);
 }
 //==============================================================================
 /** Draws the "menu" of possible poses for the current position.
@@ -121,7 +123,10 @@ void annotationsHandle::showMenu(cv::Point center){
 	cv::imshow("Poses", tmpImg);
 
 	for(POSE p=SITTING; p<=ORIENTATION;p++){
-		void *param = (void *) new unsigned int(p);
+		unsigned int *pt;
+		unsigned int ui_p = (unsigned int)p;
+		pt                = &ui_p;
+		void *param       = pt;
 		switch(p){
 			case SITTING:
 				cv::createTrackbar("Sitting","Poses", &pose0, 1, \
