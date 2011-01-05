@@ -35,6 +35,8 @@ ADD_LIBRARY(helpers
   ${EIGEN_SRC}/Background.cc
   ${EIGEN_SRC}/ImgProducer.cc
   ${EIGEN_SRC}/Annotate.cc
+  ${EIGEN_SRC}/Tracker.cc
+
   ${MT_SRC}/Auxiliary.cpp
   )
 
@@ -43,8 +45,8 @@ ADD_LIBRARY(calib
   ${EIGEN_SRC}/sample/xmlUtil.cpp
   )
 
-ADD_EXECUTABLE( Tracker ${EIGEN_SRC}/Tracker.cc )
-TARGET_LINK_LIBRARIES( Tracker helpers highgui  cmn tools iberty vnl_algo vnl v3p_netlib boost_date_time-mt boost_thread-mt ${XML2_LDFLAGS})
+#ADD_EXECUTABLE( Tracker ${EIGEN_SRC}/Tracker.cc )
+#TARGET_LINK_LIBRARIES( Tracker helpers highgui  cmn tools iberty vnl_algo vnl v3p_netlib boost_date_time-mt boost_thread-mt ${XML2_LDFLAGS})
 
 #ADD_EXECUTABLE( Annotate ${EIGEN_SRC}/Annotate.cc )
 #TARGET_LINK_LIBRARIES( Annotate helpers highgui  cmn tools iberty vnl_algo vnl v3p_netlib boost_date_time-mt boost_thread-mt ${XML2_LDFLAGS})
@@ -54,4 +56,6 @@ TARGET_LINK_LIBRARIES( Tracker helpers highgui  cmn tools iberty vnl_algo vnl v3
 ADD_EXECUTABLE(annotationsHandle ${MT_SRC}/annotationsHandle.cpp)
 TARGET_LINK_LIBRARIES(annotationsHandle helpers cv highgui cmn tools iberty vnl_algo vnl v3p_netlib boost_filesystem boost_date_time-mt boost_thread-mt ${XML2_LDFLAGS})
 
+ADD_EXECUTABLE(featureDetector ${MT_SRC}/featureDetector.cpp)
+TARGET_LINK_LIBRARIES(featureDetector helpers cv highgui cmn tools iberty vnl_algo vnl v3p_netlib boost_filesystem boost_date_time-mt boost_thread-mt ${XML2_LDFLAGS})
 
