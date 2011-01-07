@@ -22,6 +22,12 @@
 
 class featureDetector:public Tracker{
 	public:
+		/** structure containing images of the size of the detected people
+		 */
+		struct people {
+			cv::Point location;
+			cv::Mat pixels;
+		};
 		//======================================================================
 		/** Class constructor.
 		 */
@@ -34,7 +40,7 @@ class featureDetector:public Tracker{
 		/** Function that gets the ROI corresponding to a head of a person in
 		 * an image.
 		 */
-		cv::Mat getHeadROI(vector<unsigned> existing);
+		void getHeadROI(vector<unsigned> existing);
 
 		/** Start the running in a parallel thread an instance of the tracker.
 		 */
@@ -45,6 +51,28 @@ class featureDetector:public Tracker{
 		/** Simple "menu" for skipping to the next image or quitting the processing
 		 */
 		bool imageProcessingMenu();
+
+		/** Creates the \c Gabor filter with the given parameters and returns the \c wavelet.
+		 */
+		cv::Mat createGabor(float params[]);
+
+		/** Convolves an image with a computed \c Gabor filter.
+		 */
+		cv::Mat convolveImage(cv::Point winCenter, cv::Mat image, float params[]);
+
+		/** Get the foreground pixels corresponding to each person
+		 */
+		cv::Mat getAllForegroundPixels(vector<unsigned> existing, IplImage *bg,\
+			double threshold);
+		/** Gets the distance to the given template from a given pixel location.
+		 */
+		double getDistToTemplate(int pixelX,int pixelY,std::vector<CvPoint> templ);
+		/** Checks to see if a given pixel is inside of a template.
+		 */
+		bool isInTemplate(int pixelX, int pixelY, vector<CvPoint> templ);
+		/** Shows a ROI in a given image.
+		 */
+		void showROI(cv::Mat image, cv::Point top_left, cv::Size ROI_size);
 		//======================================================================
 	protected:
 

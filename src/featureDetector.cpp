@@ -10,38 +10,260 @@
 #include <fstream>
 #include <string>
 #include <cmath>
+#include <math.h>
 #include <opencv/cv.h>
 #include <exception>
 #include <opencv/highgui.h>
 #include "eigenbackground/src/Tracker.hh"
 #include "eigenbackground/src/Helpers.hh"
 unsigned MIN_TRACKLEN = 20;
+//==============================================================================
+/** Shows a ROI in a given image.
+ */
+void featureDetector::showROI(cv::Mat image, cv::Point top_left, cv::Size ROI_size){
+	cv::Mat roi(image.clone(), cv::Rect(top_left,ROI_size));
+	cv::imshow("ROI", roi);
+	cv::waitKey(0);
+	cvDestroyWindow("ROI");
+	roi.release();
+}
+//==============================================================================
+/** Gets the distance to the given template from a given pixel location.
+ */
+double featureDetector::getDistToTemplate(int pixelX, int pixelY, \
+std::vector<CvPoint> templ){
+	vector<CvPoint> hull;
+	convexHull(templ, hull);
+	double minDist = -1;
+	unsigned i=0, j=1;
+	while(i<hull.size() && j<hull.size()-1){
+		/*
+		double a    = hull[i].y - hull[j].y;
+		double b    = hull[j].x - hull[i].x;
+		double c    = hull[i].x*hull[j].y-hull[i].y*hull[j].x;
 
+		cout<<"a="<<a<<" b="<<b<<" c="<<c<<endl;
+		double dist = std::abs(a*pixelX + b*pixelY + c)/std::sqrt(a*a + b*b);
+		*/
+		double x1 = hull[i].x, x2 = hull[j].x, y1 = hull[i].y, y2 = hull[j].y;
+		double dist = std::abs((x2-x1)*(y1-pixelY)-(x1-pixelX)*(y2-y1))/ \
+						std::sqrt((x2-x1)*(x2-x1) + (y2-y1)*(y2-y1));
+
+		if(minDist == -1 || minDist>dist){
+			minDist = dist;
+		}
+		i++; j++;
+	}
+	return minDist;
+}
+//==============================================================================
+/** Checks to see if a given pixel is inside of a template.
+ */
+bool featureDetector::isInTemplate(int pixelX, int pixelY,vector<CvPoint> templ){
+	vector<CvPoint> hull;
+	convexHull(templ, hull);
+	vector<scanline_t> lines;
+	getScanLines(hull, lines);
+	for(vector<scanline_t>::const_iterator i=lines.begin();i!=lines.end();++i){
+		if(i->line == pixelY && i->start<=pixelX && i->end>=pixelX){
+			return true;
+		};
+	}
+	return false;
+}
+//==============================================================================
+/** Get the foreground pixels corresponding to each person
+ */
+cv::Mat featureDetector::getAllForegroundPixels(vector<unsigned> existing, \
+IplImage *bg, double threshold){
+	IplImage *bgI  = cvCloneImage(bg);
+	IplImage *imgI = cvCloneImage(this->current->img);
+	cv::Mat thresh(bgI);
+	cv::Mat foregr(imgI);
+
+	std::vector<featureDetector::people> allPeople(existing.size());
+	std::vector<unsigned> tmpminX(existing.size(),thresh.cols);
+	std::vector<unsigned> tmpmaxX(existing.size(),0);
+	std::vector<unsigned> tmpminY(existing.size(),thresh.rows);
+	std::vector<unsigned> tmpmaxY(existing.size(),0);
+
+	// FOR EACH EXISTING TEMPLATE LOOK ON AN AREA OF 100 PIXELS AROUND IT
+	for(unsigned k=0; k<existing.size();k++){
+		cv::Point center      = this->cvPoint(existing[k]);
+		allPeople[k].location = center;
+		std::vector<CvPoint> templ;
+		genTemplate2(center, persHeight, camHeight, templ);
+		unsigned minX=thresh.cols, maxX=0, minY=thresh.rows, maxY=0;
+
+		// GET THE MIN/MAX SIZE OF THE TEMPLATE
+		for(unsigned i=0; i<templ.size(); i++){
+			if(minX>templ[i].x){minX = templ[i].x;}
+			if(maxX<templ[i].x){maxX = templ[i].x;}
+			if(minY>templ[i].y){minY = templ[i].y;}
+			if(maxY<templ[i].y){maxY = templ[i].y;}
+		}
+		minX        = std::max((int)minX-100,0); minY = std::max((int)minY-100,0);
+		maxX        = std::min(thresh.cols,(int)maxX+100);
+		maxY        = std::min(thresh.rows,(int)maxY+100);
+		cv::Mat roi = cv::Mat(foregr.clone(),cv::Rect(cv::Point(minX,minY),\
+						cv::Size(maxX-minX,maxY-minY)));
+
+		// LOOP OVER THE AREA OF OUR TEMPLATE AND THERESHOLD ONLY THOSE PIXELS
+		for(unsigned x=minX; x<maxX; x++){
+			for(unsigned y=minY; y<maxY; y++){
+				if(thresh.at<double>((int)x,(int)y)>threshold){
+					cvCircle(this->current->img,cv::Point(x,y),3,\
+						cv::Scalar(225,0,0),2,8,0);
+
+					if(!this->isInTemplate(x,y,templ)){
+						double minDist = thresh.rows*thresh.cols;
+						unsigned label = -1;
+						for(unsigned l=0; l<existing.size(); l++){
+							cv::Point aCenter = this->cvPoint(existing[l]);
+							std::vector<CvPoint> aTempl;
+							genTemplate2(aCenter,persHeight,camHeight,aTempl);
+							double dist = this->getDistToTemplate((int)x,(int)y,aTempl);
+							cout<<l<<" => dist="<<dist<<endl;
+							if(minDist>dist){
+								minDist = dist;
+								label   = l;
+							}
+						}
+						if(label != k){
+							roi.at<double>((int)(x-minX),(int)(y-minY)) = 0;
+						}else{
+							// UPDATE THE BORDER OF THE IMAGE
+							if(tmpminX[label]>x-minX){tmpminX[label] = x-minX;}
+							if(tmpminY[label]>y-minY){tmpminY[label] = y-minY;}
+							if(tmpmaxX[label]<x-minX){tmpmaxX[label] = x-minX;}
+							if(tmpmaxY[label]<y-minY){tmpmaxY[label] = y-minY;}
+						}
+						cv::Point point = this->cvPoint(existing[label]);
+						cerr<<"1>!!!!!!!!!!!! assigned to "<<label<<" "<<\
+							point.x<<","<<point.y<<endl;
+					}else{
+						cv::Point point = this->cvPoint(existing[k]);
+						cerr<<"2>!!!!!!!!!!!! assigned to "<<k<<" "<<\
+							point.x<<","<<point.y<<endl;
+
+						// UPDATE THE BORDER OF THE IMAGE
+						if(tmpminX[k]>x-minX){tmpminX[k] = x-minX;}
+						if(tmpminY[k]>y-minY){tmpminY[k] = y-minY;}
+						if(tmpmaxX[k]<x-minX){tmpmaxX[k] = x-minX;}
+						if(tmpmaxY[k]<y-minY){tmpmaxY[k] = y-minY;}
+					}
+					return roi;
+				}
+			}
+		}
+		/*
+		cout<<roi.cols<<"/"<<roi.rows<<endl;
+		cout<<tmpmaxX[k]<<":"<<tmpminX[k]<<"/"<<tmpmaxY[k]<<":"<<tmpminY[k]<<endl;
+
+		allPeople[k].pixels = cv::Mat(roi.clone(),cv::Rect(cv::Point(tmpminX[k],\
+			tmpminY[k]),cv::Size(tmpmaxX[k]-tmpminX[k],tmpmaxY[k]-tmpminY[k])));
+		roi.release();
+		cv::imshow("people",allPeople[k].pixels);
+		cv::waitKey(0);
+		cvDestroyWindow("people");
+		*/
+	}
+
+	thresh.release();
+	foregr.release();
+}
+//==============================================================================
+/** Creates the \c Gabor filter with the given parameters and returns the \c wavelet.
+ */
+cv::Mat featureDetector::createGabor(float params[]){
+	// params[0] -- sigma: (3, 68)
+	// params[1] -- gamma: (0.2, 1)
+	// params[2] -- dimension: (1, 10)
+	// params[3] -- theta: (0, 180) or (-90, 90)
+	// params[4] -- lambda: (2, 256)
+	// params[5] -- psi: (0, 180)
+
+	float sigmaX = params[0];
+	float sigmaY = params[0]/params[1];
+	float xMax   = std::max(std::abs(params[2]*sigmaX*std::cos(params[3])), \
+							std::abs(params[2]*sigmaY*std::sin(params[3])));
+	xMax         = std::ceil(std::max((float)1.0, xMax));
+	float yMax   = std::max(std::abs(params[2]*sigmaX*std::cos(params[3])), \
+							std::abs(params[2]*sigmaY*std::sin(params[3])));
+	yMax         = std::ceil(std::max((float)1.0, yMax));
+	float xMin   = -xMax;
+	float yMin   = -yMax;
+
+	cv::Mat gabor = cv::Mat::zeros((int)(xMax-xMin),(int)(yMax-yMin),CV_32F);
+	for(int x=(int)xMin; x<xMax; x++){
+		for(int y=(int)yMin; y<yMax; y++){
+			float xPrime = x*std::cos(params[3])+y*std::sin(params[3]);
+			float yPrime = -x*std::sin(params[3])+y*std::cos(params[3]);
+			gabor.at<float>((int)(x+xMax),(int)(y+yMax)) = \
+				std::exp(-0.5*((xPrime*xPrime)/(sigmaX*sigmaX)+\
+				(yPrime*yPrime)/(sigmaY*sigmaY)))*\
+				std::cos(2.0 * M_PI/params[4]*xPrime*params[5]);
+		}
+	}
+	cv::imshow("wavelet",gabor);
+	cvDestroyWindow("wavelet");
+	return gabor;
+}
+//==============================================================================
+/** Convolves an image with a computed \c Gabor filter.
+ */
+cv::Mat featureDetector::convolveImage(cv::Point winCenter, cv::Mat image, \
+float params[]){
+	cv::Mat gabor = this->createGabor(params);
+
+	cv::Mat edges(image.cols, image.rows, CV_8UC1);
+	image.convertTo(edges,CV_8UC1,0,1);
+	cv::cvtColor(image,edges,CV_RGB2GRAY,0);
+
+	cv::Canny(edges, edges, 10.0, 100.0, 3, false);
+	cv::imshow("edges",edges);
+
+	cv::filter2D(edges,edges,-1,gabor,cv::Point(-1,-1),0,cv::BORDER_REPLICATE);
+	gabor.release();
+	cv::imshow("gabor",edges);
+	cv::waitKey();
+
+	cvDestroyWindow("edges");
+	cvDestroyWindow("gabor");
+	edges.release();
+	return image;
+}
 //==============================================================================
 /** Function that gets the ROI corresponding to a head of a person in
  * an image.
  */
-cv::Mat featureDetector::getHeadROI(std::vector<unsigned> existing){
+void featureDetector::getHeadROI(std::vector<unsigned> existing){
 	for(unsigned i=0; i<existing.size(); i++){
 		cv::Point center = this->cvPoint(existing[i]);
 		std::vector<CvPoint> templ;
 		genTemplate2(center, persHeight, camHeight, templ);
 
 		cv::Mat tmpImage(this->current->img);
+		unsigned wi         = templ[14].x-templ[13].x;
+		unsigned hi         = templ[13].y-templ[12].y;
 
-		unsigned wi = templ[14].x-templ[13].x;
-		unsigned hi = templ[13].y-templ[12].y;
-		//cv::Size someSize = cv::Size(wi,hi);
-		//cv::Range xRange = cv::Range((int)templ[13].x, (int)templ[14].x);
-		//cv::Range yRange = cv::Range((int)templ[12].y, (int)templ[13].y);
-		//cv::Mat roi(xRange,yRange,tmpImage(someSize, center);
-		cv::Mat roi(tmpImage, cv::Rect(center.x, center.y, wi, hi));
-		cv::imshow("head", roi);
-		roi.release();
-		break;
+		unsigned variance = 20;
+		templ[12].x -= variance;
+		templ[12].y -= variance;
+		wi          += variance;
+		hi          += variance;
+
+		if((templ[12].x + wi)<tmpImage.cols && (templ[12].y + hi)<tmpImage.rows){
+			cv::Mat roi(tmpImage.clone(), cv::Rect(templ[12],cv::Size(wi, hi)));
+			cv::imshow("head", roi);
+			cv::Point winCenter(templ[12].x+wi/2,templ[12].y+hi/2);
+			float params[]    = {10.0, 1.0, 2.0, M_PI, 2.0, 0.1};
+			cv::Mat convolved = this->convolveImage(winCenter,roi,params);
+			roi.release();
+		}
+		cv::waitKey();
+		tmpImage.release();
 	}
-
-	return cv::Mat(cv::Size(300,1),8,1);
 }
 //==============================================================================
 /** Overwrite the \c doFindPeople function from the \c Tracker class to make it
@@ -90,17 +312,22 @@ const FLOAT logBGProb,const vnl_vector<FLOAT> &logSumPixelBGProb){
 		}
 	}
 
-	//7') GET THE HEAD
-	this->getHeadROI(existing);
+	IplImage *bg = vec2img((imgVec-bgVec).apply(fabs));
+	//7') GET ALL PIXELS CORRESPONDING TO PPL AND THEN EXTRACT HEADS AND FEET
+	this->getAllForegroundPixels(existing,bg,20.0);
+	//this->getHeadROI(existing);
 
 	//7) SHOW THE FOREGROUND POSSIBLE LOCATIONS AND PLOT THE TEMPLATES
-	IplImage *bg = vec2img((imgVec-bgVec).apply(fabs));
 	this->plotHull(bg, this->priorHull);
 	cerr<<"no. of detected people: "<<existing.size()<<endl;
 	for(unsigned i=0; i!=existing.size(); ++i){
 		cv::Point pt = this->cvPoint(existing[i]);
 		plotTemplate2(bg,pt,persHeight,camHeight,CV_RGB(255,255,255));
 		plotScanLines(this->current->img,mask,CV_RGB(0,255,0),0.3);
+		cv::Mat tmp = cv::Mat(this->current->img);
+		char buffer[50];
+		sprintf(buffer,"%u",i);
+		cv::putText(tmp,(string)buffer,pt,3,3.0,cv::Scalar(0,0,255),1,8,false);
 	}
 	cvShowImage("bg", bg);
 	cvReleaseImage(&bg);

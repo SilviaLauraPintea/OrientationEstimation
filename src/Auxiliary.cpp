@@ -21,7 +21,7 @@ using namespace boost;
 vector<string> readImages(const char* dirName){
 	DIR *dirPoint;
 	if((dirPoint = opendir(dirName)) == NULL){
-		cerr<<"Error("<<errno<<") opening "<<dirName<<endl;
+		std::cerr<<"Error opening "<<dirName<<endl;
 		exit(1);
 	}
 	struct dirent *dirEntry;
