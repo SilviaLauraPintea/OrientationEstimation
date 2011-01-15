@@ -22,11 +22,11 @@ unsigned MIN_TRACKLEN = 20;
 /** Shows a ROI in a given image.
  */
 void featureDetector::showROI(cv::Mat image, cv::Point top_left, cv::Size ROI_size){
-	cv::Mat roi(image.clone(), cv::Rect(top_left,ROI_size));
-	cv::imshow("ROI", roi);
+	cv::Mat aRoi(image.clone(), cv::Rect(top_left,ROI_size));
+	cv::imshow("ROI", aRoi);
 	cv::waitKey(0);
 	cvDestroyWindow("ROI");
-	roi.release();
+	aRoi.release();
 }
 //==============================================================================
 /** Gets the distance to the given template from a given pixel location.
@@ -52,13 +52,13 @@ std::vector<CvPoint> templ){
 //==============================================================================
 /** Checks to see if a given pixel is inside of a template.
  */
-bool featureDetector::isInTemplate(int pixelX, int pixelY,vector<CvPoint> templ){
+bool featureDetector::isInTemplate(unsigned pixelX,unsigned pixelY,vector<CvPoint> templ){
 	vector<CvPoint> hull;
 	convexHull(templ, hull);
 	vector<scanline_t> lines;
 	getScanLines(hull, lines);
 	for(vector<scanline_t>::const_iterator i=lines.begin();i!=lines.end();++i){
-		if(i->line == pixelY && i->start<=pixelX && i->end>=pixelX){
+		if(i->line==pixelX && i->start<=pixelY && i->end>=pixelY){
 			return true;
 		};
 	}
@@ -67,23 +67,20 @@ bool featureDetector::isInTemplate(int pixelX, int pixelY,vector<CvPoint> templ)
 //==============================================================================
 /** Get the foreground pixels corresponding to each person
  */
-cv::Mat featureDetector::getAllForegroundPixels(vector<unsigned> existing, \
+void featureDetector::getAllForegroundPixels(vector<unsigned> existing, \
 IplImage *bg, double threshold){
-	IplImage *bgI  = cvCloneImage(bg);
-	IplImage *imgI = cvCloneImage(this->current->img);
-	cv::Mat thrsh(bgI);
-	cv::Mat thresh(thrsh.rows, thrsh.cols, CV_8UC1);
-	cv::cvtColor(thrsh, thresh, CV_BGR2GRAY);
-	cv::threshold(thresh, thresh, threshold, 255.0, cv::THRESH_BINARY);
-	cv::Mat foregr(imgI);
+	// INITIALIZING STUFF
+	cv::Mat thsh(cvCloneImage(bg));
+	cv::Mat thrsh(thsh.rows, thsh.cols, CV_8UC1);
+	cv::cvtColor(thsh, thrsh, CV_BGR2GRAY);
+	cv::threshold(thrsh, thrsh, threshold, 255, cv::THRESH_BINARY);
+	cv::Mat foregr(cvCloneImage(this->current->img));
 
 	std::vector<featureDetector::people> allPeople(existing.size());
-	std::vector<unsigned> tmpminX(existing.size(),thresh.cols);
+	std::vector<unsigned> tmpminX(existing.size(),thrsh.cols);
 	std::vector<unsigned> tmpmaxX(existing.size(),0);
-	std::vector<unsigned> tmpminY(existing.size(),thresh.rows);
+	std::vector<unsigned> tmpminY(existing.size(),thrsh.rows);
 	std::vector<unsigned> tmpmaxY(existing.size(),0);
-
-	cv::imshow("tmp2",thresh);
 
 	// FOR EACH EXISTING TEMPLATE LOOK ON AN AREA OF 100 PIXELS AROUND IT
 	for(unsigned k=0; k<existing.size();k++){
@@ -91,7 +88,13 @@ IplImage *bg, double threshold){
 		allPeople[k].location = center;
 		std::vector<CvPoint> templ;
 		genTemplate2(center, persHeight, camHeight, templ);
-		unsigned minX=thresh.cols, maxX=0, minY=thresh.rows, maxY=0;
+
+		//------------------------------------------
+		IplImage *test = new IplImage(foregr);
+		plotTemplate2(test, center, persHeight, camHeight, cvScalar(0,0,255));
+		//------------------------------------------
+
+		unsigned minY=thrsh.rows, maxY=0, minX=thrsh.cols, maxX=0;
 
 		// GET THE MIN/MAX SIZE OF THE TEMPLATE
 		for(unsigned i=0; i<templ.size(); i++){
@@ -100,30 +103,29 @@ IplImage *bg, double threshold){
 			if(minY>templ[i].y){minY = templ[i].y;}
 			if(maxY<templ[i].y){maxY = templ[i].y;}
 		}
-		minX = std::max((int)minX-100,0); minY = std::max((int)minY-100,0);
-		maxX = std::min(thresh.cols,(int)maxX+100);
-		maxY = std::min(thresh.rows,(int)maxY+100);
-		cv::Mat roi = cv::Mat(foregr.clone(),cv::Rect(cv::Point(minX,minY),\
-						cv::Size(maxX-minX,maxY-minY)));
+		minY = std::max((int)minY-100,0);
+		maxY = std::min(thrsh.rows,(int)maxY+100);
+		minX = std::max((int)minX-100,0);
+		maxX = std::min(thrsh.cols,(int)maxX+100);
 
-		cv::imshow("tmp", roi);
-
-		cout<<maxX<<"||"<<minX<<"//"<<maxY<<"||"<<minY<<endl;
-
+		unsigned width   = maxY-minY;
+		unsigned height  = maxX-minX;
+		cv::Mat colorRoi = cv::Mat(foregr.clone(),cv::Rect(cv::Point(minX,minY),\
+							cv::Size(width,height)));
 		// LOOP OVER THE AREA OF OUR TEMPLATE AND THERESHOLD ONLY THOSE PIXELS
-		for(unsigned x=minX; x<maxX; x++){
-			for(unsigned y=minY; y<maxY; y++){
-				cout<<"!!! "<<thresh.at<unsigned>((int)(x+minX),(int)(y+minY))<<endl;
-				if(thresh.at<unsigned>((int)(x+minX),(int)(y+minY)) > 0.0){
+		for(unsigned x=0; x<maxX-minX; x++){
+			for(unsigned y=0; y<maxY-minY; y++){
+				if((int)(thrsh.at<uchar>((int)(y+minY),(int)(x+minX)))>0){
 					// IF THE PIXEL IS NOT INSIDE OF THE TEMPLATE
-					if(!this->isInTemplate(x,y,templ)){
-						double minDist = thresh.rows*thresh.cols;
+					if(!this->isInTemplate((y+minY),(x+minX),templ)){
+						double minDist = thrsh.rows*thrsh.cols;
 						unsigned label = -1;
 						for(unsigned l=0; l<existing.size(); l++){
 							cv::Point aCenter = this->cvPoint(existing[l]);
 							std::vector<CvPoint> aTempl;
 							genTemplate2(aCenter,persHeight,camHeight,aTempl);
-							double dist = this->getDistToTemplate((int)x,(int)y,aTempl);
+							double dist = this->getDistToTemplate((int)(y+minY),\
+											(int)(x+minX),aTempl);
 							if(minDist>dist){
 								minDist = dist;
 								label   = l;
@@ -131,52 +133,49 @@ IplImage *bg, double threshold){
 						}
 						// IF THE PIXEL HAS A DIFFERENT LABEL THEN THE CURR TEMPL
 						if(label != k){
-							roi.at<cv::Vec3f>((int)(x-minX),(int)(y-minY))[0] = 0.0;
-							roi.at<cv::Vec3f>((int)(x-minX),(int)(y-minY))[1] = 0.0;
-							roi.at<cv::Vec3f>((int)(x-minX),(int)(y-minY))[2] = 0.0;
+							colorRoi.at<cv::Vec3b>((int)y,(int)x) = cv::Vec3b(100,200,100);
+						// IF IS ASSIGNED TO CURR TEMPL, UPDATE THE BORDER
 						}else{
-							// UPDATE THE BORDER OF THE IMAGE
-							cout<<" HERE 1"<<endl;
-							if(tmpminX[label]>x-minX){tmpminX[label] = x-minX;}
-							if(tmpminY[label]>y-minY){tmpminY[label] = y-minY;}
-							if(tmpmaxX[label]<x-minX){tmpmaxX[label] = x-minX;}
-							if(tmpmaxY[label]<y-minY){tmpmaxY[label] = y-minY;}
+							if(tmpminX[label]>x){tmpminX[label] = x;}
+							if(tmpmaxX[label]<x){tmpmaxX[label] = x;}
+							if(tmpminY[label]>y){tmpminY[label] = y;}
+							if(tmpmaxY[label]<y){tmpmaxY[label] = y;}
 						}
+						// IF IS ASSIGNED TO CURR TEMPL, UPDATE THE BORDER
 					}else{
-						// UPDATE THE BORDER OF THE IMAGE
-						cout<<" HERE 2"<<endl;
-						if(tmpminX[k]>x-minX){tmpminX[k] = x-minX;}
-						if(tmpminY[k]>y-minY){tmpminY[k] = y-minY;}
-						if(tmpmaxX[k]<x-minX){tmpmaxX[k] = x-minX;}
-						if(tmpmaxY[k]<y-minY){tmpmaxY[k] = y-minY;}
+						if(tmpminX[k]>x){tmpminX[k] = x;}
+						if(tmpmaxX[k]<x){tmpmaxX[k] = x;}
+						if(tmpminY[k]>y){tmpminY[k] = y;}
+						if(tmpmaxY[k]<y){tmpmaxY[k] = y;}
 					}
+				// IF THE PIXEL VALUE IS BELOW THE THRESHOLD
 				}else{
-					roi.at<cv::Vec3f>((int)(x-minX),(int)(y-minY))[0] = 0.0;
-					roi.at<cv::Vec3f>((int)(x-minX),(int)(y-minY))[1] = 0.0;
-					roi.at<cv::Vec3f>((int)(x-minX),(int)(y-minY))[2] = 0.0;
-				}
+					colorRoi.at<cv::Vec3b>((int)y,(int)x) = cv::Vec3b(100,100,200);
 
-				//cout<<tmpmaxX[k]<<"|"<<tmpminX[k]<<"/"<<tmpmaxY[k]<<"|"<<tmpminY[k]<<endl;
-				//cout<<(x-minX)<<" "<<(y-minY)<<endl<<endl;
+					if(x>100){
+						cv::imshow("test", colorRoi);
+						cv::waitKey(0);
+					}
+				}
 			}
 		}
+		cv::imshow("pixels", colorRoi);
+
 		/*
-		tmpminX[k] = std::max(minX,tmpminX[k]);
-		tmpminY[k] = std::max(minY,tmpminY[k]);
-		tmpmaxX[k] = std::min(maxX,tmpmaxX[k]);
-		tmpmaxY[k] = std::min(maxY,tmpmaxY[k]);
+		if(tmpminC[k]==thrsh.cols){tmpminC[k]=minC;}
+		if(tmpminR[k]==thrsh.rows){tmpminR[k]=minR;}
+		if(tmpmaxC[k]==0){tmpmaxC[k]=maxC;}
+		if(tmpmaxR[k]==0){tmpmaxR[k]=maxR;}
 
-		cout<<tmpmaxX[k]-tmpminX[k]<<"/"<<tmpmaxY[k]-tmpminY[k]<<endl;
-
-		allPeople[k].pixels = cv::Mat(roi.clone(),cv::Rect(cv::Point(tmpminX[k],\
-			tmpminY[k]),cv::Size(tmpmaxX[k]-tmpminX[k],tmpmaxY[k]-tmpminY[k])));
-		roi.release();
+		allPeople[k].pixels = cv::Mat(colorRoi.clone(),cv::Rect(cv::Point(tmpminC[k],\
+			tmpminR[k]),cv::Size(tmpmaxC[k]-tmpminC[k],tmpmaxR[k]-tmpminR[k])));
 		cv::imshow("people",allPeople[k].pixels);
 		cv::waitKey(0);
 		cvDestroyWindow("people");
+		colorRoi.release();
 		*/
 	}
-	thresh.release();
+	thrsh.release();
 	foregr.release();
 }
 //==============================================================================
@@ -223,7 +222,7 @@ cv::Mat featureDetector::convolveImage(cv::Point winCenter, cv::Mat image, \
 float params[]){
 	cv::Mat gabor = this->createGabor(params);
 
-	cv::Mat edges(image.cols, image.rows, CV_8UC1);
+	cv::Mat edges(image.rows, image.cols, CV_8UC1);
 	image.convertTo(edges,CV_8UC1,0,1);
 	cv::cvtColor(image,edges,CV_RGB2GRAY,0);
 
@@ -260,13 +259,13 @@ void featureDetector::getHeadROI(std::vector<unsigned> existing){
 		wi          += variance;
 		hi          += variance;
 
-		if((templ[12].x + wi)<tmpImage.cols && (templ[12].y + hi)<tmpImage.rows){
-			cv::Mat roi(tmpImage.clone(), cv::Rect(templ[12],cv::Size(wi, hi)));
-			cv::imshow("head", roi);
+		if((templ[12].x + wi)<tmpImage.rows && (templ[12].y + hi)<tmpImage.cols){
+			cv::Mat aRoi(tmpImage.clone(), cv::Rect(templ[12],cv::Size(wi, hi)));
+			cv::imshow("head", aRoi);
 			cv::Point winCenter(templ[12].x+wi/2,templ[12].y+hi/2);
 			float params[]    = {10.0, 1.0, 2.0, M_PI, 2.0, 0.1};
-			cv::Mat convolved = this->convolveImage(winCenter,roi,params);
-			roi.release();
+			cv::Mat convolved = this->convolveImage(winCenter,aRoi,params);
+			aRoi.release();
 		}
 		cv::waitKey();
 		tmpImage.release();
@@ -337,11 +336,11 @@ const FLOAT logBGProb,const vnl_vector<FLOAT> &logSumPixelBGProb){
 		cv::putText(tmp,(string)buffer,pt,3,3.0,cv::Scalar(0,0,255),1,8,false);
 	}
 	cvShowImage("bg", bg);
-	cvReleaseImage(&bg);
 	cvShowImage("image",src);
 
 	//8) WHILE NOT q WAS PRESSED PROCESS THE NEXT IMAGES
 	return this->imageProcessingMenu();
+	cvReleaseImage(&bg);
 }
 //==============================================================================
 bool featureDetector::imageProcessingMenu(){

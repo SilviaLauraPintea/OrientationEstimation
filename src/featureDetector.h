@@ -62,14 +62,14 @@ class featureDetector:public Tracker{
 
 		/** Get the foreground pixels corresponding to each person
 		 */
-		cv::Mat getAllForegroundPixels(vector<unsigned> existing, IplImage *bg,\
+		void getAllForegroundPixels(vector<unsigned> existing, IplImage *bg,\
 			double threshold);
 		/** Gets the distance to the given template from a given pixel location.
 		 */
 		double getDistToTemplate(int pixelX,int pixelY,std::vector<CvPoint> templ);
 		/** Checks to see if a given pixel is inside of a template.
 		 */
-		bool isInTemplate(int pixelX, int pixelY, vector<CvPoint> templ);
+		bool isInTemplate(unsigned pixelX, unsigned pixelY, vector<CvPoint> templ);
 		/** Shows a ROI in a given image.
 		 */
 		void showROI(cv::Mat image, cv::Point top_left, cv::Size ROI_size);
