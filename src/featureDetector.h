@@ -25,7 +25,8 @@ class featureDetector:public Tracker{
 		/** structure containing images of the size of the detected people
 		 */
 		struct people {
-			cv::Point location;
+			cv::Point absoluteLoc;
+			cv::Point relativeLoc;
 			cv::Mat_<cv::Vec3b> pixels;
 		};
 		//======================================================================
@@ -40,7 +41,7 @@ class featureDetector:public Tracker{
 		/** Function that gets the ROI corresponding to a head of a person in
 		 * an image.
 		 */
-		void getHeadROI(vector<unsigned> existing);
+		void getHeadROI(std::vector<featureDetector::people> allPeople);
 
 		/** Start the running in a parallel thread an instance of the tracker.
 		 */
@@ -62,14 +63,14 @@ class featureDetector:public Tracker{
 
 		/** Get the foreground pixels corresponding to each person
 		 */
-		void getAllForegroundPixels(vector<unsigned> existing, IplImage *bg,\
-			double threshold);
+		void getAllForegroundPixels(std::vector<featureDetector::people> &allPeople,\
+			std::vector<unsigned> existing, IplImage *bg, double threshold);
 		/** Gets the distance to the given template from a given pixel location.
 		 */
 		double getDistToTemplate(int pixelX,int pixelY,std::vector<CvPoint> templ);
 		/** Checks to see if a given pixel is inside of a template.
 		 */
-		bool isInTemplate(unsigned pixelX, unsigned pixelY, vector<CvPoint> templ);
+		bool isInTemplate(unsigned pixelX, unsigned pixelY, std::vector<CvPoint> templ);
 		/** Shows a ROI in a given image.
 		 */
 		void showROI(cv::Mat image, cv::Point top_left, cv::Size ROI_size);

@@ -33,7 +33,7 @@ void featureDetector::showROI(cv::Mat image, cv::Point top_left, cv::Size ROI_si
  */
 double featureDetector::getDistToTemplate(int pixelX, int pixelY, \
 std::vector<CvPoint> templ){
-	vector<CvPoint> hull;
+	std::vector<CvPoint> hull;
 	convexHull(templ, hull);
 	double minDist = -1;
 	unsigned i=0, j=1;
@@ -52,12 +52,12 @@ std::vector<CvPoint> templ){
 //==============================================================================
 /** Checks to see if a given pixel is inside of a template.
  */
-bool featureDetector::isInTemplate(unsigned pixelX,unsigned pixelY,vector<CvPoint> templ){
-	vector<CvPoint> hull;
+bool featureDetector::isInTemplate(unsigned pixelX,unsigned pixelY,std::vector<CvPoint> templ){
+	std::vector<CvPoint> hull;
 	convexHull(templ, hull);
-	vector<scanline_t> lines;
+	std::vector<scanline_t> lines;
 	getScanLines(hull, lines);
-	for(vector<scanline_t>::const_iterator i=lines.begin();i!=lines.end();++i){
+	for(std::vector<scanline_t>::const_iterator i=lines.begin();i!=lines.end();++i){
 		if(i->line==pixelY && i->start<=pixelX && i->end>=pixelX){
 			return true;
 		};
@@ -67,8 +67,8 @@ bool featureDetector::isInTemplate(unsigned pixelX,unsigned pixelY,vector<CvPoin
 //==============================================================================
 /** Get the foreground pixels corresponding to each person
  */
-void featureDetector::getAllForegroundPixels(vector<unsigned> existing, \
-IplImage *bg, double threshold){
+void featureDetector::getAllForegroundPixels(std::vector<featureDetector::people> &allPeople,\
+std::vector<unsigned> existing, IplImage *bg, double threshold){
 	// INITIALIZING STUFF
 	cv::Mat thsh(cvCloneImage(bg));
 	cv::Mat thrsh(thsh.rows, thsh.cols, CV_8UC1);
@@ -76,7 +76,6 @@ IplImage *bg, double threshold){
 	cv::threshold(thrsh, thrsh, threshold, 255, cv::THRESH_BINARY);
 	cv::Mat foregr(cvCloneImage(this->current->img));
 
-	std::vector<featureDetector::people> allPeople(existing.size());
 	std::vector<unsigned> tmpminX(existing.size(),thrsh.cols);
 	std::vector<unsigned> tmpmaxX(existing.size(),0);
 	std::vector<unsigned> tmpminY(existing.size(),thrsh.rows);
@@ -85,8 +84,8 @@ IplImage *bg, double threshold){
 	// FOR EACH EXISTING TEMPLATE LOOK ON AN AREA OF 100 PIXELS AROUND IT
 	cout<<"number of templates: "<<existing.size()<<endl;
 	for(unsigned k=0; k<existing.size();k++){
-		cv::Point center      = this->cvPoint(existing[k]);
-		allPeople[k].location = center;
+		cv::Point center         = this->cvPoint(existing[k]);
+		allPeople[k].absoluteLoc = center;
 		std::vector<CvPoint> templ;
 		genTemplate2(center, persHeight, camHeight, templ);
 
@@ -139,8 +138,9 @@ IplImage *bg, double threshold){
 								}
 							}
 						}
+
 						// IF THE PIXEL HAS A DIFFERENT LABEL THEN THE CURR TEMPL
-						if(label != k || minDist>=persHeight/2){
+						if(label != k || minDist>=persHeight/5){
 							colorRoi.at<cv::Vec3b>((int)y,(int)x) = cv::Vec3b(0,0,0);
 						// IF IS ASSIGNED TO CURR TEMPL, UPDATE THE BORDER
 						}else{
@@ -166,9 +166,10 @@ IplImage *bg, double threshold){
 		if(tmpmaxX[k]==0){tmpmaxX[k]=maxX-minX;}
 		if(tmpminY[k]==thrsh.rows){tmpminY[k]=0;}
 		if(tmpmaxY[k]==0){tmpmaxY[k]=maxY-minY;}
+		allPeople[k].relativeLoc = cv::Point(center.x - (int)(minX + tmpminX[k]),\
+										center.y - (int)(minY + tmpminY[k]));
 		width  = tmpmaxX[k]-tmpminX[k];
 		height = tmpmaxY[k]-tmpminY[k];
-
 		allPeople[k].pixels = cv::Mat(colorRoi.clone(),\
 			cv::Rect(cv::Point(tmpminX[k],tmpminY[k]),cv::Size(width,height)));
 		cv::imshow("people",allPeople[k].pixels);
@@ -243,32 +244,39 @@ float params[]){
 /** Function that gets the ROI corresponding to a head of a person in
  * an image.
  */
-void featureDetector::getHeadROI(std::vector<unsigned> existing){
-	for(unsigned i=0; i<existing.size(); i++){
-		cv::Point center = this->cvPoint(existing[i]);
+void featureDetector::getHeadROI(std::vector<featureDetector::people> allPeople){
+	for(unsigned i=0; i<allPeople.size(); i++){
+		double offsetX = allPeople[i].absoluteLoc.x - allPeople[i].relativeLoc.x;
+		double offsetY = allPeople[i].absoluteLoc.y - allPeople[i].relativeLoc.y;
+
 		std::vector<CvPoint> templ;
-		genTemplate2(center, persHeight, camHeight, templ);
+		genTemplate2(allPeople[i].absoluteLoc, persHeight, camHeight, templ);
 
-		cv::Mat tmpImage(this->current->img);
-		unsigned wi         = templ[14].x-templ[13].x;
-		unsigned hi         = templ[13].y-templ[12].y;
+		double variance = 20;
+		unsigned wi = templ[14].x-templ[13].x + variance;
+		unsigned hi = templ[13].y-templ[12].y + variance;
+		templ[12].x -= offsetX + variance;
+		templ[12].y -= offsetY + variance;
+		templ[12].x = std::max(0,templ[12].x);
+		templ[12].y = std::max(0,templ[12].y);
 
-		unsigned variance = 20;
-		templ[12].x -= variance;
-		templ[12].y -= variance;
-		wi          += variance;
-		hi          += variance;
+		if((templ[12].x + wi)<allPeople[i].pixels.cols && \
+		(templ[12].y + hi)<allPeople[i].pixels.rows){
+			cout<<templ[12].x<<" "<<templ[12].y<<endl;
+			cout<<(templ[12].x + wi)<<" <?> "<<allPeople[i].pixels.cols<<endl;
+			cout<<(templ[12].y + hi)<<" <?> "<<allPeople[i].pixels.rows<<endl;
 
-		if((templ[12].x + wi)<tmpImage.rows && (templ[12].y + hi)<tmpImage.cols){
-			cv::Mat aRoi(tmpImage.clone(), cv::Rect(templ[12],cv::Size(wi, hi)));
+			cv::Mat aRoi(allPeople[i].pixels.clone(),cv::Rect(templ[12],cv::Size(wi, hi)));
 			cv::imshow("head", aRoi);
+			cv::waitKey(0);
+
+			/*
 			cv::Point winCenter(templ[12].x+wi/2,templ[12].y+hi/2);
 			float params[]    = {10.0, 1.0, 2.0, M_PI, 2.0, 0.1};
 			cv::Mat convolved = this->convolveImage(winCenter,aRoi,params);
+			*/
 			aRoi.release();
 		}
-		cv::waitKey();
-		tmpImage.release();
 	}
 }
 //==============================================================================
@@ -320,8 +328,9 @@ const FLOAT logBGProb,const vnl_vector<FLOAT> &logSumPixelBGProb){
 
 	IplImage *bg = vec2img((imgVec-bgVec).apply(fabs));
 	//7') GET ALL PIXELS CORRESPONDING TO PPL AND THEN EXTRACT HEADS AND FEET
-	this->getAllForegroundPixels(existing, bg, 12.0);
-	//this->getHeadROI(existing);
+	std::vector<featureDetector::people> allPeople(existing.size());
+	this->getAllForegroundPixels(allPeople, existing, bg, 10.0);
+	this->getHeadROI(allPeople);
 
 	//7) SHOW THE FOREGROUND POSSIBLE LOCATIONS AND PLOT THE TEMPLATES
 	this->plotHull(bg, this->priorHull);
