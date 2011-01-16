@@ -26,7 +26,7 @@ class featureDetector:public Tracker{
 		 */
 		struct people {
 			cv::Point location;
-			cv::Mat_<float> pixels;
+			cv::Mat_<cv::Vec3b> pixels;
 		};
 		//======================================================================
 		/** Class constructor.

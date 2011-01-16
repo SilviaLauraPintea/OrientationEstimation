@@ -58,7 +58,7 @@ bool featureDetector::isInTemplate(unsigned pixelX,unsigned pixelY,vector<CvPoin
 	vector<scanline_t> lines;
 	getScanLines(hull, lines);
 	for(vector<scanline_t>::const_iterator i=lines.begin();i!=lines.end();++i){
-		if(i->line==pixelX && i->start<=pixelY && i->end>=pixelY){
+		if(i->line==pixelY && i->start<=pixelX && i->end>=pixelX){
 			return true;
 		};
 	}
@@ -83,6 +83,7 @@ IplImage *bg, double threshold){
 	std::vector<unsigned> tmpmaxY(existing.size(),0);
 
 	// FOR EACH EXISTING TEMPLATE LOOK ON AN AREA OF 100 PIXELS AROUND IT
+	cout<<"number of templates: "<<existing.size()<<endl;
 	for(unsigned k=0; k<existing.size();k++){
 		cv::Point center      = this->cvPoint(existing[k]);
 		allPeople[k].location = center;
@@ -90,8 +91,8 @@ IplImage *bg, double threshold){
 		genTemplate2(center, persHeight, camHeight, templ);
 
 		//------------------------------------------
-		IplImage *test = new IplImage(foregr);
-		plotTemplate2(test, center, persHeight, camHeight, cvScalar(0,0,255));
+		//IplImage *test = new IplImage(foregr);
+		//plotTemplate2(test, center, persHeight, camHeight, cvScalar(0,0,255));
 		//------------------------------------------
 
 		unsigned minY=thrsh.rows, maxY=0, minX=thrsh.cols, maxX=0;
@@ -108,32 +109,39 @@ IplImage *bg, double threshold){
 		minX = std::max((int)minX-100,0);
 		maxX = std::min(thrsh.cols,(int)maxX+100);
 
-		unsigned width   = maxY-minY;
-		unsigned height  = maxX-minX;
+		unsigned width   = maxX-minX;
+		unsigned height  = maxY-minY;
 		cv::Mat colorRoi = cv::Mat(foregr.clone(),cv::Rect(cv::Point(minX,minY),\
 							cv::Size(width,height)));
+
 		// LOOP OVER THE AREA OF OUR TEMPLATE AND THERESHOLD ONLY THOSE PIXELS
 		for(unsigned x=0; x<maxX-minX; x++){
 			for(unsigned y=0; y<maxY-minY; y++){
 				if((int)(thrsh.at<uchar>((int)(y+minY),(int)(x+minX)))>0){
 					// IF THE PIXEL IS NOT INSIDE OF THE TEMPLATE
-					if(!this->isInTemplate((y+minY),(x+minX),templ)){
+					if(!this->isInTemplate((x+minX),(y+minY),templ)){
 						double minDist = thrsh.rows*thrsh.cols;
 						unsigned label = -1;
 						for(unsigned l=0; l<existing.size(); l++){
 							cv::Point aCenter = this->cvPoint(existing[l]);
 							std::vector<CvPoint> aTempl;
 							genTemplate2(aCenter,persHeight,camHeight,aTempl);
-							double dist = this->getDistToTemplate((int)(y+minY),\
-											(int)(x+minX),aTempl);
-							if(minDist>dist){
-								minDist = dist;
+							if(k!=l && this->isInTemplate((x+minX),(y+minY),aTempl)){
+								minDist = 0;
 								label   = l;
+								break;
+							}else{
+								double dist = this->getDistToTemplate((int)(x+minX),\
+												(int)(y+minY),aTempl);
+								if(minDist>dist){
+									minDist = dist;
+									label   = l;
+								}
 							}
 						}
 						// IF THE PIXEL HAS A DIFFERENT LABEL THEN THE CURR TEMPL
-						if(label != k){
-							colorRoi.at<cv::Vec3b>((int)y,(int)x) = cv::Vec3b(100,200,100);
+						if(label != k || minDist>=persHeight/2){
+							colorRoi.at<cv::Vec3b>((int)y,(int)x) = cv::Vec3b(0,0,0);
 						// IF IS ASSIGNED TO CURR TEMPL, UPDATE THE BORDER
 						}else{
 							if(tmpminX[label]>x){tmpminX[label] = x;}
@@ -150,30 +158,22 @@ IplImage *bg, double threshold){
 					}
 				// IF THE PIXEL VALUE IS BELOW THE THRESHOLD
 				}else{
-					colorRoi.at<cv::Vec3b>((int)y,(int)x) = cv::Vec3b(100,100,200);
-
-					if(x>100){
-						cv::imshow("test", colorRoi);
-						cv::waitKey(0);
-					}
+					colorRoi.at<cv::Vec3b>((int)y,(int)x) = cv::Vec3b(0,0,0);
 				}
 			}
 		}
-		cv::imshow("pixels", colorRoi);
+		if(tmpminX[k]==thrsh.cols){tmpminX[k]=0;}
+		if(tmpmaxX[k]==0){tmpmaxX[k]=maxX-minX;}
+		if(tmpminY[k]==thrsh.rows){tmpminY[k]=0;}
+		if(tmpmaxY[k]==0){tmpmaxY[k]=maxY-minY;}
+		width  = tmpmaxX[k]-tmpminX[k];
+		height = tmpmaxY[k]-tmpminY[k];
 
-		/*
-		if(tmpminC[k]==thrsh.cols){tmpminC[k]=minC;}
-		if(tmpminR[k]==thrsh.rows){tmpminR[k]=minR;}
-		if(tmpmaxC[k]==0){tmpmaxC[k]=maxC;}
-		if(tmpmaxR[k]==0){tmpmaxR[k]=maxR;}
-
-		allPeople[k].pixels = cv::Mat(colorRoi.clone(),cv::Rect(cv::Point(tmpminC[k],\
-			tmpminR[k]),cv::Size(tmpmaxC[k]-tmpminC[k],tmpmaxR[k]-tmpminR[k])));
+		allPeople[k].pixels = cv::Mat(colorRoi.clone(),\
+			cv::Rect(cv::Point(tmpminX[k],tmpminY[k]),cv::Size(width,height)));
 		cv::imshow("people",allPeople[k].pixels);
 		cv::waitKey(0);
-		cvDestroyWindow("people");
 		colorRoi.release();
-		*/
 	}
 	thrsh.release();
 	foregr.release();
@@ -320,7 +320,7 @@ const FLOAT logBGProb,const vnl_vector<FLOAT> &logSumPixelBGProb){
 
 	IplImage *bg = vec2img((imgVec-bgVec).apply(fabs));
 	//7') GET ALL PIXELS CORRESPONDING TO PPL AND THEN EXTRACT HEADS AND FEET
-	this->getAllForegroundPixels(existing, bg, 10.0);
+	this->getAllForegroundPixels(existing, bg, 12.0);
 	//this->getHeadROI(existing);
 
 	//7) SHOW THE FOREGROUND POSSIBLE LOCATIONS AND PLOT THE TEMPLATES
