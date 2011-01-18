@@ -17,7 +17,116 @@
 #include "eigenbackground/src/Tracker.hh"
 #include "eigenbackground/src/Helpers.hh"
 unsigned MIN_TRACKLEN = 20;
+//==============================================================================
+/** Get perpendicular to a line given by 2 points A, B in point C.
+ */
+void featureDetector::getLinePerpendicular(cv::Point A, cv::Point B, cv::Point C, \
+double &m, double &b){
+	double slope = (B.y - A.y)/(B.x - A.x);
+	m            = -1.0/slope;
+	b            = C.y - m * C.x;
+}
+//==============================================================================
+/** Checks to see if a point is on the same side of a line like another given point.
+ */
+bool featureDetector::sameSubplane(cv::Point test,cv::Point point, double m, double b){
+	return (m*point.x+b-point.y)*(m*test.x+b-test.y)>=0.0;
+}
+//==============================================================================
+/** Creates a symmetrical Gaussian kernel.
+ */
+void featureDetector::gaussianKernel(cv::Mat &gauss, cv::Size size, double sigma,\
+cv::Point offset){
+	int xmin = -1 * size.width/2, xmax = size.width/2;
+	int ymin = -1 * size.height/2, ymax = size.height/2;
 
+	gauss = cv::Mat::zeros(size.height,size.width,CV_32FC1);
+	for(int x=xmin; x<xmax; x++){
+		for(int y=ymin; y<ymax; y++){
+			gauss.at<float>(y+ymax,x+xmax) = \
+				std::exp(-0.5*((x+offset.x)*(x+offset.x)+(y+offset.y)*(y+offset.y))/(sigma*sigma));
+		}
+	}
+}
+//==============================================================================
+/** Head detection by fitting ellipses.
+ */
+void featureDetector::ellipseDetection(cv::Mat img){
+	cv::Mat large;
+	cv::resize(img,large,cv::Size(0,0),5,5,cv::INTER_CUBIC);
+
+	// TRANSFORM FROM BGR TO HSV TO BE ABLE TO DETECT MORE SKIN-LIKE PIXELS
+	cv::Mat hsv;
+	cv::cvtColor(large, hsv, CV_BGR2HSV);
+
+	/*
+	// THRESHOLD THE HSV TO KEEP THE HIGH-GREEN PIXELS => brown+green+skin
+	for(int x=0; x<hsv.cols; x++){
+		for(int y=0; y<hsv.rows; y++){
+			if(((hsv.at<cv::Vec3b>(y,x)[0]<200 && hsv.at<cv::Vec3b>(y,x)[0]>100) && \
+				(hsv.at<cv::Vec3b>(y,x)[1]<200 && hsv.at<cv::Vec3b>(y,x)[1]>0) && \
+				(hsv.at<cv::Vec3b>(y,x)[2]<200 && hsv.at<cv::Vec3b>(y,x)[2]>0))){
+				hsv.at<cv::Vec3b>(y,x) = cv::Vec3b(0,0,0);
+			}
+		}
+	}
+
+	cv::Mat gray;
+	cv::cvtColor(hsv, gray, CV_BGR2GRAY);
+
+
+	// EORDE AND DILATE WITH A GAUSSIAN KERNEL
+	cv::Mat gauss;
+	this->gaussianKernel(gauss,cv::Size(10,10),5.0,cv::Point(0,0));
+	cv::erode(gray, gray, gauss, cv::Point(-1,-1), 2, cv::BORDER_CONSTANT,\
+		cv::morphologyDefaultBorderValue());
+
+	cv::dilate(gray,gray,gauss,cv::Point(-1, -1),4,cv::BORDER_CONSTANT,\
+		cv::morphologyDefaultBorderValue());
+	cv::equalizeHist(gray,gray);
+	gauss.release();
+	cv::imshow("eroded_dilated", gray);
+
+	//RETAIN ONLY THE PIXELS THAT ARE INSIDE OF A BLOB
+	for(int x=0; x<hsv.cols; x++){
+		for(int y=0; y<hsv.rows; y++){
+			if((int)gray.at<uchar>(y,x)<100){
+				hsv.at<cv::Vec3b>(y,x) = cv::Vec3b(0,0,0);
+			}
+		}
+	}
+	cv::imshow("hsv",hsv);
+	*/
+
+	cv::Mat newGray, edges, corners;
+	cv::cvtColor(large,newGray,CV_BGR2GRAY);
+	cv::medianBlur(newGray,newGray,3);
+	cv::Canny(newGray,edges,60,30,3,true);
+	cv::imshow("new gray", edges);
+
+
+	cv::cornerHarris(newGray,corners,3, 3, 1, cv::BORDER_DEFAULT);
+	cv::imshow("harris", corners);
+	/*
+	std::vector<std::vector<cv::Point> > contours;
+	cv::findContours(newGray,contours,CV_RETR_LIST,CV_CHAIN_APPROX_NONE);
+	//cv::Mat cimage = cv::Mat::zeros(newGray.size(),CV_8UC3);
+	cv::drawContours(newGray, contours, -1, cv::Scalar::all(255), 1, 8);
+	for(std::size_t i = 0; i < contours.size(); i++){
+		size_t count = contours[i].size();
+		if( count < 6 ) continue;
+		cv::Mat pointsf;
+		cv::Mat(contours[i]).convertTo(pointsf, CV_32F);
+		cv::RotatedRect box = fitEllipse(pointsf);
+		box.angle = -box.angle;
+		if(std::max(box.size.width, box.size.height)>\
+		std::min(box.size.width, box.size.height)*30) continue;
+		//cv::drawContours(cimage, contours, -1, cv::Scalar::all(255), 1, 8);
+		cv::ellipse(newGray, box, cv::Scalar(0,0,255), 1, CV_AA);
+	}
+	cv::imshow("result", newGray);
+	*/
+}
 //==============================================================================
 /** Shows a ROI in a given image.
  */
@@ -182,7 +291,7 @@ std::vector<unsigned> existing, IplImage *bg, double threshold){
 //==============================================================================
 /** Creates the \c Gabor filter with the given parameters and returns the \c wavelet.
  */
-cv::Mat featureDetector::createGabor(float params[]){
+void featureDetector::createGabor(cv::Mat &gabor, float params[]){
 	// params[0] -- sigma: (3, 68)
 	// params[1] -- gamma: (0.2, 1)
 	// params[2] -- dimension: (1, 10)
@@ -201,7 +310,7 @@ cv::Mat featureDetector::createGabor(float params[]){
 	float xMin   = -xMax;
 	float yMin   = -yMax;
 
-	cv::Mat gabor = cv::Mat::zeros((int)(xMax-xMin),(int)(yMax-yMin),CV_32F);
+	gabor = cv::Mat::zeros((int)(xMax-xMin),(int)(yMax-yMin),CV_32F);
 	for(int x=(int)xMin; x<xMax; x++){
 		for(int y=(int)yMin; y<yMax; y++){
 			float xPrime = x*std::cos(params[3])+y*std::sin(params[3]);
@@ -214,14 +323,69 @@ cv::Mat featureDetector::createGabor(float params[]){
 	}
 	cv::imshow("wavelet",gabor);
 	cvDestroyWindow("wavelet");
-	return gabor;
 }
 //==============================================================================
 /** Convolves an image with a computed \c Gabor filter.
  */
 cv::Mat featureDetector::convolveImage(cv::Point winCenter, cv::Mat image, \
 float params[]){
-	cv::Mat gabor = this->createGabor(params);
+	/*
+	cv::cvtColor(large, gray, CV_BGR2GRAY);
+
+	// NEEDS TO BE SMOOTHED TO REMOVE THE FALSE CIRCLES
+	cv::GaussianBlur(gray,gray,cv::Size(9,9),2,2);
+	cv::equalizeHist(gray,gray);
+	std::vector<cv::Vec3f> circles;
+
+	cv::Sobel(gray,gray,gray.depth(),1,1,1,1,0,cv::BORDER_DEFAULT);
+	cv::imshow("laplace", gray);
+
+	cv::imshow("pre-filtered",gray);
+
+	// CONVOLVE WITH SOME GAUSSIAN FILTER OR SMTH
+	cv::Mat gauss1, gauss2, gauss;
+	this->gaussianKernel(gauss1,cv::Size(20,20),10.0,cv::Point(0,0));
+	this->gaussianKernel(gauss2,cv::Size(20,20),5.0,cv::Point(-10,0));
+	gauss = gauss1 - gauss2;
+	cv::imshow("gauss",gauss);
+
+	cv::filter2D(gray,gray,-1,gauss,cv::Point(-1,-1),0,cv::BORDER_REPLICATE);
+	cv::imshow("filtered",gray);
+
+	cv::HoughCircles(gray,circles,CV_HOUGH_GRADIENT,2,gray.rows/4,70,10,0,0);
+	//cv::HoughCircles(gray,circles,CV_HOUGH_GRADIENT,2,gray.rows/2,100,100,0,0);
+	for(std::size_t i=0; i<circles.size(); i++){
+		 cv::Point center(cvRound(circles[i][0]), cvRound(circles[i][1]));
+		 int radius = cvRound(circles[i][2]);
+
+		 // draw the circle center
+		 cv::circle(large,center,3,cv::Scalar(0,255,0),-1,8,0);
+		 // draw the circle outline
+		 cv::circle(large,center,radius,cv::Scalar(0,0,255),3,8,0);
+	}
+	cv::namedWindow("circles",1);
+	cv::imshow("circles", large);
+
+	cv::Sobel(gray,gray,gray.depth(),1,1,1,1,0,cv::BORDER_DEFAULT);
+	cv::imshow("laplace", gray);
+
+	 *
+	cv::Mat ellipse(1,200,CV_32FC2);
+	cv::fitEllipse(ellipse);
+	cv::Point* pts = new cv::Point[200];
+	for(unsigned i=0; i<ellipse.cols;i++){
+		pts[i].x = ellipse.at<cv::Vec2f>(1,i)[0];
+		pts[i].y = ellipse.at<cv::Vec2f>(1,i)[1];
+
+		cout<<pts[i].y<<" "<<pts[i].x<<endl;
+	}
+	cv::fillConvexPoly(large,pts,200,cv::Scalar(200,10,10),8,0);
+	cv::imshow("circles", large);
+
+	*/
+
+	cv::Mat gabor;
+	this->createGabor(gabor,params);
 
 	cv::Mat edges(image.rows, image.cols, CV_8UC1);
 	image.convertTo(edges,CV_8UC1,0,1);
@@ -244,40 +408,63 @@ float params[]){
 /** Function that gets the ROI corresponding to a head of a person in
  * an image.
  */
-void featureDetector::getHeadROI(std::vector<featureDetector::people> allPeople){
-	for(unsigned i=0; i<allPeople.size(); i++){
+void featureDetector::getHeadROI(featureDetector::people someone,
+double variance){
+	double offsetX = someone.absoluteLoc.x - someone.relativeLoc.x;
+	double offsetY = someone.absoluteLoc.y - someone.relativeLoc.y;
+
+	std::vector<CvPoint> templ;
+	genTemplate2(someone.absoluteLoc, persHeight, camHeight, templ);
+	templ[12].x -= offsetX; templ[12].y -= offsetY;
+	templ[14].x -= offsetX; templ[14].y -= offsetY;
+	templ[0].x  -= offsetX; templ[0].y  -= offsetY;
+	templ[2].x  -= offsetX; templ[2].y  -= offsetY;
+
+	cv::Point A((templ[14].x-templ[12].x)/2,(templ[14].y-templ[12].y)/2);
+	cv::Point B((templ[2].x-templ[0].x)/2,(templ[2].y-templ[0].y)/2);
+	double m,b;
+	this->getLinePerpendicular(A,B,someone.relativeLoc,m,b);
+
+	cv::Mat aRoi(someone.pixels.clone());
+	for(int x=0; x<someone.pixels.cols; x++){
+		for(int y=0; y<someone.pixels.rows; y++){
+			if(!this->sameSubplane(cv::Point(x,y),A,m,b)){
+				aRoi.at<cv::Vec3b>(y,x) = cv::Vec3b(0,0,0);
+			}
+		}
+	}
+	cv::imshow("upper part", aRoi);
+
+/*
+for(unsigned i=0; i<allPeople.size(); i++){
 		double offsetX = allPeople[i].absoluteLoc.x - allPeople[i].relativeLoc.x;
 		double offsetY = allPeople[i].absoluteLoc.y - allPeople[i].relativeLoc.y;
 
 		std::vector<CvPoint> templ;
 		genTemplate2(allPeople[i].absoluteLoc, persHeight, camHeight, templ);
 
-		double variance = 20;
 		unsigned wi = templ[14].x-templ[13].x + variance;
 		unsigned hi = templ[13].y-templ[12].y + variance;
 		templ[12].x -= offsetX + variance;
 		templ[12].y -= offsetY + variance;
 		templ[12].x = std::max(0,templ[12].x);
 		templ[12].y = std::max(0,templ[12].y);
+		wi          = std::min((int)wi, allPeople[i].pixels.cols-templ[12].x);
+		hi          = std::min((int)hi, allPeople[i].pixels.rows-templ[12].y);
 
-		if((templ[12].x + wi)<allPeople[i].pixels.cols && \
-		(templ[12].y + hi)<allPeople[i].pixels.rows){
-			cout<<templ[12].x<<" "<<templ[12].y<<endl;
-			cout<<(templ[12].x + wi)<<" <?> "<<allPeople[i].pixels.cols<<endl;
-			cout<<(templ[12].y + hi)<<" <?> "<<allPeople[i].pixels.rows<<endl;
+		cv::Mat aRoi(allPeople[i].pixels.clone(),cv::Rect(templ[12],cv::Size(wi, hi)));
+		cv::imshow("head", aRoi);
+		cv::waitKey(0);
 
-			cv::Mat aRoi(allPeople[i].pixels.clone(),cv::Rect(templ[12],cv::Size(wi, hi)));
-			cv::imshow("head", aRoi);
-			cv::waitKey(0);
+		this->ellipseDetection(aRoi);
 
-			/*
-			cv::Point winCenter(templ[12].x+wi/2,templ[12].y+hi/2);
-			float params[]    = {10.0, 1.0, 2.0, M_PI, 2.0, 0.1};
-			cv::Mat convolved = this->convolveImage(winCenter,aRoi,params);
-			*/
-			aRoi.release();
-		}
+		cv::Point winCenter(templ[12].x+wi/2,templ[12].y+hi/2);
+		float params[]    = {10.0, 1.0, 2.0, M_PI, 2.0, 0.1};
+		cv::Mat convolved = this->convolveImage(winCenter,aRoi,params);
+		aRoi.release();
+
 	}
+*/
 }
 //==============================================================================
 /** Overwrite the \c doFindPeople function from the \c Tracker class to make it
@@ -329,8 +516,9 @@ const FLOAT logBGProb,const vnl_vector<FLOAT> &logSumPixelBGProb){
 	IplImage *bg = vec2img((imgVec-bgVec).apply(fabs));
 	//7') GET ALL PIXELS CORRESPONDING TO PPL AND THEN EXTRACT HEADS AND FEET
 	std::vector<featureDetector::people> allPeople(existing.size());
-	this->getAllForegroundPixels(allPeople, existing, bg, 10.0);
-	this->getHeadROI(allPeople);
+	this->getAllForegroundPixels(allPeople, existing, bg, 7.0);
+	this->getHeadROI(allPeople[0],0);
+	//this->ellipseDetection(allPeople[0].pixels);
 
 	//7) SHOW THE FOREGROUND POSSIBLE LOCATIONS AND PLOT THE TEMPLATES
 	this->plotHull(bg, this->priorHull);

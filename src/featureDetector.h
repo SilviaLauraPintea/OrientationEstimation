@@ -41,7 +41,7 @@ class featureDetector:public Tracker{
 		/** Function that gets the ROI corresponding to a head of a person in
 		 * an image.
 		 */
-		void getHeadROI(std::vector<featureDetector::people> allPeople);
+		void getHeadROI(featureDetector::people someone, double variance);
 
 		/** Start the running in a parallel thread an instance of the tracker.
 		 */
@@ -53,9 +53,17 @@ class featureDetector:public Tracker{
 		 */
 		bool imageProcessingMenu();
 
+		/** Creates a symmetrical Gaussian kernel.
+		 */
+		void gaussianKernel(cv::Mat &gauss, cv::Size size, double sigma,cv::Point offset);
+
+		/** Hough transform for circle detection.
+		 */
+		void ellipseDetection(cv::Mat img);
+
 		/** Creates the \c Gabor filter with the given parameters and returns the \c wavelet.
 		 */
-		cv::Mat createGabor(float params[]);
+		void createGabor(cv::Mat &gabor,float params[]);
 
 		/** Convolves an image with a computed \c Gabor filter.
 		 */
@@ -74,6 +82,15 @@ class featureDetector:public Tracker{
 		/** Shows a ROI in a given image.
 		 */
 		void showROI(cv::Mat image, cv::Point top_left, cv::Size ROI_size);
+
+		/** Get perpendicular to a line given by 2 points A, B in point C.
+		 */
+		void getLinePerpendicular(cv::Point A, cv::Point B, cv::Point C, \
+			double &m, double &b);
+
+		/** Checks to see if a point is on the same side of a line like another given point.
+		 */
+		bool sameSubplane(cv::Point test,cv::Point point, double m, double b);
 		//======================================================================
 	protected:
 
