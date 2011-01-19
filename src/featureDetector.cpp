@@ -22,15 +22,21 @@ unsigned MIN_TRACKLEN = 20;
  */
 void featureDetector::getLinePerpendicular(cv::Point A, cv::Point B, cv::Point C, \
 double &m, double &b){
-	double slope = (B.y - A.y)/(B.x - A.x);
-	m            = -1.0/slope;
-	b            = C.y - m * C.x;
+	double slope = (double)(B.y - A.y)/(double)(B.x - A.x);
+	m = -1.0/slope;
+	b = C.y - m * C.x;
 }
 //==============================================================================
 /** Checks to see if a point is on the same side of a line like another given point.
  */
 bool featureDetector::sameSubplane(cv::Point test,cv::Point point, double m, double b){
-	return (m*point.x+b-point.y)*(m*test.x+b-test.y)>=0.0;
+	if(isnan(m)){
+		return (point.x*test.x)>=0.0;
+	}else if(m == 0){
+		return (point.y*test.y)>=0.0;
+	}else{
+		return (m*point.x+b-point.y)*(m*test.x+b-test.y)>=0.0;
+	}
 }
 //==============================================================================
 /** Creates a symmetrical Gaussian kernel.
@@ -59,21 +65,22 @@ void featureDetector::ellipseDetection(cv::Mat img){
 	cv::Mat hsv;
 	cv::cvtColor(large, hsv, CV_BGR2HSV);
 
-	/*
 	// THRESHOLD THE HSV TO KEEP THE HIGH-GREEN PIXELS => brown+green+skin
 	for(int x=0; x<hsv.cols; x++){
 		for(int y=0; y<hsv.rows; y++){
-			if(((hsv.at<cv::Vec3b>(y,x)[0]<200 && hsv.at<cv::Vec3b>(y,x)[0]>100) && \
+			if(((hsv.at<cv::Vec3b>(y,x)[0]<255 && hsv.at<cv::Vec3b>(y,x)[0]>50) && \
 				(hsv.at<cv::Vec3b>(y,x)[1]<200 && hsv.at<cv::Vec3b>(y,x)[1]>0) && \
 				(hsv.at<cv::Vec3b>(y,x)[2]<200 && hsv.at<cv::Vec3b>(y,x)[2]>0))){
-				hsv.at<cv::Vec3b>(y,x) = cv::Vec3b(0,0,0);
+				large.at<cv::Vec3b>(y,x) = cv::Vec3b(0,0,0);
 			}
 		}
 	}
+	cv::imshow("hsv",hsv);
+	cv::imshow("large",large);
 
+	/*
 	cv::Mat gray;
 	cv::cvtColor(hsv, gray, CV_BGR2GRAY);
-
 
 	// EORDE AND DILATE WITH A GAUSSIAN KERNEL
 	cv::Mat gauss;
@@ -104,9 +111,17 @@ void featureDetector::ellipseDetection(cv::Mat img){
 	cv::Canny(newGray,edges,60,30,3,true);
 	cv::imshow("new gray", edges);
 
+	std::vector<cv::Point2f> cors;
+	cv::goodFeaturesToTrack(newGray,cors,20,0.001,large.rows/4);
+	for(std::size_t i = 0; i <cors.size(); i++){
+		cv::circle(large,cv::Point(cors[i].x,cors[i].y),1,cv::Scalar(0,0,255),1,8,0);
+	}
+	cv::imshow("features", large);
 
-	cv::cornerHarris(newGray,corners,3, 3, 1, cv::BORDER_DEFAULT);
-	cv::imshow("harris", corners);
+
+	cv::Sobel(large,large,large.depth(),1,1,3,1,0,cv::BORDER_DEFAULT);
+	cv::imshow("gradient", large);
+
 	/*
 	std::vector<std::vector<cv::Point> > contours;
 	cv::findContours(newGray,contours,CV_RETR_LIST,CV_CHAIN_APPROX_NONE);
@@ -415,56 +430,32 @@ double variance){
 
 	std::vector<CvPoint> templ;
 	genTemplate2(someone.absoluteLoc, persHeight, camHeight, templ);
+
 	templ[12].x -= offsetX; templ[12].y -= offsetY;
 	templ[14].x -= offsetX; templ[14].y -= offsetY;
 	templ[0].x  -= offsetX; templ[0].y  -= offsetY;
 	templ[2].x  -= offsetX; templ[2].y  -= offsetY;
+	cv::Point A((templ[14].x+templ[12].x)/2,(templ[14].y+templ[12].y)/2);
+	cv::Point B((templ[2].x+templ[0].x)/2,(templ[2].y+templ[0].y)/2);
 
-	cv::Point A((templ[14].x-templ[12].x)/2,(templ[14].y-templ[12].y)/2);
-	cv::Point B((templ[2].x-templ[0].x)/2,(templ[2].y-templ[0].y)/2);
 	double m,b;
-	this->getLinePerpendicular(A,B,someone.relativeLoc,m,b);
-
-	cv::Mat aRoi(someone.pixels.clone());
+	this->getLinePerpendicular(A,B,cv::Point((A.x+B.x)/2,(A.y+B.y)/2),m,b);
+	cv::Mat upperRoi(someone.pixels.clone());
+	cv::Mat lowerRoi(someone.pixels.clone());
 	for(int x=0; x<someone.pixels.cols; x++){
 		for(int y=0; y<someone.pixels.rows; y++){
 			if(!this->sameSubplane(cv::Point(x,y),A,m,b)){
-				aRoi.at<cv::Vec3b>(y,x) = cv::Vec3b(0,0,0);
+				upperRoi.at<cv::Vec3b>(y,x) = cv::Vec3b(0,0,0);
+			}else{
+				lowerRoi.at<cv::Vec3b>(y,x) = cv::Vec3b(0,0,0);
 			}
 		}
 	}
-	cv::imshow("upper part", aRoi);
 
-/*
-for(unsigned i=0; i<allPeople.size(); i++){
-		double offsetX = allPeople[i].absoluteLoc.x - allPeople[i].relativeLoc.x;
-		double offsetY = allPeople[i].absoluteLoc.y - allPeople[i].relativeLoc.y;
+	cv::imshow("upper part", upperRoi);
+	this->ellipseDetection(upperRoi);
 
-		std::vector<CvPoint> templ;
-		genTemplate2(allPeople[i].absoluteLoc, persHeight, camHeight, templ);
-
-		unsigned wi = templ[14].x-templ[13].x + variance;
-		unsigned hi = templ[13].y-templ[12].y + variance;
-		templ[12].x -= offsetX + variance;
-		templ[12].y -= offsetY + variance;
-		templ[12].x = std::max(0,templ[12].x);
-		templ[12].y = std::max(0,templ[12].y);
-		wi          = std::min((int)wi, allPeople[i].pixels.cols-templ[12].x);
-		hi          = std::min((int)hi, allPeople[i].pixels.rows-templ[12].y);
-
-		cv::Mat aRoi(allPeople[i].pixels.clone(),cv::Rect(templ[12],cv::Size(wi, hi)));
-		cv::imshow("head", aRoi);
-		cv::waitKey(0);
-
-		this->ellipseDetection(aRoi);
-
-		cv::Point winCenter(templ[12].x+wi/2,templ[12].y+hi/2);
-		float params[]    = {10.0, 1.0, 2.0, M_PI, 2.0, 0.1};
-		cv::Mat convolved = this->convolveImage(winCenter,aRoi,params);
-		aRoi.release();
-
-	}
-*/
+	cv::imshow("lower part", lowerRoi);
 }
 //==============================================================================
 /** Overwrite the \c doFindPeople function from the \c Tracker class to make it
