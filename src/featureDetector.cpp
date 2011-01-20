@@ -5,7 +5,6 @@
 	#include <boost/thread/detail/lock.hpp>
 #endif
 #include <boost/thread/xtime.hpp>
-
 #include <iostream>
 #include <fstream>
 #include <string>
@@ -20,11 +19,11 @@ unsigned MIN_TRACKLEN = 20;
 //==============================================================================
 /** Get perpendicular to a line given by 2 points A, B in point C.
  */
-void featureDetector::getLinePerpendicular(cv::Point A, cv::Point B, cv::Point C, \
+void featureDetector::getLinePerpendicular(cv::Point A, cv::Point B, cv::Point C,\
 double &m, double &b){
 	double slope = (double)(B.y - A.y)/(double)(B.x - A.x);
-	m = -1.0/slope;
-	b = C.y - m * C.x;
+	m            = -1.0/slope;
+	b            = C.y - m * C.x;
 }
 //==============================================================================
 /** Checks to see if a point is on the same side of a line like another given point.
@@ -44,7 +43,7 @@ bool featureDetector::sameSubplane(cv::Point test,cv::Point point, double m, dou
 void featureDetector::gaussianKernel(cv::Mat &gauss, cv::Size size, double sigma,\
 cv::Point offset){
 	int xmin = -1 * size.width/2, xmax = size.width/2;
-	int ymin = -1 * size.height/2, ymax = size.height/2;
+	int ymioperatorn = -1 * size.height/2, ymax = size.height/2;
 
 	gauss = cv::Mat::zeros(size.height,size.width,CV_32FC1);
 	for(int x=xmin; x<xmax; x++){
@@ -55,15 +54,114 @@ cv::Point offset){
 	}
 }
 //==============================================================================
-/** Head detection by fitting ellipses.
+/** Gets strong corner points in an image.
  */
-void featureDetector::ellipseDetection(cv::Mat img){
-	cv::Mat large;
-	cv::resize(img,large,cv::Size(0,0),5,5,cv::INTER_CUBIC);
+void featureDetector::getCornerPoints(std::vector<cv::Point2f> &corners,\
+cv::Mat image){
+	cv::Mat_<uchar> gray;
+	cv::cvtColor(image, gray, CV_BGR2GRAY);
+	cv::goodFeaturesToTrack(gray, corners, 100, 0.001, image.rows/4);
 
+	for(std::size_t i = 0; i <corners.size(); i++){
+		cv::circle(image, cv::Point(corners[i].x, corners[i].y), 1,\
+			cv::Scalar(0,0,255), 1, 8, 0);
+	}
+	cv::imshow("Corners", image);
+	cv::waitKey(0);
+	cvDestroyWindow("Corners");
+
+	//extract descriptors ==> ??? opponentColorDescriptorExtractor
+
+	gray.release();
+}
+//==============================================================================
+/** Gets the edges in an image.
+ */
+void featureDetector::getEdges(cv::Mat_<uchar> &edges, cv::Mat image){
+	cv::Mat_<uchar> gray;
+	cv::cvtColor(image, gray, CV_BGR2GRAY);
+	cv::medianBlur(gray, gray, 3);
+	cv::Canny(gray, edges, 60, 30, 3, true);
+	cv::imshow("Edges", edges);
+	cv::waitKey(0);
+	cvDestroyWindow("Edges");
+
+	gray.release();
+}
+//==============================================================================
+/** SURF descriptors (Speeded Up Robust Features).
+ */
+void featureDetector::getSURF(std::vector<float>& descriptors, cv::Mat image){
+	cv::Mat mask;
+	std::vector<cv::KeyPoint> keypoints;
+	cv::SURF aSURF = cv::SURF();
+	aSURF(image, mask, keypoints, descriptors, useProvidedKeypoints=false);
+
+	/*
+	Point2f pt;     ==> coordinates of the key-points
+	float size;     ==> diameter of the meaning-full key-point neighborhood
+	float angle;    ==> computed orientation of the key-point(-1 if not applicable)
+	float response; ==> the response by which the most strong key-points
+						have been selected. Can be used for the further sorting
+						or sub-sampling
+	int octave;     ==> octave (pyramid layer) from which the key-point has
+						been extracted
+	int class_id;   ==> object class (if the key-points need to be clustered by
+						an object they belong to)
+	*/
+
+	for(std::size_t i = 0; i <keypoints.size(); i++){
+		cv::circle(image, cv::Point(keypoints[i].pt.x, keypoints[i].pt.y),\
+			keypoints[i].size, cv::Scalar(0,0,255), 1, 8, 0);
+	}
+	cv::imshow("SURFS", image);
+	cv::waitKey(0);
+	cvDestroyWindow("SURFS");
+
+	mask.release();
+}
+//==============================================================================
+/** Blob detector in RGB color space.
+ */
+void featureDetector::blobDetector(std::vector<std::vector<cv::Point> >& msers,\
+cv::Mat image){
+	int _delta, _min_area, _max_area, _max_evolution, _edge_blur_size;
+	float _max_variation, _min_diversity;
+	double _area_threshold, _min_margin;
+	cv::MSER aMSER = cv::MSER(_delta, _min_area, _max_area, _max_variation,\
+		_min_diversity, _max_evolution, _area_threshold, _min_margin, _edge_blur_size );
+
+	// runs the extractor on the specified image; returns the MSERs,
+	// each encoded as a contour the optional mask marks the area where MSERs
+	// are searched for
+	cv::Mat mask;
+	aMSER(image, msers, mask);
+	cv::drawContours(image, msers, -1, cv::Scalar(0,0,255), 1, 8);
+	mask.release();
+}
+//
+//==============================================================================
+/** Just displaying an image a bit larger to see it better.
+ */
+void featureDetector::showZoomedImage(cv::Mat image, const std::string title="zoomed"){
+	cv::Mat large;
+	cv::resize(image, large, cv::Size(0,0), 5, 5, cv::INTER_CUBIC);
+	cv::imshow(title, image);
+	cv::waitKey(0);
+	cvDestroyWindow(title);
+
+	large.release();
+}
+//==============================================================================
+/** Head detection by fitting ellipses (if templateCenter is relative to the img
+ * the offset needs to be used).
+ */
+void featureDetector::skinEllipses(cv::RotatedRect &finalBox, cv::Mat img,\
+cv::Point templateCenter, cv::Point offset=cv::Point(0,0), double minHeadSize=20,\
+double maxHeadSize=40){
 	// TRANSFORM FROM BGR TO HSV TO BE ABLE TO DETECT MORE SKIN-LIKE PIXELS
 	cv::Mat hsv;
-	cv::cvtColor(large, hsv, CV_BGR2HSV);
+	cv::cvtColor(img, hsv, CV_BGR2HSV);
 
 	// THRESHOLD THE HSV TO KEEP THE HIGH-GREEN PIXELS => brown+green+skin
 	for(int x=0; x<hsv.cols; x++){
@@ -75,72 +173,54 @@ void featureDetector::ellipseDetection(cv::Mat img){
 			}
 		}
 	}
-	cv::imshow("hsv",hsv);
-	cv::imshow("large",large);
 
-	/*
-	cv::Mat gray;
-	cv::cvtColor(hsv, gray, CV_BGR2GRAY);
+	// GET EDGES OF THE IMAGE
+	cv::Mat_<uchar> edges;
+	this->getEdges(edges, large);
 
-	// EORDE AND DILATE WITH A GAUSSIAN KERNEL
-	cv::Mat gauss;
-	this->gaussianKernel(gauss,cv::Size(10,10),5.0,cv::Point(0,0));
-	cv::erode(gray, gray, gauss, cv::Point(-1,-1), 2, cv::BORDER_CONSTANT,\
-		cv::morphologyDefaultBorderValue());
-
-	cv::dilate(gray,gray,gauss,cv::Point(-1, -1),4,cv::BORDER_CONSTANT,\
-		cv::morphologyDefaultBorderValue());
-	cv::equalizeHist(gray,gray);
-	gauss.release();
-	cv::imshow("eroded_dilated", gray);
-
-	//RETAIN ONLY THE PIXELS THAT ARE INSIDE OF A BLOB
-	for(int x=0; x<hsv.cols; x++){
-		for(int y=0; y<hsv.rows; y++){
-			if((int)gray.at<uchar>(y,x)<100){
-				hsv.at<cv::Vec3b>(y,x) = cv::Vec3b(0,0,0);
-			}
-		}
-	}
-	cv::imshow("hsv",hsv);
-	*/
-
-	cv::Mat newGray, edges, corners;
-	cv::cvtColor(large,newGray,CV_BGR2GRAY);
-	cv::medianBlur(newGray,newGray,3);
-	cv::Canny(newGray,edges,60,30,3,true);
-	cv::imshow("new gray", edges);
-
-	std::vector<cv::Point2f> cors;
-	cv::goodFeaturesToTrack(newGray,cors,20,0.001,large.rows/4);
-	for(std::size_t i = 0; i <cors.size(); i++){
-		cv::circle(large,cv::Point(cors[i].x,cors[i].y),1,cv::Scalar(0,0,255),1,8,0);
-	}
-	cv::imshow("features", large);
-
-
-	cv::Sobel(large,large,large.depth(),1,1,3,1,0,cv::BORDER_DEFAULT);
-	cv::imshow("gradient", large);
-
-	/*
+	// GROUP THE EDGES INTO CONTOURS
 	std::vector<std::vector<cv::Point> > contours;
-	cv::findContours(newGray,contours,CV_RETR_LIST,CV_CHAIN_APPROX_NONE);
-	//cv::Mat cimage = cv::Mat::zeros(newGray.size(),CV_8UC3);
-	cv::drawContours(newGray, contours, -1, cv::Scalar::all(255), 1, 8);
-	for(std::size_t i = 0; i < contours.size(); i++){
-		size_t count = contours[i].size();
-		if( count < 6 ) continue;
+	cv::findContours(edges, contours, CV_RETR_LIST, CV_CHAIN_APPROX_NONE);
+	cv::drawContours(edges, contours, -1, cv::Scalar::all(255), 1, 8);
+	cv::imshow("Contours", contours);
+	cv::waitKey(0);
+	cvDestroyWindow("Contours");
+
+	// GET THE HEAD CENTER
+	genTemplate2(center, persHeight, camHeight, templ);
+	cv::Point headCenter((templ[12].x+templ[14].x)/2-offset.x, \
+		(templ[12].y+templ[14].y)/2-offset.y);
+
+	// FIND THE BEST ELLIPSE YOU CAN FIND
+	double bestDistance = edges.cols*edges.rows;
+	for(std::size_t i=0; i<contours.size(); i++){
+		size_t count=contours[i].size();
+		if(count<6) continue;
 		cv::Mat pointsf;
 		cv::Mat(contours[i]).convertTo(pointsf, CV_32F);
 		cv::RotatedRect box = fitEllipse(pointsf);
-		box.angle = -box.angle;
+		box.angle           = -box.angle;
 		if(std::max(box.size.width, box.size.height)>\
 		std::min(box.size.width, box.size.height)*30) continue;
-		//cv::drawContours(cimage, contours, -1, cv::Scalar::all(255), 1, 8);
-		cv::ellipse(newGray, box, cv::Scalar(0,0,255), 1, CV_AA);
+
+		// IF IT IS AN ACCEPTABLE BLOB
+		double dist = dist(box.center, headCenter);
+		if(dist<bestDistance && minHeadSize<box.size.width && \
+		box.size.width<maxHeadSize && minHeadSize<box.size.height &&\
+		box.size.height<maxHeadSize){
+			bestDistance = dist;
+			finalBox     = box;
+		}
+		pointsf.release();
 	}
-	cv::imshow("result", newGray);
-	*/
+	if(bestDistance != edges.cols*edges.rows){
+		cv::ellipse(hsv, finalBox, cv::Scalar(0,0,255), 1, CV_AA);
+		cv::imshow("HSV", hsv);
+		cv::waitKey(0);
+		cvDestroyWindow("HSV");
+	}
+	edges.release();
+	hsv.release();
 }
 //==============================================================================
 /** Shows a ROI in a given image.
@@ -176,7 +256,8 @@ std::vector<CvPoint> templ){
 //==============================================================================
 /** Checks to see if a given pixel is inside of a template.
  */
-bool featureDetector::isInTemplate(unsigned pixelX,unsigned pixelY,std::vector<CvPoint> templ){
+bool featureDetector::isInTemplate(unsigned pixelX, unsigned pixelY,\
+std::vector<CvPoint> templ){
 	std::vector<CvPoint> hull;
 	convexHull(templ, hull);
 	std::vector<scanline_t> lines;
@@ -306,7 +387,8 @@ std::vector<unsigned> existing, IplImage *bg, double threshold){
 //==============================================================================
 /** Creates the \c Gabor filter with the given parameters and returns the \c wavelet.
  */
-void featureDetector::createGabor(cv::Mat &gabor, float params[]){
+void featureDetector::getGabor(cv::Mat &response, cv::Mat image, float params[]=\
+{3,0.4,2,M_PI/4,4,20}){
 	// params[0] -- sigma: (3, 68)
 	// params[1] -- gamma: (0.2, 1)
 	// params[2] -- dimension: (1, 10)
@@ -325,7 +407,7 @@ void featureDetector::createGabor(cv::Mat &gabor, float params[]){
 	float xMin   = -xMax;
 	float yMin   = -yMax;
 
-	gabor = cv::Mat::zeros((int)(xMax-xMin),(int)(yMax-yMin),CV_32F);
+	cv::Mat gabor = cv::Mat::zeros((int)(xMax-xMin),(int)(yMax-yMin),CV_32F);
 	for(int x=(int)xMin; x<xMax; x++){
 		for(int y=(int)yMin; y<yMax; y++){
 			float xPrime = x*std::cos(params[3])+y*std::sin(params[3]);
@@ -336,95 +418,23 @@ void featureDetector::createGabor(cv::Mat &gabor, float params[]){
 				std::cos(2.0 * M_PI/params[4]*xPrime*params[5]);
 		}
 	}
-	cv::imshow("wavelet",gabor);
-	cvDestroyWindow("wavelet");
-}
-//==============================================================================
-/** Convolves an image with a computed \c Gabor filter.
- */
-cv::Mat featureDetector::convolveImage(cv::Point winCenter, cv::Mat image, \
-float params[]){
-	/*
-	cv::cvtColor(large, gray, CV_BGR2GRAY);
+	cv::imshow("Gabor",gabor);
+	cv::waitKey(0);
+	cvDestroyWindow("Gabor");
 
-	// NEEDS TO BE SMOOTHED TO REMOVE THE FALSE CIRCLES
-	cv::GaussianBlur(gray,gray,cv::Size(9,9),2,2);
-	cv::equalizeHist(gray,gray);
-	std::vector<cv::Vec3f> circles;
+	cv::filter2D(image,response,-1,gabor,cv::Point(-1,-1),0,cv::BORDER_REPLICATE);
+	cv::imshow("GaborResponse",response);
+	cv::waitKey(0);
+	cvDestroyWindow("GaborResponse");
 
-	cv::Sobel(gray,gray,gray.depth(),1,1,1,1,0,cv::BORDER_DEFAULT);
-	cv::imshow("laplace", gray);
-
-	cv::imshow("pre-filtered",gray);
-
-	// CONVOLVE WITH SOME GAUSSIAN FILTER OR SMTH
-	cv::Mat gauss1, gauss2, gauss;
-	this->gaussianKernel(gauss1,cv::Size(20,20),10.0,cv::Point(0,0));
-	this->gaussianKernel(gauss2,cv::Size(20,20),5.0,cv::Point(-10,0));
-	gauss = gauss1 - gauss2;
-	cv::imshow("gauss",gauss);
-
-	cv::filter2D(gray,gray,-1,gauss,cv::Point(-1,-1),0,cv::BORDER_REPLICATE);
-	cv::imshow("filtered",gray);
-
-	cv::HoughCircles(gray,circles,CV_HOUGH_GRADIENT,2,gray.rows/4,70,10,0,0);
-	//cv::HoughCircles(gray,circles,CV_HOUGH_GRADIENT,2,gray.rows/2,100,100,0,0);
-	for(std::size_t i=0; i<circles.size(); i++){
-		 cv::Point center(cvRound(circles[i][0]), cvRound(circles[i][1]));
-		 int radius = cvRound(circles[i][2]);
-
-		 // draw the circle center
-		 cv::circle(large,center,3,cv::Scalar(0,255,0),-1,8,0);
-		 // draw the circle outline
-		 cv::circle(large,center,radius,cv::Scalar(0,0,255),3,8,0);
-	}
-	cv::namedWindow("circles",1);
-	cv::imshow("circles", large);
-
-	cv::Sobel(gray,gray,gray.depth(),1,1,1,1,0,cv::BORDER_DEFAULT);
-	cv::imshow("laplace", gray);
-
-	 *
-	cv::Mat ellipse(1,200,CV_32FC2);
-	cv::fitEllipse(ellipse);
-	cv::Point* pts = new cv::Point[200];
-	for(unsigned i=0; i<ellipse.cols;i++){
-		pts[i].x = ellipse.at<cv::Vec2f>(1,i)[0];
-		pts[i].y = ellipse.at<cv::Vec2f>(1,i)[1];
-
-		cout<<pts[i].y<<" "<<pts[i].x<<endl;
-	}
-	cv::fillConvexPoly(large,pts,200,cv::Scalar(200,10,10),8,0);
-	cv::imshow("circles", large);
-
-	*/
-
-	cv::Mat gabor;
-	this->createGabor(gabor,params);
-
-	cv::Mat edges(image.rows, image.cols, CV_8UC1);
-	image.convertTo(edges,CV_8UC1,0,1);
-	cv::cvtColor(image,edges,CV_RGB2GRAY,0);
-
-	cv::Canny(edges, edges, 10.0, 100.0, 3, false);
-	cv::imshow("edges",edges);
-
-	cv::filter2D(edges,edges,-1,gabor,cv::Point(-1,-1),0,cv::BORDER_REPLICATE);
 	gabor.release();
-	cv::imshow("gabor",edges);
-	cv::waitKey();
-
-	cvDestroyWindow("edges");
-	cvDestroyWindow("gabor");
-	edges.release();
-	return image;
 }
 //==============================================================================
-/** Function that gets the ROI corresponding to a head of a person in
+/** Function that gets the ROI corresponding to a head/feet of a person in
  * an image.
  */
-void featureDetector::getHeadROI(featureDetector::people someone,
-double variance){
+void featureDetector::upperLowerROI(featureDetector::people someone,
+double variance, cv::Mat &upperRoi, cv::Mat &lowerRoi){
 	double offsetX = someone.absoluteLoc.x - someone.relativeLoc.x;
 	double offsetY = someone.absoluteLoc.y - someone.relativeLoc.y;
 
@@ -440,8 +450,8 @@ double variance){
 
 	double m,b;
 	this->getLinePerpendicular(A,B,cv::Point((A.x+B.x)/2,(A.y+B.y)/2),m,b);
-	cv::Mat upperRoi(someone.pixels.clone());
-	cv::Mat lowerRoi(someone.pixels.clone());
+	upperRoi(someone.pixels.clone());
+	lowerRoi(someone.pixels.clone());
 	for(int x=0; x<someone.pixels.cols; x++){
 		for(int y=0; y<someone.pixels.rows; y++){
 			if(!this->sameSubplane(cv::Point(x,y),A,m,b)){
@@ -451,11 +461,11 @@ double variance){
 			}
 		}
 	}
-
-	cv::imshow("upper part", upperRoi);
-	this->ellipseDetection(upperRoi);
-
-	cv::imshow("lower part", lowerRoi);
+	cv::imshow("UpperPart", upperRoi);
+	cv::imshow("LowerPart", lowerRoi);
+	cv::waitKey(0);
+	cvDestroyWindow("LowerPart");
+	cvDestroyWindow("UpperPart");
 }
 //==============================================================================
 /** Overwrite the \c doFindPeople function from the \c Tracker class to make it
@@ -505,27 +515,29 @@ const FLOAT logBGProb,const vnl_vector<FLOAT> &logSumPixelBGProb){
 	}
 
 	IplImage *bg = vec2img((imgVec-bgVec).apply(fabs));
-	//7') GET ALL PIXELS CORRESPONDING TO PPL AND THEN EXTRACT HEADS AND FEET
+
+	//7') EXTRACT FEATURES FOR THE CURRENTLY DETECTED LOCATIONS
 	std::vector<featureDetector::people> allPeople(existing.size());
 	this->getAllForegroundPixels(allPeople, existing, bg, 7.0);
 	this->getHeadROI(allPeople[0],0);
 	//this->ellipseDetection(allPeople[0].pixels);
 
 	//7) SHOW THE FOREGROUND POSSIBLE LOCATIONS AND PLOT THE TEMPLATES
-	this->plotHull(bg, this->priorHull);
 	cerr<<"no. of detected people: "<<existing.size()<<endl;
-	for(unsigned i=0; i!=existing.size(); ++i){
-		cv::Point pt = this->cvPoint(existing[i]);
-		plotTemplate2(bg,pt,persHeight,camHeight,CV_RGB(255,255,255));
-		plotScanLines(this->current->img,mask,CV_RGB(0,255,0),0.3);
-		cv::Mat tmp = cv::Mat(this->current->img);
-		char buffer[50];
-		sprintf(buffer,"%u",i);
-		cv::putText(tmp,(string)buffer,pt,3,3.0,cv::Scalar(0,0,255),1,8,false);
+	if(this->plotTracks){
+		this->plotHull(bg, this->priorHull);
+		for(unsigned i=0; i!=existing.size(); ++i){
+			cv::Point pt = this->cvPoint(existing[i]);
+			plotTemplate2(bg,pt,persHeight,camHeight,CV_RGB(255,255,255));
+			plotScanLines(this->current->img,mask,CV_RGB(0,255,0),0.3);
+			cv::Mat tmp = cv::Mat(this->current->img);
+			char buffer[50];
+			sprintf(buffer,"%u",i);
+			cv::putText(tmp,(string)buffer,pt,3,3.0,cv::Scalar(0,0,255),1,8,false);
+		}
+		cvShowImage("bg", bg);
+		cvShowImage("image",src);
 	}
-	cvShowImage("bg", bg);
-	cvShowImage("image",src);
-
 	//8) WHILE NOT q WAS PRESSED PROCESS THE NEXT IMAGES
 	return this->imageProcessingMenu();
 	cvReleaseImage(&bg);
@@ -565,6 +577,6 @@ bool featureDetector::imageProcessingMenu(){
 }
 //==============================================================================
 int main(int argc, char **argv){
-	featureDetector feature;
-	feature.run(argc,argv);
+	featureDetector feature(argc,argv,false);
+	feature.run();
 }

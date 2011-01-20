@@ -16,13 +16,6 @@
 using namespace std;
 using namespace boost;
 //==============================================================================
-struct myIpl:public IplImage{
-	double operator()(const unsigned i, const unsigned j) const{
-		return (double)(this->imageData+i*this->widthStep)[j];
-	}
-};
-//==============================================================================
-//==============================================================================
 /** Reads images from a dir and stores them into a vector of strings.
  */
 vector<string> readImages(const char* dirName){

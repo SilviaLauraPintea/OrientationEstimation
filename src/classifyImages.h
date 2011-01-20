@@ -17,17 +17,51 @@
 #include <opencv/ml.h>
 #include "eigenbackground/src/Tracker.hh"
 #include "eigenbackground/src/Helpers.hh"
+#include "featureDetector.h"
 
 class classifyImages {
-	public:
-		featureDetector features;
+	protected:
+		/** @var testFeatures
+		 * An instance of \c featureDetector class.
+		 */
+		featureDetector *testFeatures;
+
+		/** @var trainFeatures
+		 * An instance of \c featureDetector class.
+		 */
+		featureDetector *trainFeatures;
+
+		/** @var trainData
+		 * The training data matrix.
+		 */
+		cv::Mat trainData;
+
+		/** @var
+		 * The test data matrix.
+		 */
+		cv::Mat testData;
+
+		/** @var
+		 * The folder containing the training images.
+		 */
+		std::string trainFolder;
+
+		/** @var
+		 * The folder containing the test images.
+		 */
+		std::string testFolder;
 		//======================================================================
-		classifyImages();
+	public:
+		classifyImages(int argc, char **argv);
 		virtual ~classifyImages();
+
+		/** Creates the training data/test data.
+		 */
+		void createData(std::vector<std::string> options);
 
 		/** Regression SVM classification.
 		 */
-		void classifySVM(cv::Mat* trainData, cv::Mat* sample);
+		void classifySVM();
 };
 
 #endif /* CLASSIFYIMAGES_H_ */

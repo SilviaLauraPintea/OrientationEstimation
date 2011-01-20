@@ -128,7 +128,7 @@ class annotationsHandle {
 		 */
 		static void drawOrientation(cv::Point center, unsigned int orient);
 		//======================================================================
-	private:
+	protected:
 		/** @var image
 		 * The currently processed image.
 		 */
