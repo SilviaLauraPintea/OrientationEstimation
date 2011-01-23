@@ -26,13 +26,19 @@ class featureDetector:public Tracker{
 		struct people {
 			cv::Point absoluteLoc;
 			cv::Point relativeLoc;
+			std::vector<unsigned> borders;
 			cv::Mat_<cv::Vec3b> pixels;
 		};
+
+		/** All available feature types.
+		 */
+		enum FEATURE {BLOB, ELLIPSE, CORNER, EDGES, GABOR, SURF};
 		//======================================================================
 		/** Default Class constructor.
 		 */
 		featureDetector(int argc,char** argv):Tracker(argc, argv, 10, true, true){
-			this->plotTracks = true;
+			this->plotTracks  = true;
+			this->featureType = CORNER;
 		}
 		featureDetector(int argc,char** argv,bool plot):Tracker(argc, argv, 10, \
 		true, true){
@@ -41,7 +47,7 @@ class featureDetector:public Tracker{
 
 		/** Class destructor.
 		 */
-		virtual ~featureDetector(){};
+		virtual ~featureDetector(){}
 
 		/** Function that gets the ROI corresponding to a head/feet of a person in
 		 * an image.
@@ -62,10 +68,6 @@ class featureDetector:public Tracker{
 		/** Creates a symmetrical Gaussian kernel.
 		 */
 		void gaussianKernel(cv::Mat &gauss, cv::Size size, double sigma,cv::Point offset);
-
-		/** Hough transform for circle detection.
-		 */
-		void ellipseDetection(cv::Mat img);
 
 		/** Get the foreground pixels corresponding to each person
 		 */
@@ -99,7 +101,7 @@ class featureDetector:public Tracker{
 
 		/** Gets the edges in an image.
 		 */
-		void getEdges(cv::Mat_<uchar> edges, cv::Mat image);
+		void getEdges(cv::Mat_<uchar> &edges, cv::Mat image);
 
 		/** SURF descriptors (Speeded Up Robust Features).
 		 */
@@ -107,15 +109,12 @@ class featureDetector:public Tracker{
 
 		/** Blob detector in RGB color space.
 		 */
-		void blobDetector(std::vector<std::vector<cv::Point> >& msers, cv::Mat image);
+		void blobDetector(cv::Mat &feature, cv::Mat image, std::vector<unsigned>\
+		borders);
 
 		/** Just displaying an image a bit larger to see it better.
 		 */
 		void showZoomedImage(cv::Mat image, std::string title="zoomed");
-
-		/** Head detection by fitting ellipses.
-		 */
-		void skinEllipses(cv::RotatedRect &box, cv::Mat img);
 
 		/** Head detection by fitting ellipses (if templateCenter is relative to the img
 		 * the offset needs to be used).
@@ -126,11 +125,42 @@ class featureDetector:public Tracker{
 
 		/** Creates the \c Gabor filter with the given parameters and returns the \c wavelet.
 		 */
-		void getGabor(cv::Mat &response, cv::Mat image, float params[]=\
-		{3,0.4,2,M_PI/4,4,20});
+		void getGabor(cv::Mat &response, cv::Mat image, float *params = NULL);
+
+
+		/** Set what kind of features to extract.
+		 */
+		void setFeatureType(FEATURE type);
+
+		/** Creates on data row in the final data matrix by getting the feature
+		 * descriptors.
+		 */
+		void extractDataRow(std::vector<unsigned> existing, IplImage *bg);
+
+		/** Gets a window around a template centered in a given point.
+		 */
+		void templateWindow(cv::Size imgSize, unsigned &minX, unsigned &maxX,\
+		unsigned &minY, unsigned &maxY, std::vector<CvPoint> &templ,\
+		unsigned tplBorder = 100);
+
+		/** Initializes the parameters of the tracker.
+		 */
+		void init(std::string dataFolder);
 		//======================================================================
 	protected:
+		/** @var plotTracks
+		 * If it is true it displays the tracks of the people in the images.
+		 */
 		bool plotTracks;
 
+		/** @var featureType
+		 * Can have one of the values indicating the feature type.
+		 */
+		FEATURE featureType;
+
+		/** @var data
+		 * The training data obtained from the feature descriptors.
+		 */
+		cv::Mat data;
 };
 #endif /* FESTUREDETECTOR_H_ */
