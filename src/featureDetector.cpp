@@ -134,44 +134,64 @@ void featureDetector::getSURF(std::vector<float>& descriptors, cv::Mat image){
 void featureDetector::blobDetector(cv::Mat &feature, cv::Mat image, \
 std::vector<unsigned> borders){
 	std::vector<std::vector<cv::Point> > msers;
+	/*
 	int _delta, _min_area, _max_area, _max_evolution, _edge_blur_size;
 	float _max_variation, _min_diversity;
 	double _area_threshold, _min_margin;
 	cv::MSER aMSER = cv::MSER(_delta, _min_area, _max_area, _max_variation,\
 		_min_diversity, _max_evolution, _area_threshold, _min_margin, _edge_blur_size );
+	 */
+	cv::MSER aMSER;
 
 	// runs the extractor on the specified image; returns the MSERs,
 	// each encoded as a contour the optional mask marks the area where MSERs
 	// are searched for
 	cv::Mat mask;
 	aMSER(image, msers, mask);
-	cv::drawContours(image, msers, -1, cv::Scalar(0,0,255), 1, 8);
+	//cv::drawContours(image, msers, -1, cv::Scalar(0,0,255), 1, 8);
 	mask.release();
 
 	// KEEP ONLY THE DESCRIPTORS WITHIN THE BORDERS
-	for(std::size_t x=0; x<msers.size(); x++){
-		for(std::size_t y=0; y<msers[x].size(); y++){
-			if(borders[0]>msers[x][y].x || borders[1]<msers[x][y].x ||\
-			borders[2]>msers[x][y].y || borders[3]<msers[x][y].y){
-				msers[x].erase(msers[x].begin()+y);
+	uchar removed = 1;
+	while(removed){
+		removed = 0;
+		for(std::size_t x=0; x<msers.size(); x++){
+			for(std::size_t y=0; y<msers[x].size(); y++){
+				if(borders[0]>msers[x][y].x || borders[1]<msers[x][y].x ||\
+				borders[2]>msers[x][y].y || borders[3]<msers[x][y].y){
+					msers[x].erase(msers[x].begin()+y);
+					removed = 1;
+					break;
+				}
+			}
+			if(msers[x].empty()){ msers.erase(msers.begin()+x);
+				removed = 1;
+				break;
 			}
 		}
-		if(msers[x].empty()){ msers.erase(msers.begin()+x);}
 	}
 
 	// SAVE IN A MATRIX
-	cv::Mat tmp = cv::Mat::zeros(image.size(),CV_8UC1);
-	cv::drawContours(tmp, msers, -1, cv::Scalar(255,255,255), 1, 8);
-	feature = cv::Mat(tmp.clone(), cv::Rect(cv::Point(borders[0],borders[2]),\
-			cv::Size(borders[1]-borders[0],borders[3]-borders[2])));
-	feature.reshape(0,1);
+	if(this->plotTracks){
+		cv::Mat tmp   = cv::Mat::zeros(image.size(), CV_8UC1);
+		cv::drawContours(tmp, msers, -1, cv::Scalar(255,255,255), 1, 8);
+		cv::Mat blobs = cv::Mat(tmp.clone(), cv::Rect(cv::Point(borders[0],borders[2]),\
+						cv::Size(borders[1]-borders[0],borders[3]-borders[2])));
+		cv::imshow("feature",blobs);
+		cv::waitKey(0);
+		tmp.release();
+		blobs.release();
+	}
+	feature = cv::Mat(msers).reshape(0,1);
+	cout<<msers.size()<<" "<<feature.cols<<endl;
 
-	//-------------------------------------
-	cv::imshow("blobs",feature);
-	cv::waitKey(0);
-	//-------------------------------------
-
-	tmp.release();
+	// THE VALUES IN THE FEATURES
+	for(int x=0; x<feature.cols; x++){
+		for(int y=0; y<feature.rows; y++){
+			cout<<(int)(feature.at<cv::Vec2b>(y,x)[0])<<" "<<\
+				(int)(feature.at<cv::Vec2b>(y,x)[1])<<endl;
+		}
+	}
 }
 //==============================================================================
 /** Just displaying an image a bit larger to see it better.
@@ -413,10 +433,10 @@ std::vector<unsigned> existing, IplImage *bg, double threshold){
 		allPeople[k].relativeLoc = cv::Point(center.x - (int)(minX + tmpminX[k]),\
 										center.y - (int)(minY + tmpminY[k]));
 		allPeople[k].borders.assign(4,0);
-		allPeople[k].borders[0] = tmpminX[k];
-		allPeople[k].borders[1] = tmpmaxX[k];
-		allPeople[k].borders[2] = tmpminY[k];
-		allPeople[k].borders[3] = tmpmaxY[k];
+		allPeople[k].borders[0] = tmpminX[k]+minX;
+		allPeople[k].borders[1] = tmpmaxX[k]+minX;
+		allPeople[k].borders[2] = tmpminY[k]+minY;
+		allPeople[k].borders[3] = tmpmaxY[k]+minY;
 
 		width  = tmpmaxX[k]-tmpminX[k];
 		height = tmpmaxY[k]-tmpminY[k];
@@ -554,8 +574,9 @@ void featureDetector::extractDataRow(std::vector<unsigned> existing, IplImage *b
 		std::vector<unsigned> borders = allPeople[i].borders;
 		borders[0] -= minX; borders[1] -= minX;
 		borders[2] -= minY; borders[3] -= minY;
+
 		switch(this->featureType){
-			case featureDetector::BLOB:
+			case (featureDetector::BLOB):
 				// FILTER THE FEATURES DISCOVERED
 				this->blobDetector(feature, imgRoi, borders);
 				break;

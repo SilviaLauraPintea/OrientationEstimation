@@ -38,11 +38,13 @@ class featureDetector:public Tracker{
 		 */
 		featureDetector(int argc,char** argv):Tracker(argc, argv, 10, true, true){
 			this->plotTracks  = true;
-			this->featureType = CORNER;
+			this->featureType = BLOB;
 		}
+
 		featureDetector(int argc,char** argv,bool plot):Tracker(argc, argv, 10, \
 		true, true){
-			this->plotTracks = false;
+			this->plotTracks  = false;
+			this->featureType = BLOB;
 		}
 
 		/** Class destructor.
