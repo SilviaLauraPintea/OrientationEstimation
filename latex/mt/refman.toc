@@ -1,8 +1,15 @@
 \contentsline {chapter}{\numberline {1}Data Structure Documentation}{1}{chapter.1}
 \contentsline {section}{\numberline {1.1}annotationsHandle::ANNOTATION Struct Reference}{1}{section.1.1}
 \contentsline {section}{\numberline {1.2}annotationsHandle Class Reference}{1}{section.1.2}
-\contentsline {subsection}{\numberline {1.2.1}Member Function Documentation}{2}{subsection.1.2.1}
-\contentsline {subsubsection}{\numberline {1.2.1.1}runAnn}{2}{subsubsection.1.2.1.1}
+\contentsline {subsection}{\numberline {1.2.1}Member Function Documentation}{3}{subsection.1.2.1}
+\contentsline {subsubsection}{\numberline {1.2.1.1}runAnn}{3}{subsubsection.1.2.1.1}
 \contentsline {subsubsection}{\numberline {1.2.1.2}runEvaluation}{3}{subsubsection.1.2.1.2}
+\contentsline {subsection}{\numberline {1.2.2}Field Documentation}{3}{subsection.1.2.2}
+\contentsline {subsubsection}{\numberline {1.2.2.1}image}{3}{subsubsection.1.2.2.1}
 \contentsline {section}{\numberline {1.3}annotationsHandle::ASSIGNED Struct Reference}{3}{section.1.3}
-\contentsline {section}{\numberline {1.4}annotationsHandle::FULL\_\discretionary {-}{}{}ANNOTATIONS Struct Reference}{3}{section.1.4}
+\contentsline {section}{\numberline {1.4}classifyImages Class Reference}{4}{section.1.4}
+\contentsline {section}{\numberline {1.5}featureDetector Class Reference}{4}{section.1.5}
+\contentsline {subsection}{\numberline {1.5.1}Member Function Documentation}{6}{subsection.1.5.1}
+\contentsline {subsubsection}{\numberline {1.5.1.1}getGabor}{6}{subsubsection.1.5.1.1}
+\contentsline {section}{\numberline {1.6}annotationsHandle::FULL\_\discretionary {-}{}{}ANNOTATIONS Struct Reference}{7}{section.1.6}
+\contentsline {section}{\numberline {1.7}featureDetector::people Struct Reference}{7}{section.1.7}

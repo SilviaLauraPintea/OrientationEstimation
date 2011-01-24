@@ -1,17 +1,38 @@
 \begin{theindex}
 
   \item {annotationsHandle}, \hyperpage{1}
-    \subitem {runAnn}, \hyperpage{2}
+    \subitem {image}, \hyperpage{3}
+    \subitem {runAnn}, \hyperpage{3}
     \subitem {runEvaluation}, \hyperpage{3}
   \item {annotationsHandle::ANNOTATION}, \hyperpage{1}
   \item {annotationsHandle::ASSIGNED}, \hyperpage{3}
   \item {annotationsHandle::FULL\_\discretionary {-}{}{}ANNOTATIONS}, 
-		\hyperpage{3}
+		\hyperpage{7}
+
+  \indexspace
+
+  \item {classifyImages}, \hyperpage{4}
+
+  \indexspace
+
+  \item {featureDetector}, \hyperpage{4}
+    \subitem {getGabor}, \hyperpage{6}
+  \item {featureDetector::people}, \hyperpage{7}
+
+  \indexspace
+
+  \item {getGabor}
+    \subitem {featureDetector}, \hyperpage{6}
+
+  \indexspace
+
+  \item {image}
+    \subitem {annotationsHandle}, \hyperpage{3}
 
   \indexspace
 
   \item {runAnn}
-    \subitem {annotationsHandle}, \hyperpage{2}
+    \subitem {annotationsHandle}, \hyperpage{3}
   \item {runEvaluation}
     \subitem {annotationsHandle}, \hyperpage{3}
 

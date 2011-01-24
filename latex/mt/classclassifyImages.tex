@@ -1,0 +1,55 @@
+\hypertarget{classclassifyImages}{
+\section{classifyImages Class Reference}
+\label{classclassifyImages}\index{classifyImages@{classifyImages}}
+}
+\subsection*{Public Member Functions}
+\begin{DoxyCompactItemize}
+\item 
+\hypertarget{classclassifyImages_a2ced301ff23a5c73c73d71bb0aa28d14}{
+{\bfseries classifyImages} (int argc, char $\ast$$\ast$argv)}
+\label{classclassifyImages_a2ced301ff23a5c73c73d71bb0aa28d14}
+
+\item 
+\hypertarget{classclassifyImages_a406fd42b8a6c482cfdf7a9ad9dbe9122}{
+void \hyperlink{classclassifyImages_a406fd42b8a6c482cfdf7a9ad9dbe9122}{createData} (std::vector$<$ std::string $>$ options)}
+\label{classclassifyImages_a406fd42b8a6c482cfdf7a9ad9dbe9122}
+
+\begin{DoxyCompactList}\small\item\em Creates the training data/test data. \item\end{DoxyCompactList}\item 
+\hypertarget{classclassifyImages_a9a5c705866ce77cb4a4a24bda7396c85}{
+void \hyperlink{classclassifyImages_a9a5c705866ce77cb4a4a24bda7396c85}{classifySVM} ()}
+\label{classclassifyImages_a9a5c705866ce77cb4a4a24bda7396c85}
+
+\begin{DoxyCompactList}\small\item\em Regression SVM classification. \item\end{DoxyCompactList}\end{DoxyCompactItemize}
+\subsection*{Protected Attributes}
+\begin{DoxyCompactItemize}
+\item 
+\hypertarget{classclassifyImages_a5eee69bc11357b80cf106af7aecd8203}{
+\hyperlink{classfeatureDetector}{featureDetector} $\ast$ \hyperlink{classclassifyImages_a5eee69bc11357b80cf106af7aecd8203}{testFeatures}}
+\label{classclassifyImages_a5eee69bc11357b80cf106af7aecd8203}
+
+\begin{DoxyCompactList}\small\item\em An instance of {\ttfamily \hyperlink{classfeatureDetector}{featureDetector}} class. \item\end{DoxyCompactList}\item 
+\hypertarget{classclassifyImages_a2ed3a786aec67ed0e79adc115bdd000d}{
+\hyperlink{classfeatureDetector}{featureDetector} $\ast$ \hyperlink{classclassifyImages_a2ed3a786aec67ed0e79adc115bdd000d}{trainFeatures}}
+\label{classclassifyImages_a2ed3a786aec67ed0e79adc115bdd000d}
+
+\begin{DoxyCompactList}\small\item\em An instance of {\ttfamily \hyperlink{classfeatureDetector}{featureDetector}} class. \item\end{DoxyCompactList}\item 
+\hypertarget{classclassifyImages_a0aa55d034e03263d29eb56b0df841f45}{
+cv::Mat \hyperlink{classclassifyImages_a0aa55d034e03263d29eb56b0df841f45}{trainData}}
+\label{classclassifyImages_a0aa55d034e03263d29eb56b0df841f45}
+
+\begin{DoxyCompactList}\small\item\em The training data matrix. \item\end{DoxyCompactList}\item 
+\hypertarget{classclassifyImages_ad90d3c1df694b6d4c26520d916b82141}{
+cv::Mat \hyperlink{classclassifyImages_ad90d3c1df694b6d4c26520d916b82141}{testData}}
+\label{classclassifyImages_ad90d3c1df694b6d4c26520d916b82141}
+
+\begin{DoxyCompactList}\small\item\em The test data matrix. \item\end{DoxyCompactList}\item 
+\hypertarget{classclassifyImages_aa132c49ad63d508ac2a4c0503e22f089}{
+std::string \hyperlink{classclassifyImages_aa132c49ad63d508ac2a4c0503e22f089}{trainFolder}}
+\label{classclassifyImages_aa132c49ad63d508ac2a4c0503e22f089}
+
+\begin{DoxyCompactList}\small\item\em The folder containing the training images. \item\end{DoxyCompactList}\item 
+\hypertarget{classclassifyImages_a7373134549cfc434db469f7e07e10f85}{
+std::string \hyperlink{classclassifyImages_a7373134549cfc434db469f7e07e10f85}{testFolder}}
+\label{classclassifyImages_a7373134549cfc434db469f7e07e10f85}
+
+\begin{DoxyCompactList}\small\item\em The folder containing the test images. \item\end{DoxyCompactList}\end{DoxyCompactItemize}

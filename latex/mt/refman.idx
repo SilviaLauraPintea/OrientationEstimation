@@ -1,8 +1,15 @@
 \indexentry{annotationsHandle::ANNOTATION@{annotationsHandle::ANNOTATION}|hyperpage}{1}
 \indexentry{annotationsHandle@{annotationsHandle}|hyperpage}{1}
-\indexentry{annotationsHandle@{annotationsHandle}!runAnn@{runAnn}|hyperpage}{2}
-\indexentry{runAnn@{runAnn}!annotationsHandle@{annotationsHandle}|hyperpage}{2}
+\indexentry{annotationsHandle@{annotationsHandle}!runAnn@{runAnn}|hyperpage}{3}
+\indexentry{runAnn@{runAnn}!annotationsHandle@{annotationsHandle}|hyperpage}{3}
 \indexentry{annotationsHandle@{annotationsHandle}!runEvaluation@{runEvaluation}|hyperpage}{3}
 \indexentry{runEvaluation@{runEvaluation}!annotationsHandle@{annotationsHandle}|hyperpage}{3}
+\indexentry{annotationsHandle@{annotationsHandle}!image@{image}|hyperpage}{3}
+\indexentry{image@{image}!annotationsHandle@{annotationsHandle}|hyperpage}{3}
 \indexentry{annotationsHandle::ASSIGNED@{annotationsHandle::ASSIGNED}|hyperpage}{3}
-\indexentry{annotationsHandle::FULL\_\discretionary {-}{}{}ANNOTATIONS@{annotationsHandle::FULL\_\discretionary {-}{}{}ANNOTATIONS}|hyperpage}{3}
+\indexentry{classifyImages@{classifyImages}|hyperpage}{4}
+\indexentry{featureDetector@{featureDetector}|hyperpage}{4}
+\indexentry{featureDetector@{featureDetector}!getGabor@{getGabor}|hyperpage}{6}
+\indexentry{getGabor@{getGabor}!featureDetector@{featureDetector}|hyperpage}{6}
+\indexentry{annotationsHandle::FULL\_\discretionary {-}{}{}ANNOTATIONS@{annotationsHandle::FULL\_\discretionary {-}{}{}ANNOTATIONS}|hyperpage}{7}
+\indexentry{featureDetector::people@{featureDetector::people}|hyperpage}{7}

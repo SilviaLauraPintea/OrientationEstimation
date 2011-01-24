@@ -1,4 +1,4 @@
-This is pdfTeX, Version 3.1415926-1.40.10 (TeX Live 2009/Debian) (format=pdflatex 2010.9.1)  30 OCT 2010 19:38
+This is pdfTeX, Version 3.1415926-1.40.10 (TeX Live 2009/Debian) (format=pdflatex 2010.9.1)  24 JAN 2011 16:46
 entering extended mode
  restricted \write18 enabled.
  %&-line parsing enabled.
@@ -863,31 +863,38 @@ File: ts1kurierlc.fd 2005/10/03 v1.2 font definition file for TS1/kurierlc (MW)
 (./classannotationsHandle.tex [1
 
 ]
-LaTeX Font Info:    Try loading font information for T1+pcr on input line 67.
+LaTeX Font Info:    Try loading font information for T1+pcr on input line 45.
 
 (/usr/share/texmf-texlive/tex/latex/psnfss/t1pcr.fd
 File: t1pcr.fd 2001/06/04 font definitions for T1/pcr.
 )
 LaTeX Font Info:    Font shape `T1/pcr/m/it' in size <9> not available
-(Font)              Font shape `T1/pcr/m/sl' tried instead on input line 67.
+(Font)              Font shape `T1/pcr/m/sl' tried instead on input line 45.
  [2])
-(./structannotationsHandle_1_1ASSIGNED.tex)
-(./structannotationsHandle_1_1FULL__ANNOTATIONS.tex) (./refman.ind [3] [4
+(./structannotationsHandle_1_1ASSIGNED.tex) (./classclassifyImages.tex [3])
+(./classfeatureDetector.tex [4] [5]
+LaTeX Font Info:    Font shape `T1/pcr/b/it' in size <10> not available
+(Font)              Font shape `T1/pcr/b/sl' tried instead on input line 173.
+)
+(./structannotationsHandle_1_1FULL__ANNOTATIONS.tex [6])
+(./structfeatureDetector_1_1people.tex) (./refman.ind [7] [8
 
 
-])
-(./refman.aux) ) 
+]) (./refman.aux) ) 
 Here is how much of TeX's memory you used:
- 8555 strings out of 495061
- 120907 string characters out of 1182622
- 212665 words of memory out of 3000000
- 11513 multiletter control sequences out of 15000+50000
- 66393 words of font info for 47 fonts, out of 3000000 for 9000
+ 8691 strings out of 495061
+ 126651 string characters out of 1182622
+ 212625 words of memory out of 3000000
+ 11570 multiletter control sequences out of 15000+50000
+ 67760 words of font info for 51 fonts, out of 3000000 for 9000
  28 hyphenation exceptions out of 8191
- 38i,11n,58p,436b,490s stack positions out of 5000i,500n,10000p,200000b,50000s
-pdfTeX warning (dest): name{classannotationsHandle_a7a9e324ff6c
-85eeb2c2bd91b2b8cbdba} has been referenced but does not exist, replaced by a fi
-xed one
+ 38i,12n,58p,436b,500s stack positions out of 5000i,500n,10000p,200000b,50000s
+pdfTeX warning (dest): name{classfeatureDetector_a84a8847c41
+24b284d1d5ae20bc9be583} has been referenced but does not exist, replaced by a f
+ixed one
+
+pdfTeX warning (dest): name{classannotationsHandle_a7a9e324ff6c85eeb2c2bd91b2b8
+cbdba} has been referenced but does not exist, replaced by a fixed one
 
 {/usr/share/texmf-texlive/fonts/enc/dvips/base/8r.enc}{/usr/share/texmf-texlive
 /fonts/enc/dvips/kurier/kurier-ec.enc}{/usr/share/texmf-texlive/fonts/enc/dvips
@@ -897,10 +904,12 @@ re/texmf-texlive/fonts/type1/public/kurier/kuriercl.pfb></usr/share/texmf-texli
 ve/fonts/type1/public/kurier/kuriercli.pfb></usr/share/texmf-texlive/fonts/type
 1/public/kurier/kuriercm.pfb></usr/share/texmf-texlive/fonts/type1/public/kurie
 r/kuriercmi.pfb></usr/share/texmf-texlive/fonts/type1/urw/courier/ucrb8a.pfb></
-usr/share/texmf-texlive/fonts/type1/urw/courier/ucrro8a.pfb>
-Output written on refman.pdf (8 pages, 122641 bytes).
+usr/share/texmf-texlive/fonts/type1/urw/courier/ucrbo8a.pfb></usr/share/texmf-t
+exlive/fonts/type1/urw/courier/ucrr8a.pfb></usr/share/texmf-texlive/fonts/type1
+/urw/courier/ucrro8a.pfb>
+Output written on refman.pdf (12 pages, 173877 bytes).
 PDF statistics:
- 188 PDF objects out of 1000 (max. 8388607)
- 45 named destinations out of 1000 (max. 500000)
- 65 words of extra memory for PDF output out of 10000 (max. 10000000)
+ 370 PDF objects out of 1000 (max. 8388607)
+ 112 named destinations out of 1000 (max. 500000)
+ 121 words of extra memory for PDF output out of 10000 (max. 10000000)
 

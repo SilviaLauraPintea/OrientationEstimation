@@ -38,6 +38,11 @@ static void \hyperlink{classannotationsHandle_a2510d1948d3138df3331c91ddcd49b95}
 \label{classannotationsHandle_a2510d1948d3138df3331c91ddcd49b95}
 
 \begin{DoxyCompactList}\small\item\em Draws the \char`\"{}menu\char`\"{} of possible poses for the current position. \item\end{DoxyCompactList}\item 
+\hypertarget{classannotationsHandle_aa51b2586e2fc41b010b6d4b1a4c4beb4}{
+static void \hyperlink{classannotationsHandle_aa51b2586e2fc41b010b6d4b1a4c4beb4}{plotHull} (IplImage $\ast$img, vector$<$ CvPoint $>$ \&hull)}
+\label{classannotationsHandle_aa51b2586e2fc41b010b6d4b1a4c4beb4}
+
+\begin{DoxyCompactList}\small\item\em Plots the hull indicated by the parameter {\ttfamily hull} on the given image. \item\end{DoxyCompactList}\item 
 static int \hyperlink{classannotationsHandle_a226e4ef5f47790d98002d2567659a62e}{runAnn} (int argc, char $\ast$$\ast$argv)
 \begin{DoxyCompactList}\small\item\em Starts the annotation of the images. \item\end{DoxyCompactList}\item 
 \hypertarget{classannotationsHandle_ac8d0365f010294def2757bf31ba1207f}{
@@ -82,6 +87,26 @@ static void \hyperlink{classannotationsHandle_a6d11e0a0dbc45897a8176d5970af5438}
 \label{classannotationsHandle_a6d11e0a0dbc45897a8176d5970af5438}
 
 \begin{DoxyCompactList}\small\item\em Shows how the selected orientation looks on the image. \item\end{DoxyCompactList}\end{DoxyCompactItemize}
+\subsection*{Static Protected Attributes}
+\begin{DoxyCompactItemize}
+\item 
+static IplImage $\ast$ \hyperlink{classannotationsHandle_a42cb5f5737262947250c709931232c69}{image}
+\begin{DoxyCompactList}\small\item\em The currently processed image. \item\end{DoxyCompactList}\item 
+\hypertarget{classannotationsHandle_ae9fe3ed8c2d988da74227e53bf6ba766}{
+static vector$<$ \hyperlink{structannotationsHandle_1_1ANNOTATION}{ANNOTATION} $>$ {\bfseries annotations}}
+\label{classannotationsHandle_ae9fe3ed8c2d988da74227e53bf6ba766}
+
+\item 
+\hypertarget{classannotationsHandle_afd05e88e13762e173d9d20fe3596216f}{
+static char \hyperlink{classannotationsHandle_afd05e88e13762e173d9d20fe3596216f}{choice}}
+\label{classannotationsHandle_afd05e88e13762e173d9d20fe3596216f}
+
+\begin{DoxyCompactList}\small\item\em Indicates if the pose was defined for the current frame. \item\end{DoxyCompactList}\item 
+\hypertarget{classannotationsHandle_a13d528766773c38917d47141e6b36252}{
+static boost::mutex \hyperlink{classannotationsHandle_a13d528766773c38917d47141e6b36252}{trackbarMutex}}
+\label{classannotationsHandle_a13d528766773c38917d47141e6b36252}
+
+\begin{DoxyCompactList}\small\item\em A mutex for controlling the access to the annotations. \item\end{DoxyCompactList}\end{DoxyCompactItemize}
 
 
 \subsection{Member Function Documentation}
@@ -113,3 +138,12 @@ The parameters that need to be indicated are:
 
 \begin{DoxyItemize}
 \item argv\mbox{[}1\mbox{]} -\/-\/ train file with the correct annotations; \item argv\mbox{[}2\mbox{]} -\/-\/ test file with predicted annotations; \end{DoxyItemize}
+
+
+\subsection{Field Documentation}
+\hypertarget{classannotationsHandle_a42cb5f5737262947250c709931232c69}{
+\index{annotationsHandle@{annotationsHandle}!image@{image}}
+\index{image@{image}!annotationsHandle@{annotationsHandle}}
+\subsubsection[{image}]{\setlength{\rightskip}{0pt plus 5cm}{\bf image}\hspace{0.3cm}{\ttfamily  \mbox{[}static, protected\mbox{]}}}}
+\label{classannotationsHandle_a42cb5f5737262947250c709931232c69}
+An instance of the structure {\ttfamily ANNOTATIONS} storing the annotations for each image. 
