@@ -2,10 +2,10 @@
 <DOCUMENTROOT>
   <VersionMajor>2</VersionMajor>
   <VersionMinor>0</VersionMinor>
-  <camPosX>440</camPosX>
-  <camPosY>170</camPosY>
-  <camHeight>700</camHeight>
+  <camPosX>415</camPosX>
+  <camPosY>165</camPosY>
+  <camHeight>550</camHeight>
   <persHeight>175</persHeight>
-  <w>14</w>
+  <w>12</w>
 </DOCUMENTROOT>
 
