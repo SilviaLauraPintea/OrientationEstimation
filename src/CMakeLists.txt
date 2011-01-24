@@ -9,7 +9,7 @@ INCLUDE(FindPkgConfig)
 pkg_check_modules(XML2 REQUIRED libxml-2.0)
 
 #PROJECT TO BE BUILT_______________________________________________________ 
-PROJECT(Probabilistic_Tracking_using_Stereo_Cameras_proj)
+PROJECT(Social_Groups_Detection)
 
 #OPENCV PACKAGE REQUIRED___________________________________________________
 #FIND_PACKAGE(OpenCV REQUIRED)
@@ -17,17 +17,20 @@ PROJECT(Probabilistic_Tracking_using_Stereo_Cameras_proj)
 #SET VARIABLES' NAMES______________________________________________________
 SET(CMAKE_CXX_FLAGS ${XML2_CFLAGS}) #??????????????????
 
-SET(EIGEN_SRC /data/Documents/masterProject/Probabilistic_Tracking_using_Stereo_Cameras/src/eigenbackground/src CACHE PATH "Location of the eigenbackground src files")
-SET(MT_SRC /data/Documents/masterProject/Probabilistic_Tracking_using_Stereo_Cameras/src CACHE PATH "Location of my src")
+SET(EIGEN_SRC /data/Documents/masterProject/Social_Groups_Detection/src/eigenbackground/src CACHE PATH "Location of the eigenbackground src files")
+SET(MT_SRC /data/Documents/masterProject/Social_Groups_Detection/src CACHE PATH "Location of my src")
 
-SET(EXECUTABLE_OUTPUT_PATH /data/Documents/masterProject/Probabilistic_Tracking_using_Stereo_Cameras/bin CACHE PATH "Location of the compiled files")
+SET(EXECUTABLE_OUTPUT_PATH /data/Documents/masterProject/Social_Groups_Detection/bin CACHE PATH "Location of the compiled files")
 
-SET(OPENCV /usr/local/include/opencv CACHE PATH "Location of the OpenCV headers")
+#SET(OPENCV /usr/local/include/opencv CACHE PATH "Location of the OpenCV headers")
+SET(OPENCV1 /opt/OpenCV/include/opencv CACHE PATH "Location of the OpenCV headers")
+SET(OPENCV2 /opt/OpenCV/include/opencv2 CACHE PATH "Location of the OpenCV headers (version 2.2)")
+
 SET(VXL_BIN /opt/vxlbin CACHE PATH "Location of the VXL compiled library")
-SET(CMN_SRC /data/Documents/masterProject/Probabilistic_Tracking_using_Stereo_Cameras/src/cmn/src CACHE PATH "Location of the CMN library source code")
-SET(CMN_BIN /data/Documents/masterProject/Probabilistic_Tracking_using_Stereo_Cameras/src/cmn/bin CACHE PATH "Location of the CMN compiled library")
+SET(CMN_SRC /data/Documents/masterProject/Social_Groups_Detection/src/cmn/src CACHE PATH "Location of the CMN library source code")
+SET(CMN_BIN /data/Documents/masterProject/Social_Groups_Detection/src/cmn/bin CACHE PATH "Location of the CMN compiled library")
 
-INCLUDE_DIRECTORIES(${OPENCV} ${VXL_BIN} ${VXL_BIN} ${VXL_BIN}/contrib/tbl ${VXL_BIN}/core ${VXL_BIN}/vcl ${CMN_SRC} ${EIGEN_SRC})
+INCLUDE_DIRECTORIES(${OPENCV1} ${OPENCV2} ${VXL_BIN} ${VXL_BIN} ${VXL_BIN}/contrib/tbl ${VXL_BIN}/core ${VXL_BIN}/vcl ${CMN_SRC} ${EIGEN_SRC})
 LINK_DIRECTORIES(${VXL_BIN}/lib ${CMN_BIN})
 
 ADD_LIBRARY(helpers

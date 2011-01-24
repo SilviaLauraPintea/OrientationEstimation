@@ -36,17 +36,17 @@ class classifyImages {
 		 */
 		cv::Mat trainData;
 
-		/** @var
+		/** @var testData
 		 * The test data matrix.
 		 */
 		cv::Mat testData;
 
-		/** @var
+		/** @var trainFolder
 		 * The folder containing the training images.
 		 */
 		std::string trainFolder;
 
-		/** @var
+		/** @var testFolder
 		 * The folder containing the test images.
 		 */
 		std::string testFolder;

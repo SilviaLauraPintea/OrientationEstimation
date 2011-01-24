@@ -194,7 +194,7 @@ std::vector<unsigned> borders){
 	}
 }
 //==============================================================================
-/** Just displaying an image a bit larger to see it better.
+/** Just displaying an image a bit larger to visualize it better.
  */
 void featureDetector::showZoomedImage(cv::Mat image, const std::string title){
 	cv::Mat large;
@@ -206,8 +206,8 @@ void featureDetector::showZoomedImage(cv::Mat image, const std::string title){
 	large.release();
 }
 //==============================================================================
-/** Head detection by fitting ellipses (if templateCenter is relative to the img
- * the offset needs to be used).
+/** Head detection by fitting ellipses (if \i templateCenter is relative to the
+ * \i img the offset needs to be used).
  */
 void featureDetector::skinEllipses(cv::RotatedRect &finalBox, cv::Mat img,\
 cv::Point templateCenter,cv::Point offset,double minHeadSize,double maxHeadSize){
@@ -307,7 +307,7 @@ std::vector<CvPoint> templ){
 	return minDist;
 }
 //==============================================================================
-/** Checks to see if a given pixel is inside of a template.
+/** Checks to see if a given pixel is inside a template.
  */
 bool featureDetector::isInTemplate(unsigned pixelX, unsigned pixelY,\
 std::vector<CvPoint> templ){
@@ -323,7 +323,7 @@ std::vector<CvPoint> templ){
 	return false;
 }
 //==============================================================================
-/** Gets a window around a template centered in a given point.
+/** Returns the size of a window around a template centered in a given point.
  */
 void featureDetector::templateWindow(cv::Size imgSize, unsigned &minX, unsigned\
 &maxX, unsigned &minY, unsigned &maxY, std::vector<CvPoint> &templ, unsigned tplBorder){
@@ -340,9 +340,9 @@ void featureDetector::templateWindow(cv::Size imgSize, unsigned &minX, unsigned\
 	maxX = std::min(imgSize.width,(int)(maxX+tplBorder));
 }
 //==============================================================================
-/** Get the foreground pixels corresponding to each person
+/** Get the foreground pixels corresponding to each person.
  */
-void featureDetector::getAllForegroundPixels(std::vector<featureDetector::people> &allPeople,\
+void featureDetector::allForegroundPixels(std::vector<featureDetector::people> &allPeople,\
 std::vector<unsigned> existing, IplImage *bg, double threshold){
 	// INITIALIZING STUFF
 	cv::Mat thsh(cvCloneImage(bg));
@@ -450,7 +450,8 @@ std::vector<unsigned> existing, IplImage *bg, double threshold){
 	foregr.release();
 }
 //==============================================================================
-/** Creates the \c Gabor filter with the given parameters and returns the \c wavelet.
+/** Convolves an image with a \i Gabor filter with the given parameters and
+ * returns the \i response image.
  */
 void featureDetector::getGabor(cv::Mat &response, cv::Mat image, float *params){
 	// params[0] -- sigma: (3, 68)
@@ -553,7 +554,7 @@ void featureDetector::extractDataRow(std::vector<unsigned> existing, IplImage *b
 
 	// REDUCE THE IMAGE TO ONLY THE INTERESTING AREA
 	std::vector<featureDetector::people> allPeople(existing.size());
-	this->getAllForegroundPixels(allPeople, existing, bg, 7.0);
+	this->allForegroundPixels(allPeople, existing, bg, 7.0);
 
 	// FOR EACH LOCATION IN THE IMAGE EXTRACT FEATURES, FILTER THEM AND RESHAPE
 	for(std::size_t i=0; i<existing.size(); i++){
@@ -616,7 +617,7 @@ void featureDetector::extractDataRow(std::vector<unsigned> existing, IplImage *b
 	}
 }
 //==============================================================================
-/** Overwrite the \c doFindPeople function from the \c Tracker class to make it
+/** Overwrites the \c doFindPeople function from the \c Tracker class to make it
  * work with the feature extraction.
  */
 bool featureDetector::doFindPerson(unsigned imgNum, IplImage *src,\
@@ -688,6 +689,8 @@ const FLOAT logBGProb,const vnl_vector<FLOAT> &logSumPixelBGProb){
 	cvReleaseImage(&bg);
 }
 //==============================================================================
+/** Simple "menu" for skipping to the next image or quitting the processing.
+ */
 bool featureDetector::imageProcessingMenu(){
 	cout<<" To quite press 'q'.\n To pause press 'p'.\n To skip 10 "<<\
 		"images press 's'.\n To skip 100 images press 'f'.\n To go back 10 "<<\

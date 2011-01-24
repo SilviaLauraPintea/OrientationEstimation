@@ -21,7 +21,7 @@
  */
 class featureDetector:public Tracker{
 	public:
-		/** structure containing images of the size of the detected people
+		/** Structure containing images of the size of the detected people.
 		 */
 		struct people {
 			cv::Point absoluteLoc;
@@ -34,8 +34,6 @@ class featureDetector:public Tracker{
 		 */
 		enum FEATURE {BLOB, ELLIPSE, CORNER, EDGES, GABOR, SURF};
 		//======================================================================
-		/** Default Class constructor.
-		 */
 		featureDetector(int argc,char** argv):Tracker(argc, argv, 10, true, true){
 			this->plotTracks  = true;
 			this->featureType = BLOB;
@@ -47,8 +45,6 @@ class featureDetector:public Tracker{
 			this->featureType = BLOB;
 		}
 
-		/** Class destructor.
-		 */
 		virtual ~featureDetector(){}
 
 		/** Function that gets the ROI corresponding to a head/feet of a person in
@@ -57,13 +53,14 @@ class featureDetector:public Tracker{
 		void upperLowerROI(featureDetector::people someone, double variance,\
 		cv::Mat &upperRoi, cv::Mat &lowerRoi);
 
-		/** Start the running in a parallel thread an instance of the tracker.
+		/** Overwrites the \c doFindPeople function from the \c Tracker class
+		 * to make it work with the feature extraction.
 		 */
 		bool doFindPerson(unsigned imgNum, IplImage *src,\
 			const vnl_vector<FLOAT> &imgVec, vnl_vector<FLOAT> &bgVec,\
 			const FLOAT logBGProb,const vnl_vector<FLOAT> &logSumPixelBGProb);
 
-		/** Simple "menu" for skipping to the next image or quitting the processing
+		/** Simple "menu" for skipping to the next image or quitting the processing.
 		 */
 		bool imageProcessingMenu();
 
@@ -71,16 +68,16 @@ class featureDetector:public Tracker{
 		 */
 		void gaussianKernel(cv::Mat &gauss, cv::Size size, double sigma,cv::Point offset);
 
-		/** Get the foreground pixels corresponding to each person
+		/** Get the foreground pixels corresponding to each person.
 		 */
-		void getAllForegroundPixels(std::vector<featureDetector::people> &allPeople,\
+		void allForegroundPixels(std::vector<featureDetector::people> &allPeople,\
 			std::vector<unsigned> existing, IplImage *bg, double threshold);
 
 		/** Gets the distance to the given template from a given pixel location.
 		 */
 		double getDistToTemplate(int pixelX,int pixelY,std::vector<CvPoint> templ);
 
-		/** Checks to see if a given pixel is inside of a template.
+		/** Checks to see if a given pixel is inside a template.
 		 */
 		bool isInTemplate(unsigned pixelX, unsigned pixelY, std::vector<CvPoint> templ);
 
@@ -114,18 +111,19 @@ class featureDetector:public Tracker{
 		void blobDetector(cv::Mat &feature, cv::Mat image, std::vector<unsigned>\
 		borders);
 
-		/** Just displaying an image a bit larger to see it better.
+		/** Just displaying an image a bit larger to visualize it better.
 		 */
 		void showZoomedImage(cv::Mat image, std::string title="zoomed");
 
-		/** Head detection by fitting ellipses (if templateCenter is relative to the img
-		 * the offset needs to be used).
+		/** Head detection by fitting ellipses (if \i templateCenter is relative to
+		 * the \i img the offset needs to be used).
 		 */
 		void skinEllipses(cv::RotatedRect &finalBox, cv::Mat img, cv::Point \
 		templateCenter, cv::Point offset=cv::Point(0,0), double minHeadSize=20,\
 		double maxHeadSize=40);
 
-		/** Creates the \c Gabor filter with the given parameters and returns the \c wavelet.
+		/** Convolve an image with a \i Gabor filter with the given parameters and
+		 * returns the \i response image.
 		 */
 		void getGabor(cv::Mat &response, cv::Mat image, float *params = NULL);
 
@@ -139,7 +137,7 @@ class featureDetector:public Tracker{
 		 */
 		void extractDataRow(std::vector<unsigned> existing, IplImage *bg);
 
-		/** Gets a window around a template centered in a given point.
+		/** Returns the size of a window around a template centered in a given point.
 		 */
 		void templateWindow(cv::Size imgSize, unsigned &minX, unsigned &maxX,\
 		unsigned &minY, unsigned &maxY, std::vector<CvPoint> &templ,\
