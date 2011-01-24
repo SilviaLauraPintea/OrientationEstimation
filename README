@@ -1,12 +1,24 @@
 Social Groups Detection
 
+
 Short Description:
+______________________
 
-The project has two main parts: tracking people in real-time and estimating their orientation and pose; and the second part involves the detection of social groups given the estimated poses.
+The project has two main parts: tracking people in real-time and estimating their 
+orientation and pose; and the second part involves the detection of social groups 
+given the estimated poses.
 
-After tracking the people in the image the orientation and pose of the people needs to be estimated. 
-The data used in this project is video data from a single ceiling-mounted camera -- this makes the pose estimation task harder and number of features and object recognition techniques need to be implemented and tested in order to discover an efficient one. 
-The pose estimation part will mainly be carried out by using supervised learning techniques -- data needs to be annotates and classifiers need to be trained on a set of features that were found to be useful for this task.
+After tracking the people in the image the orientation and pose of the people needs 
+to be estimated. 
+The data used in this project is video data from a single ceiling-mounted camera -- 
+this makes the pose estimation task harder and number of features and object recognition 
+techniques need to be implemented and tested in order to discover an efficient one. 
+The pose estimation part will mainly be carried out by using supervised learning 
+techniques -- data needs to be annotates and classifiers need to be trained on a set 
+of features that were found to be useful for this task.
 
-Once an efficient way of estimation the poses is determined, the second part of the project involves finding a reliable way for using the pose estimations of the tracked people in order to detect the social groups present in the video and the dynamic of these groups.
+Once an efficient way of estimation the poses is determined, the second part of 
+the project involves finding a reliable way for using the pose estimations of the 
+tracked people in order to detect the social groups present in the video and the 
+dynamic of these groups.
 
