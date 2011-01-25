@@ -1,9 +1,7 @@
-#include <iostream>
-#include <string>
-#include <cmath>
-#include <exception>
-#include <opencv/cv.h>
-#include <opencv/highgui.h>
+/* cholesky.cpp
+ * Original code: Dr Gwenn Englebienne
+ * Modified by: Silvia-Laura Pintea
+ */
 #include "cholesky.h"
 //==============================================================================
 /** Decomposes the (covariance) matrix A into A = LL*.

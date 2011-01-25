@@ -1,21 +1,7 @@
+/* featureDetector.cpp
+ * Author: Silvia-Laura Pintea
+ */
 #include "featureDetector.h"
-#include <boost/thread.hpp>
-#include <boost/version.hpp>
-#if BOOST_VERSION < 103500
-	#include <boost/thread/detail/lock.hpp>
-#endif
-#include <boost/thread/xtime.hpp>
-#include <iostream>
-#include <fstream>
-#include <string>
-#include <cmath>
-#include <math.h>
-#include <exception>
-#include <opencv/cv.h>
-#include <opencv/highgui.h>
-#include "eigenbackground/src/Tracker.hh"
-#include "eigenbackground/src/Helpers.hh"
-unsigned MIN_TRACKLEN = 20;
 //==============================================================================
 /** Initializes the parameters of the tracker.
  */
@@ -450,8 +436,8 @@ std::vector<unsigned> existing, IplImage *bg, double threshold){
 	foregr.release();
 }
 //==============================================================================
-/** Convolves an image with a \i Gabor filter with the given parameters and
- * returns the \i response image.
+/** Convolves an image with a Gabor filter with the given parameters and
+ * returns the response image.
  */
 void featureDetector::getGabor(cv::Mat &response, cv::Mat image, float *params){
 	// params[0] -- sigma: (3, 68)

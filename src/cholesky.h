@@ -1,5 +1,15 @@
+/* cholesky.h
+ * Original code: Dr Gwenn Englebienne
+ * Modified by: Silvia-Laura Pintea
+ */
 #ifndef CHOLESKY_H_
 #define CHOLESKY_H_
+#include <iostream>
+#include <string>
+#include <cmath>
+#include <exception>
+#include <opencv/cv.h>
+#include <opencv/highgui.h>
 
 /** The \c Cholesky decomposition is used to solve Ax = b; if A is symmetric and
  * positive definite => we can decompose A = LL* and instead of solving Ax = b,

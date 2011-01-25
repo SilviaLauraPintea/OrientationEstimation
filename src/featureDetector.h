@@ -1,3 +1,6 @@
+/* featureDetector.h
+ * Author: Silvia-Laura Pintea
+ */
 #ifndef FESTUREDETECTOR_H_
 #define FESTUREDETECTOR_H_
 #include <boost/thread.hpp>
@@ -15,6 +18,7 @@
 #include <opencv/highgui.h>
 #include "eigenbackground/src/Tracker.hh"
 #include "eigenbackground/src/Helpers.hh"
+unsigned MIN_TRACKLEN = 20;
 
 /** Class used for detecting useful features in the images that can be later
  * used for training and classifying.
@@ -122,8 +126,8 @@ class featureDetector:public Tracker{
 		templateCenter, cv::Point offset=cv::Point(0,0), double minHeadSize=20,\
 		double maxHeadSize=40);
 
-		/** Convolve an image with a \i Gabor filter with the given parameters and
-		 * returns the \i response image.
+		/** Convolves an image with a Gabor filter with the given parameters and
+		 * returns the response image.
 		 */
 		void getGabor(cv::Mat &response, cv::Mat image, float *params = NULL);
 

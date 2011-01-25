@@ -1,11 +1,19 @@
+/* annotationsHandle.h
+ * Author: Silvia-Laura Pintea
+ */
 #ifndef ANNOTATIONSHANDLE_H_
 #define ANNOTATIONSHANDLE_H_
 #include <iostream>
+#include <exception>
 #include <cmath>
+#include <fstream>
+#include <string>
 #include <opencv/cv.h>
 #include <opencv/highgui.h>
 #include <boost/thread.hpp>
 #include <boost/version.hpp>
+#include <boost/filesystem/operations.hpp>
+#include <boost/filesystem/fstream.hpp>
 #if BOOST_VERSION < 103500
 	#include <boost/thread/detail/lock.hpp>
 #endif

@@ -1,12 +1,8 @@
+/* classifyImages.h
+ * Author: Silvia-Laura Pintea
+ */
 #ifndef CLASSIFYIMAGES_H_
 #define CLASSIFYIMAGES_H_
-#include <boost/thread.hpp>
-#include <boost/version.hpp>
-#if BOOST_VERSION < 103500
-	#include <boost/thread/detail/lock.hpp>
-#endif
-#include <boost/thread/xtime.hpp>
-
 #include <iostream>
 #include <fstream>
 #include <string>
@@ -19,6 +15,8 @@
 #include "eigenbackground/src/Helpers.hh"
 #include "featureDetector.h"
 
+/** Class used for classifying the training data.
+ */
 class classifyImages {
 	protected:
 		/** @var testFeatures

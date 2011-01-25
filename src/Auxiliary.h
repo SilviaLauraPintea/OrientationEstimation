@@ -1,6 +1,8 @@
+/* Auxiliary.h
+ * Author: Silvia-Laura Pintea
+ */
 #ifndef AUXILIARY_H_
 #define AUXILIARY_H_
-
 #include <vector>
 #include <string>
 #include <set>

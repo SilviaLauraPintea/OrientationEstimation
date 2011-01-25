@@ -1,22 +1,7 @@
+/* annotationsHandle.cpp
+ * Author: Silvia-Laura Pintea
+ */
 #include "annotationsHandle.h"
-#include <iostream>
-#include <fstream>
-#include <string>
-#include <cmath>
-#include <opencv/cv.h>
-#include <exception>
-#include <opencv/highgui.h>
-#include <boost/thread.hpp>
-#include <boost/version.hpp>
-#include <boost/filesystem/operations.hpp>
-#include <boost/filesystem/fstream.hpp>
-#if BOOST_VERSION < 103500
-	#include <boost/thread/detail/lock.hpp>
-#endif
-#include <boost/thread/xtime.hpp>
-#include "eigenbackground/src/Annotate.hh"
-#include "eigenbackground/src/Helpers.hh"
-using namespace std;
 //==============================================================================
 /** Define a post-fix increment operator for the enum \c POSE.
  */
