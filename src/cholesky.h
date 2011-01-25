@@ -18,8 +18,20 @@
 class cholesky {
 	//==========================================================================
 	public:
-		cholesky(){};
+		cholesky(){
+			this->n = 0;
+		};
 		virtual ~cholesky(){};
+
+		/** (Re)Initializes the class variables so the same instance of the class
+		 * can be used for multiple decompositions.
+		 */
+		void init();
+
+		/** Checks to see if the decomposition was already done (returns true
+		 * if it is done).
+		 */
+		bool checkDecomposition();
 
 		/** Decomposes the (covariance) matrix A into A = LL*.
 		 */
@@ -36,6 +48,10 @@ class cholesky {
 		/** Solve the simplified equation L'y = b, and return y (where A=LL*).
 		 */
 		void solveLTranspose(cv::Mat b, cv::Mat &y);
+
+		/** Returns the inverse of the covariance: A^{-1}.
+		 */
+		void inverse(cv::Mat &ainv);
 
 		/** Returns the log of the determiner of the (covariance) matrix, A.
 		 */

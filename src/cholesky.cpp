@@ -4,6 +4,23 @@
  */
 #include "cholesky.h"
 //==============================================================================
+/** Checks to see if the decomposition was already done (returns true if it is
+ * done).
+ */
+bool cholesky::checkDecomposition(){
+	return this->covar.empty();
+}
+//==============================================================================
+/** (Re)Initializes the class variables so the same instance of the class can be
+ * used for multiple decompositions.
+ */
+void cholesky::init(){
+	if(!this->covar.empty()){
+		this->covar.release();
+		this->n = 0;
+	}
+}
+//==============================================================================
 /** Decomposes the (covariance) matrix A into A = LL*.
  */
 int cholesky::decomposeCov(cv::Mat a){
@@ -13,7 +30,6 @@ int cholesky::decomposeCov(cv::Mat a){
 	}
 	this->n     = static_cast<unsigned>(a.rows);
 	this->covar = a.clone();
-	cv::Mat_<float> tmp;
     for(unsigned y=0; y<this->n; y++){
     	for(unsigned x=0; x<this->n; x++){
         	float sum = this->covar.at<float>(y,x);
