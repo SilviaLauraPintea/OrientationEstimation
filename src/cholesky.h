@@ -7,6 +7,7 @@
 #include <iostream>
 #include <string>
 #include <cmath>
+#include <err.h>
 #include <exception>
 #include <opencv/cv.h>
 #include <opencv/highgui.h>
@@ -21,7 +22,7 @@ class cholesky {
 		cholesky(){
 			this->n = 0;
 		};
-		virtual ~cholesky(){};
+		virtual ~cholesky(){ this->covar.release(); };
 
 		/** (Re)Initializes the class variables so the same instance of the class
 		 * can be used for multiple decompositions.
@@ -55,10 +56,10 @@ class cholesky {
 
 		/** Returns the log of the determiner of the (covariance) matrix, A.
 		 */
-		float logDet();
+		double logDet();
 	//==========================================================================
-	protected:
+	public:
 		unsigned n;
-		cv::Mat_<float> covar;
+		cv::Mat_<double> covar;
 };
 #endif /* CHOLESKY_H_ */
