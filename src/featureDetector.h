@@ -18,7 +18,6 @@
 #include <opencv/highgui.h>
 #include "eigenbackground/src/Tracker.hh"
 #include "eigenbackground/src/Helpers.hh"
-unsigned MIN_TRACKLEN = 20;
 
 /** Class used for detecting useful features in the images that can be later
  * used for training and classifying.
