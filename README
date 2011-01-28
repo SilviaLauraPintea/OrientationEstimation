@@ -20,7 +20,16 @@ techniques (data has to be annotated and classifiers have to be trained on a set
 of features that were found to be useful for this task).
 
 Once an efficient way of estimating the poses is determined, the second part of the 
-project involves finding a reliable way for using these pose estimations of the 
-tracked people in order to detect the social groups present in the video and the 
-dynamics of these groups.
+project involves finding a reliable way of using these pose estimations in order 
+to detect the social groups present in the video and the dynamics of these groups.
+The second part will be performed by exploiting available unsupervised learning 
+techniques.
+The difficulty that arises in this part of the project is the need for a robust 
+method that would account for the possible inaccuracies resulted from the estimation 
+of the poses.
+The fact that it is rather hard to acquire a good prior knowledge related to the 
+number of groups present in a video is another challenge of this project. Thus, well 
+known methods such as "Expectation Maximization" can not be applied efficiently on 
+this task. A technique that should be considered when solving this task would be 
+the "Dirichlet Processes". 
 
