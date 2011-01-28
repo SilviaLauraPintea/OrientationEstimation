@@ -14,20 +14,17 @@
 #include "eigenbackground/src/Tracker.hh"
 #include "eigenbackground/src/Helpers.hh"
 #include "featureDetector.h"
+#include "gaussianProcess.h"
+#include "annotationsHandle.h"
 
 /** Class used for classifying the training data.
  */
 class classifyImages {
 	protected:
-		/** @var testFeatures
+		/** @var features
 		 * An instance of \c featureDetector class.
 		 */
-		featureDetector *testFeatures;
-
-		/** @var trainFeatures
-		 * An instance of \c featureDetector class.
-		 */
-		featureDetector *trainFeatures;
+		featureDetector *features;
 
 		/** @var trainData
 		 * The training data matrix.
@@ -48,18 +45,45 @@ class classifyImages {
 		 * The folder containing the test images.
 		 */
 		std::string testFolder;
+
+		/** @var annotationsTrain
+		 * The file contains the annotations for the training images.
+		 */
+		std::string annotationsTrain;
+
+		/** @var annotationsTest
+		 * The file contains the annotations for the test images.
+		 */
+		std::string annotationsTest;
+
+		/** @var trainTargets
+		 * The column matrix containing the train annotation data (targets).
+		 */
+		cv::Mat trainTargets;
+
+		/** @var testTargets
+		 * The column matrix containing the test annotation data (targets).
+		 */
+		cv::Mat testTargets;
+
+		/** @var gaussianProcess
+		 * An instance of the class gaussianProcess.
+		 */
+		gaussianProcess gp;
 		//======================================================================
 	public:
 		classifyImages(int argc, char **argv);
 		virtual ~classifyImages();
 
-		/** Creates the training data/test data.
+		/** Creates the training data (according to the options), the labels and
+		 * trains the a \c GaussianProcess on the data.
 		 */
-		void createData(std::vector<std::string> options);
+		void trainGP(std::vector<std::string> options = std::vector<std::string>(0));
 
-		/** Regression SVM classification.
+		/** Creates the test data and applies \c GaussianProcess prediction on the test
+		 * data.
 		 */
-		void classifySVM();
+		void predictGP(std::vector<std::string> options = std::vector<std::string>(0));
 };
 
 #endif /* CLASSIFYIMAGES_H_ */

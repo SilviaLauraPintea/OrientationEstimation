@@ -48,7 +48,8 @@ class gaussianProcess {
 		/** Trains the Gaussian process.
 		 */
 		void train(cv::Mat_<double> X, cv::Mat_<double> y,\
-			double (gaussianProcess::*fFunction)(cv::Mat, cv::Mat, double),double sigmasq);
+			double (gaussianProcess::*fFunction)(cv::Mat, cv::Mat, double),\
+			double sigmasq);
 
 		/** Returns the prediction for the test data, x (only one test data point).
 		 */
@@ -103,7 +104,7 @@ class gaussianProcess {
 		cv::Mat_<double> data;
 
 		/** @var N
-		 * Number of data points (data.rows).
+		 * Number of training data points (data.rows).
 		 */
 		unsigned N;
 

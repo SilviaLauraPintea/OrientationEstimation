@@ -542,10 +542,10 @@ void annotationsHandle::annoDifferences(vector<FULL_ANNOTATIONS> &train, \
 						}
 					}
 					// SSD between the predicted values and the correct ones
-					ssdOrientDiff += pow(cos((double)train[i].annos[l].poses[3])\
-						- cos((double)test[i].annos[k].poses[3]),2) +
-						pow(sin((double)train[i].annos[l].poses[3])\
-						- sin((double)test[i].annos[k].poses[3]),2) ;
+					double angleTrain = ((double)train[i].annos[l].poses[3]*M_PI/180.0);
+					double angleTest  = ((double)test[i].annos[k].poses[3]*M_PI/180.0);
+					ssdOrientDiff += pow(cos(angleTrain)-cos(angleTest),2) +\
+									pow(sin(angleTrain)-sin(angleTest),2);
 					break;
 				}
 			}
@@ -611,8 +611,9 @@ boost::mutex annotationsHandle::trackbarMutex;
 IplImage *annotationsHandle::image;
 vector<annotationsHandle::ANNOTATION> annotationsHandle::annotations;
 //==============================================================================
-
+/*
 int main(int argc, char **argv){
 	annotationsHandle::runAnn(argc,argv);
 	//annotationsHandle::runEvaluation(argc,argv);
 }
+*/

@@ -39,13 +39,15 @@ class featureDetector:public Tracker{
 		//======================================================================
 		featureDetector(int argc,char** argv):Tracker(argc, argv, 10, true, true){
 			this->plotTracks  = true;
-			this->featureType = BLOB;
+			this->featureType = EDGES;
+			this->imgIndex    = 0;
 		}
 
 		featureDetector(int argc,char** argv,bool plot):Tracker(argc, argv, 10, \
 		true, true){
 			this->plotTracks  = false;
-			this->featureType = BLOB;
+			this->featureType = EDGES;
+			this->imgIndex    = 0;
 		}
 
 		virtual ~featureDetector(){}
@@ -99,11 +101,15 @@ class featureDetector:public Tracker{
 
 		/** Gets strong corner points in an image.
 		 */
-		void getCornerPoints(std::vector<cv::Point2f> &corners, cv::Mat image);
+		/** Gets strong corner points in an image.
+		 */
+		void getCornerPoints(cv::Mat &feature, cv::Mat imgage,\
+			std::vector<unsigned> borders);
 
 		/** Gets the edges in an image.
 		 */
-		void getEdges(cv::Mat_<uchar> &edges, cv::Mat image);
+		void getEdges(cv::Mat &feature, cv::Mat image, std::vector<unsigned>\
+			borders, unsigned reshpae=1);
 
 		/** SURF descriptors (Speeded Up Robust Features).
 		 */
@@ -112,7 +118,7 @@ class featureDetector:public Tracker{
 		/** Blob detector in RGB color space.
 		 */
 		void blobDetector(cv::Mat &feature, cv::Mat image, std::vector<unsigned>\
-		borders);
+			borders, string featType="1d");
 
 		/** Just displaying an image a bit larger to visualize it better.
 		 */
@@ -144,13 +150,13 @@ class featureDetector:public Tracker{
 		 */
 		void templateWindow(cv::Size imgSize, unsigned &minX, unsigned &maxX,\
 		unsigned &minY, unsigned &maxY, std::vector<CvPoint> &templ,\
-		unsigned tplBorder = 100);
+		unsigned tplBorder = 60);
 
 		/** Initializes the parameters of the tracker.
 		 */
 		void init(std::string dataFolder);
 		//======================================================================
-	protected:
+	public:
 		/** @var plotTracks
 		 * If it is true it displays the tracks of the people in the images.
 		 */
@@ -165,5 +171,11 @@ class featureDetector:public Tracker{
 		 * The training data obtained from the feature descriptors.
 		 */
 		cv::Mat data;
+
+		/** @var imgIndex
+		 * Indexes the number of images "processed".
+		 */
+		unsigned imgIndex;
+
 };
 #endif /* FESTUREDETECTOR_H_ */

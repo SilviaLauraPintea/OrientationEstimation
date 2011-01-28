@@ -8,6 +8,7 @@
 void featureDetector::init(std::string dataFolder){
 	delete this->producer;
 	this->producer = new ImgProducer(dataFolder.c_str(), true);
+	this->imgIndex = 0;
 	this->data.release();
 }
 //==============================================================================
@@ -39,48 +40,74 @@ cv::Point offset){
 	int xmin = -1 * size.width/2, xmax = size.width/2;
 	int ymin = -1 * size.height/2, ymax = size.height/2;
 
-	gauss = cv::Mat::zeros(size.height,size.width,CV_32FC1);
+	gauss = cv::Mat::zeros(size.height,size.width,cv::DataType<float>::type);
 	for(int x=xmin; x<xmax; x++){
 		for(int y=ymin; y<ymax; y++){
 			gauss.at<float>(y+ymax,x+xmax) = \
-				std::exp(-0.5*((x+offset.x)*(x+offset.x)+(y+offset.y)*(y+offset.y))/(sigma*sigma));
+				std::exp(-0.5*((x+offset.x)*(x+offset.x)+(y+offset.y)*\
+						(y+offset.y))/(sigma*sigma));
 		}
 	}
 }
 //==============================================================================
 /** Gets strong corner points in an image.
  */
-void featureDetector::getCornerPoints(std::vector<cv::Point2f> &corners,\
-cv::Mat image){
+void featureDetector::getCornerPoints(cv::Mat &feature, cv::Mat image, \
+std::vector<unsigned> borders){
+	std::vector<cv::Point2f> corners;
 	cv::Mat_<uchar> gray;
 	cv::cvtColor(image, gray, CV_BGR2GRAY);
 	cv::goodFeaturesToTrack(gray, corners, 100, 0.001, image.rows/4);
 
 	for(std::size_t i = 0; i <corners.size(); i++){
-		cv::circle(image, cv::Point(corners[i].x, corners[i].y), 1,\
-			cv::Scalar(0,0,255), 1, 8, 0);
+		// IF THE CORNERS ARE OUTSIDE THE BORDERS OF FOREGROUND PATCH
+		if(borders[0]>corners[i].x || borders[1]<corners[i].x ||\
+		borders[2]>corners[i].y || borders[3]<corners[i].y){
+			corners.erase(corners.begin()+i);
+		}
+		if(this->plotTracks){
+			cv::circle(image, cv::Point(corners[i].x, corners[i].y), 1,\
+				cv::Scalar(0,0,255), 1, 8, 0);
+		}
 	}
-	cv::imshow("Corners", image);
-	cv::waitKey(0);
-	cvDestroyWindow("Corners");
+
+	// some feature extractor!!!
+
+	if(this->plotTracks){
+		cv::imshow("Corners", image);
+		cv::waitKey(0);
+		cvDestroyWindow("Corners");
+	}
 
 	gray.release();
-
-
 }
 //==============================================================================
 /** Gets the edges in an image.
  */
-void featureDetector::getEdges(cv::Mat_<uchar> &edges, cv::Mat image){
-	cv::Mat_<uchar> gray;
+void featureDetector::getEdges(cv::Mat &feature, cv::Mat image,\
+std::vector<unsigned> borders, unsigned reshape){
+	cv::Mat_<double> gray, edges;
 	cv::cvtColor(image, gray, CV_BGR2GRAY);
 	cv::medianBlur(gray, gray, 3);
-	cv::Canny(gray, edges, 60, 30, 3, true);
-	cv::imshow("Edges", edges);
-	cv::waitKey(0);
-	cvDestroyWindow("Edges");
 
+	cv::Canny(gray, edges, 60, 30, 3, true);
+	edges = edges(cv::Range(borders[2],borders[3]),cv::Range(borders[0],borders[1]));
+
+	if(reshape){
+		cv::Mat continuousEdges(edges.size(),edges.type());
+		edges.copyTo(continuousEdges);
+		feature = (continuousEdges.clone()).reshape(0,1);
+		continuousEdges.release();
+	}else{
+		edges.copyTo(feature);
+	}
+	if(this->plotTracks){
+		cv::imshow("Edges", edges);
+		cv::waitKey(0);
+		cvDestroyWindow("Edges");
+	}
 	gray.release();
+	edges.release();
 }
 //==============================================================================
 /** SURF descriptors (Speeded Up Robust Features).
@@ -118,7 +145,7 @@ void featureDetector::getSURF(std::vector<float>& descriptors, cv::Mat image){
 /** Blob detector in RGB color space.
  */
 void featureDetector::blobDetector(cv::Mat &feature, cv::Mat image, \
-std::vector<unsigned> borders){
+std::vector<unsigned> borders, string featType){
 	std::vector<std::vector<cv::Point> > msers;
 	/*
 	int _delta, _min_area, _max_area, _max_evolution, _edge_blur_size;
@@ -134,7 +161,6 @@ std::vector<unsigned> borders){
 	// are searched for
 	cv::Mat mask;
 	aMSER(image, msers, mask);
-	//cv::drawContours(image, msers, -1, cv::Scalar(0,0,255), 1, 8);
 	mask.release();
 
 	// KEEP ONLY THE DESCRIPTORS WITHIN THE BORDERS
@@ -159,24 +185,43 @@ std::vector<unsigned> borders){
 
 	// SAVE IN A MATRIX
 	if(this->plotTracks){
-		cv::Mat tmp   = cv::Mat::zeros(image.size(), CV_8UC1);
+		cv::Mat tmp = cv::Mat::zeros(cv::Size(borders[3]-borders[2],\
+						borders[1]-borders[0]), CV_8UC1);
 		cv::drawContours(tmp, msers, -1, cv::Scalar(255,255,255), 1, 8);
-		cv::Mat blobs = cv::Mat(tmp.clone(), cv::Rect(cv::Point(borders[0],borders[2]),\
-						cv::Size(borders[1]-borders[0],borders[3]-borders[2])));
-		cv::imshow("feature",blobs);
+		cv::imshow("feature",tmp);
 		cv::waitKey(0);
 		tmp.release();
-		blobs.release();
 	}
-	feature = cv::Mat(msers).reshape(0,1);
-	cout<<msers.size()<<" "<<feature.cols<<endl;
 
-	// THE VALUES IN THE FEATURES
-	for(int x=0; x<feature.cols; x++){
-		for(int y=0; y<feature.rows; y++){
-			cout<<(int)(feature.at<cv::Vec2b>(y,x)[0])<<" "<<\
-				(int)(feature.at<cv::Vec2b>(y,x)[1])<<endl;
+	if(featType == "2d"){
+		feature = cv::Mat(msers).reshape(0,1);
+		// THE VALUES IN THE FEATURES
+		for(int x=0; x<feature.cols; x++){
+			for(int y=0; y<feature.rows; y++){
+				cout<<"feature values: "<<(int)(feature.at<cv::Vec2b>(y,x)[0])<<" "<<\
+					(int)(feature.at<cv::Vec2b>(y,x)[1])<<endl;
+			}
 		}
+	}else{
+		//cv::Mat tmp = cv::Mat::zeros(cv::Size(borders[1]-borders[0],\
+						borders[3]-borders[2]), CV_8UC1);
+
+		cv::Mat tmp = cv::Mat::zeros(image.size(), CV_8UC1);
+		cv::drawContours(tmp, msers, -1, cv::Scalar(255,255,255), 1, 8);
+
+		cv::imshow("feature",tmp);
+		cv::waitKey(0);
+
+
+		feature = tmp.reshape(0,1);
+		/*
+		// THE VALUES IN THE FEATURES
+		for(int x=0; x<feature.cols; x++){
+			for(int y=0; y<feature.rows; y++){
+				cout<<"feature vales: "<<(int)(feature.at<uchar>(y,x))<<endl;
+			}
+		}
+		*/
 	}
 }
 //==============================================================================
@@ -214,7 +259,7 @@ cv::Point templateCenter,cv::Point offset,double minHeadSize,double maxHeadSize)
 
 	// GET EDGES OF THE IMAGE
 	cv::Mat_<uchar> edges;
-	this->getEdges(edges, img);
+	this->getEdges(edges, img, std::vector<unsigned>(4,0), 0);
 
 	// GROUP THE EDGES INTO CONTOURS
 	std::vector<std::vector<cv::Point> > contours;
@@ -313,34 +358,25 @@ std::vector<CvPoint> templ){
  */
 void featureDetector::templateWindow(cv::Size imgSize, unsigned &minX, unsigned\
 &maxX, unsigned &minY, unsigned &maxY, std::vector<CvPoint> &templ, unsigned tplBorder){
-	// GET THE MIN/MAX SIZE OF THE TEMPLATE
-	for(unsigned i=0; i<templ.size(); i++){
-		if(minX>templ[i].x){minX = templ[i].x;}
-		if(maxX<templ[i].x){maxX = templ[i].x;}
-		if(minY>templ[i].y){minY = templ[i].y;}
-		if(maxY<templ[i].y){maxY = templ[i].y;}
-	}
-	minY = std::max((int)(minY-tplBorder),0);
-	maxY = std::min(imgSize.height,(int)(maxY+tplBorder));
-	minX = std::max((int)(minX-tplBorder),0);
-	maxX = std::min(imgSize.width,(int)(maxX+tplBorder));
+	cv::Point A((templ[14].x+templ[12].x)/2,(templ[14].y+templ[12].y)/2);
+	cv::Point B((templ[2].x+templ[0].x)/2,(templ[2].y+templ[0].y)/2);
+	cv::Point mid((A.x+B.x)/2,(A.y+B.y)/2);
+	minY = std::max((int)(mid.y-tplBorder/2),0);
+	maxY = std::min(imgSize.height,(int)(mid.y+tplBorder/2));
+	minX = std::max((int)(mid.x-tplBorder/2),0);
+	maxX = std::min(imgSize.width,(int)(mid.x+tplBorder/2));
 }
 //==============================================================================
 /** Get the foreground pixels corresponding to each person.
  */
-void featureDetector::allForegroundPixels(std::vector<featureDetector::people> &allPeople,\
-std::vector<unsigned> existing, IplImage *bg, double threshold){
+void featureDetector::allForegroundPixels(std::vector<featureDetector::people>\
+&allPeople, std::vector<unsigned> existing, IplImage *bg, double threshold){
 	// INITIALIZING STUFF
 	cv::Mat thsh(cvCloneImage(bg));
 	cv::Mat thrsh(thsh.rows, thsh.cols, CV_8UC1);
 	cv::cvtColor(thsh, thrsh, CV_BGR2GRAY);
 	cv::threshold(thrsh, thrsh, threshold, 255, cv::THRESH_BINARY);
 	cv::Mat foregr(cvCloneImage(this->current->img));
-
-	std::vector<unsigned> tmpminX(existing.size(),thrsh.cols);
-	std::vector<unsigned> tmpmaxX(existing.size(),0);
-	std::vector<unsigned> tmpminY(existing.size(),thrsh.rows);
-	std::vector<unsigned> tmpmaxY(existing.size(),0);
 
 	// FOR EACH EXISTING TEMPLATE LOOK ON AN AREA OF 100 PIXELS AROUND IT
 	cout<<"number of templates: "<<existing.size()<<endl;
@@ -392,19 +428,7 @@ std::vector<unsigned> existing, IplImage *bg, double threshold){
 						// IF THE PIXEL HAS A DIFFERENT LABEL THEN THE CURR TEMPL
 						if(label != k || minDist>=persHeight/5){
 							colorRoi.at<cv::Vec3b>((int)y,(int)x) = cv::Vec3b(0,0,0);
-						// IF IS ASSIGNED TO CURR TEMPL, UPDATE THE BORDER
-						}else{
-							if(tmpminX[label]>x){tmpminX[label] = x;}
-							if(tmpmaxX[label]<x){tmpmaxX[label] = x;}
-							if(tmpminY[label]>y){tmpminY[label] = y;}
-							if(tmpmaxY[label]<y){tmpmaxY[label] = y;}
 						}
-						// IF IS ASSIGNED TO CURR TEMPL, UPDATE THE BORDER
-					}else{
-						if(tmpminX[k]>x){tmpminX[k] = x;}
-						if(tmpmaxX[k]<x){tmpmaxX[k] = x;}
-						if(tmpminY[k]>y){tmpminY[k] = y;}
-						if(tmpmaxY[k]<y){tmpmaxY[k] = y;}
 					}
 				// IF THE PIXEL VALUE IS BELOW THE THRESHOLD
 				}else{
@@ -412,24 +436,18 @@ std::vector<unsigned> existing, IplImage *bg, double threshold){
 				}
 			}
 		}
-		if(tmpminX[k]==thrsh.cols){tmpminX[k]=0;}
-		if(tmpmaxX[k]==0){tmpmaxX[k]=maxX-minX;}
-		if(tmpminY[k]==thrsh.rows){tmpminY[k]=0;}
-		if(tmpmaxY[k]==0){tmpmaxY[k]=maxY-minY;}
-		allPeople[k].relativeLoc = cv::Point(center.x - (int)(minX + tmpminX[k]),\
-										center.y - (int)(minY + tmpminY[k]));
+		allPeople[k].relativeLoc = cv::Point(center.x - (int)(minX),\
+									center.y - (int)(minY));
 		allPeople[k].borders.assign(4,0);
-		allPeople[k].borders[0] = tmpminX[k]+minX;
-		allPeople[k].borders[1] = tmpmaxX[k]+minX;
-		allPeople[k].borders[2] = tmpminY[k]+minY;
-		allPeople[k].borders[3] = tmpmaxY[k]+minY;
-
-		width  = tmpmaxX[k]-tmpminX[k];
-		height = tmpmaxY[k]-tmpminY[k];
-		allPeople[k].pixels = cv::Mat(colorRoi.clone(),\
-			cv::Rect(cv::Point(tmpminX[k],tmpminY[k]),cv::Size(width,height)));
-		cv::imshow("people",allPeople[k].pixels);
-		cv::waitKey(0);
+		allPeople[k].borders[0] = minX;
+		allPeople[k].borders[1] = maxX;
+		allPeople[k].borders[2] = minY;
+		allPeople[k].borders[3] = maxY;
+		allPeople[k].pixels     = colorRoi.clone();
+		if(this->plotTracks){
+			cv::imshow("people",allPeople[k].pixels);
+			cv::waitKey(0);
+		}
 		colorRoi.release();
 	}
 	thrsh.release();
@@ -465,7 +483,8 @@ void featureDetector::getGabor(cv::Mat &response, cv::Mat image, float *params){
 	float xMin   = -xMax;
 	float yMin   = -yMax;
 
-	cv::Mat gabor = cv::Mat::zeros((int)(xMax-xMin),(int)(yMax-yMin),CV_32F);
+	cv::Mat gabor = cv::Mat::zeros((int)(xMax-xMin),(int)(yMax-yMin),\
+					cv::DataType<float>::type);
 	for(int x=(int)xMin; x<xMax; x++){
 		for(int y=(int)yMin; y<yMax; y++){
 			float xPrime = x*std::cos(params[3])+y*std::sin(params[3]);
@@ -537,13 +556,13 @@ void featureDetector::setFeatureType(featureDetector::FEATURE type){
  */
 void featureDetector::extractDataRow(std::vector<unsigned> existing, IplImage *bg){
 	cv::Mat image(this->current->img);
-
 	// REDUCE THE IMAGE TO ONLY THE INTERESTING AREA
 	std::vector<featureDetector::people> allPeople(existing.size());
 	this->allForegroundPixels(allPeople, existing, bg, 7.0);
 
 	// FOR EACH LOCATION IN THE IMAGE EXTRACT FEATURES, FILTER THEM AND RESHAPE
 	for(std::size_t i=0; i<existing.size(); i++){
+
 		// CONSIDER ONLY A WINDOW OF 100X100 AROUND THE TEMPLATE
 		cv::Point center = this->cvPoint(existing[i]);
 		std::vector<CvPoint> templ;
@@ -561,22 +580,18 @@ void featureDetector::extractDataRow(std::vector<unsigned> existing, IplImage *b
 		std::vector<unsigned> borders = allPeople[i].borders;
 		borders[0] -= minX; borders[1] -= minX;
 		borders[2] -= minY; borders[3] -= minY;
-
 		switch(this->featureType){
 			case (featureDetector::BLOB):
-				// FILTER THE FEATURES DISCOVERED
 				this->blobDetector(feature, imgRoi, borders);
+				break;
+			case featureDetector::CORNER:
+				this->getCornerPoints(feature, imgRoi, borders);
+				break;
+			case featureDetector::EDGES:
+				this->getEdges(feature, imgRoi, borders);
 				break;
 
 			/*
-			case featureDetector::CORNER:
-				std::vector<cv::Point2f> corners;
-				this->getCornerPoints(corners, imgRoi);
-				break;
-			case featureDetector::EDGES:
-				cv::Mat_<uchar> edges;
-				this->getEdges(edges, imgRoi);
-				break;
 			case featureDetector::ELLIPSE:
 				cv::Point2f boxCenter(0.f,0.f);
 				cv::Size2f boxSize(0,0);
@@ -597,9 +612,30 @@ void featureDetector::extractDataRow(std::vector<unsigned> existing, IplImage *b
 				break;
 			 */
 		}
-		cv::Mat tmp = this->data(cv::Rect(i,i+1,feature.cols,1));
-		feature.copyTo(tmp);
+		//data NEEDS TO BE ALLOCATED & copyTo NEEDS A REFERENCE,
+		if(this->data.empty()){
+			this->data.create(cv::Size(feature.cols,1), feature.type());
+		}else{
+			this->data.create(cv::Size(feature.cols,this->data.rows+1),\
+				feature.type());
+		}
+		cv::Mat dummy = this->data.row(this->imgIndex);
+		feature.copyTo(dummy);
+		this->data.convertTo(this->data, cv::DataType<double>::type);
+
+		//-------------------WEIRD----------------------
+		/*cv::imshow("tt", this->data.row(this->imgIndex).reshape(0,borders[3]-borders[2]));
+		cv::waitKey(0);
+		for(unsigned y=0; y<this->data.rows; y++){
+			for(unsigned x=0; x<5; x++){
+				cout<<"elements: "<<this->data.at<double>(y,x)<<endl;
+			}
+		}*/
+		//-------------------WEIRD----------------------
+
+		feature.release();
 		imgRoi.release();
+		this->imgIndex += 1;
 	}
 }
 //==============================================================================
@@ -662,10 +698,11 @@ const FLOAT logBGProb,const vnl_vector<FLOAT> &logSumPixelBGProb){
 			cv::Point pt = this->cvPoint(existing[i]);
 			plotTemplate2(bg,pt,persHeight,camHeight,CV_RGB(255,255,255));
 			plotScanLines(this->current->img,mask,CV_RGB(0,255,0),0.3);
-			cv::Mat tmp = cv::Mat(this->current->img);
+			cv::Mat tmp = cv::Mat(cvCloneImage(this->current->img));
 			char buffer[50];
 			sprintf(buffer,"%u",i);
 			cv::putText(tmp,(string)buffer,pt,3,3.0,cv::Scalar(0,0,255),1,8,false);
+			tmp.release();
 		}
 		cvShowImage("bg", bg);
 		cvShowImage("image",src);
@@ -678,39 +715,40 @@ const FLOAT logBGProb,const vnl_vector<FLOAT> &logSumPixelBGProb){
 /** Simple "menu" for skipping to the next image or quitting the processing.
  */
 bool featureDetector::imageProcessingMenu(){
-	cout<<" To quite press 'q'.\n To pause press 'p'.\n To skip 10 "<<\
-		"images press 's'.\n To skip 100 images press 'f'.\n To go back 10 "<<\
-		"images  press 'b'.\n To go back 100 images press 'r'.\n";
-	int k = (char)cvWaitKey(this->waitTime);
-	cout<<"Press 'n' to go to the next frame"<<endl;
-
-	while((char)k != 'n' && (char)k != 'q'){
-		switch(k){
-			case 'p':
-				this->waitTime = 20-this->waitTime;
-				break;
-			case 's':
-				this->producer->forward(10);
-				break;
-			case 'f':
-				this->producer->forward(100);
-				break;
-			case 'b':
-				this->producer->backward(10);
-				break;
-			case 'r':
-				this->producer->backward(100);
-				break;
-			default:
-				break;
+	if(this->plotTracks){
+		cout<<" To quite press 'q'.\n To pause press 'p'.\n To skip 10 "<<\
+			"images press 's'.\n To skip 100 images press 'f'.\n To go back 10 "<<\
+			"images  press 'b'.\n To go back 100 images press 'r'.\n";
+		int k = (char)cvWaitKey(this->waitTime);
+		cout<<"Press 'n' to go to the next frame"<<endl;
+		while((char)k != 'n' && (char)k != 'q'){
+			switch(k){
+				case 'p':
+					this->waitTime = 20-this->waitTime;
+					break;
+				case 's':
+					this->producer->forward(10);
+					break;
+				case 'f':
+					this->producer->forward(100);
+					break;
+				case 'b':
+					this->producer->backward(10);
+					break;
+				case 'r':
+					this->producer->backward(100);
+					break;
+				default:
+					break;
+			}
+			k = (char)cvWaitKey(this->waitTime);
 		}
-		k = (char)cvWaitKey(this->waitTime);
+		if(k == 'q'){return false;}
 	}
-	if(k == 'q'){return false;}
 	return true;
 }
 //==============================================================================
-int main(int argc, char **argv){
-	featureDetector feature(argc,argv,false);
+/*int main(int argc, char **argv){
+	featureDetector feature(argc,argv,true);
 	feature.run();
-}
+}*/

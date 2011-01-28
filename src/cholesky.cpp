@@ -28,7 +28,7 @@ int cholesky::decomposeCov(cv::Mat a){
 		std::cerr<<"For Cholesky decomposeCov: the input matrix needs to be square"<<std::endl;
 		exit(1);
 	}
-	this->n     = static_cast<unsigned>(a.rows);
+	this->n     = static_cast<unsigned>(a.cols);
 	this->covar = a.clone();
     for(unsigned indy=0; indy<this->n; indy++){
     	for(unsigned indx=0; indx<this->n; indx++){
@@ -61,7 +61,7 @@ void cholesky::solve(cv::Mat b, cv::Mat &x){
 		std::cerr<<"In Cholesky solve: in Ax=b, b has the wrong size"<<std::endl;
 		exit(1);
 	}
-	x = cv::Mat::zeros(cv::Size(1, this->covar.rows), CV_64FC1);
+	x = cv::Mat::zeros(cv::Size(1, this->covar.rows), cv::DataType<double>::type);
 	for(unsigned indy=0; indy<this->n; indy++){
 		double sum = b.at<double>(indy,1);
 		for(int k=indy-1; k>=0; --k){
@@ -87,7 +87,7 @@ void cholesky::solveL(cv::Mat b, cv::Mat &y){
 		exit(1);
 	}
 
-	y = cv::Mat::zeros(cv::Size(1, this->covar.rows), CV_64FC1);
+	y = cv::Mat::zeros(cv::Size(1, this->covar.rows), cv::DataType<double>::type);
 	for(unsigned indy=0; indy<this->n; indy++){
 		double sum = b.at<double>(indy,1);
 		for(unsigned indx=0; indx<indy; indx++){
@@ -105,7 +105,7 @@ void cholesky::solveLTranspose(cv::Mat b, cv::Mat &y){
 		exit(1);
 	}
 
-	y = cv::Mat::zeros(cv::Size(1, this->covar.rows), CV_64FC1);
+	y = cv::Mat::zeros(cv::Size(1, this->covar.rows), cv::DataType<double>::type);
 	for(int indy=this->n-1; indy>=0; --indy){
 		double sum = b.at<double>(indy,1);
 		for(unsigned indx=indy+1; indx<this->n; indx++){
@@ -118,7 +118,8 @@ void cholesky::solveLTranspose(cv::Mat b, cv::Mat &y){
 /** Returns the inverse of the covariance: A^{-1}.
  */
 void cholesky::inverse(cv::Mat &ainv){
-	ainv = cv::Mat::zeros(cv::Size(this->covar.cols, this->covar.rows), CV_64FC1);
+	ainv = cv::Mat::zeros(cv::Size(this->covar.cols, this->covar.rows),\
+			cv::DataType<double>::type);
 	for(unsigned indy=0; indy<this->n; indy++){
 		for(unsigned indx=0; indx<this->n; indx++){
 			double sum = (indx==indy?1.0:0.0);

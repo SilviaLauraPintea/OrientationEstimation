@@ -100,15 +100,16 @@ cv::Mat mu, cv::Mat cov, double a, double b, double s){
 void gaussianProcess::train(cv::Mat_<double> X, cv::Mat_<double> y,\
 double (gaussianProcess::*fFunction)(cv::Mat, cv::Mat, double),double sigmasq){
 	this->kFunction = fFunction;
-	this->N         = X.rows;
+	this->N         = X.rows; // NUMBER OF TRAINING DATA POINTS!
 	this->data      = X.clone();
 
 	// BUILD THE KERNEL MARIX K: K(i,j) = k(x[i],x[j])
-	cv::Mat_<double> K = cv::Mat::zeros(cv::Size(this->N,this->N),CV_64FC1);
+	cv::Mat_<double> K = cv::Mat::zeros(cv::Size(this->N,this->N),\
+						 cv::DataType<double>::type);
 	for(unsigned indy=0; indy<this->N; indy++){
 		for(unsigned indx=0; indx<this->N; indx++){
-			K.at<double>(indy,indx) = (this->*kFunction)(X(cv::Range(indy,indy+1),\
-				cv::Range::all()),X(cv::Range(indx,indx+1), cv::Range::all()),1.0);
+			K.at<double>(indy,indx) = (this->*kFunction)(X.row(indy),\
+										X.row(indx), 1.0);
 		}
 	}
 
@@ -127,15 +128,15 @@ double (gaussianProcess::*fFunction)(cv::Mat, cv::Mat, double),double sigmasq){
 /** Returns the prediction for the test data, x (only one test data point).
  */
 void gaussianProcess::predict(cv::Mat x, gaussianProcess::prediction &predi){
-	cv::Mat kstar(this->data.rows, 1, CV_64FC1);
+	cv::Mat kstar(this->data.rows, 1, cv::DataType<double>::type);
 
 	for(unsigned indy=0; indy<this->N; indy++){
-		kstar.at<double>(indy,1) = (this->*kFunction)(this->data(cv::Range(indy,indy+1),\
-									cv::Range::all()), x, 1.0);
+		kstar.at<double>(indy,1) = (this->*kFunction)(this->data.row(indy),x,1.0);
 	}
 	predi.mean = kstar.dot(this->alpha);
 	cv::Mat v;
 	this->chlsky.solveL(kstar,v);
+
 	predi.variance = (this->*kFunction)(x,x,1.0) - v.dot(v);
 	kstar.release();
 }
@@ -143,17 +144,17 @@ void gaussianProcess::predict(cv::Mat x, gaussianProcess::prediction &predi){
 /** Samples the process that generates the inputs.
  */
 void gaussianProcess::sample(cv::Mat inputs, cv::Mat &smpl){
-	cv::Mat Kxstarx(this->N, inputs.cols, CV_64FC1);
-	cv::Mat Kxstarxstar(inputs.cols, inputs.cols, CV_64FC1);
+	cv::Mat Kxstarx(this->N, inputs.cols, cv::DataType<double>::type);
+	cv::Mat Kxstarxstar(inputs.cols, inputs.cols, cv::DataType<double>::type);
 
 	for(unsigned indy=0; indy<inputs.cols; indy++){
 		for(unsigned indx=0; indx<this->N; indx++){
-			Kxstarx.at<double>(indy,indx) = (this->*kFunction)(inputs(cv::Range(indy,indy+1),\
-				cv::Range::all()),this->data(cv::Range(indx,indx+1),cv::Range::all()),1.0);
+			Kxstarx.at<double>(indy,indx) = (this->*kFunction)(inputs.row(indy),\
+											this->data.row(indx),1.0);
 		}
 		for(unsigned indx=0; indx<inputs.cols; indx++){
-			Kxstarxstar.at<double>(indy,indx) = (this->*kFunction)(inputs(cv::Range(indy,indy+1),\
-				cv::Range::all()),inputs(cv::Range(indx,indx+1),cv::Range::all()),1.0);
+			Kxstarxstar.at<double>(indy,indx) = (this->*kFunction)(inputs.row(indy),\
+												inputs.row(indx),1.0);
 		}
 	}
 
@@ -223,8 +224,8 @@ cv::Mat, double), cv::Mat inputs, cv::Mat &smpl){
 	for(unsigned indy=0; indy<inputs.cols; indy++){
 		mu.at<double>(indy,1) = 0.0;
 		for(unsigned indx=0; indx<inputs.cols; indx++){
-			cov.at<double>(indy,indx) = (this->*kFunction)(inputs(cv::Range(indy,indy+1),\
-				cv::Range::all()),inputs(cv::Range(indx,indx+1),cv::Range::all()),1.0);
+			cov.at<double>(indy,indx) = (this->*kFunction)(inputs.row(indy),\
+										inputs.row(indx),1.0);
 		}
 	}
 
