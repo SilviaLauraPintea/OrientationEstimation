@@ -23,8 +23,8 @@ class gaussianProcess {
 		/** A structure used to define predictions.
 		 */
 		struct prediction {
-		  double mean;
-		  double variance;
+		  std::vector<double> mean;
+		  std::vector<double> variance;
 		};
 
 		/** All available distributions for the functions.
@@ -43,7 +43,8 @@ class gaussianProcess {
 		 * mean: mu, the covariance: cov, the data x).
 		 */
 		double distribution(cv::Mat x,gaussianProcess::DISTRIBUTION distrib,\
-			cv::Mat mu = cv::Mat(),cv::Mat cov = cv::Mat(),double a=0,double b=0,double s=0);
+			cv::Mat mu = cv::Mat(),cv::Mat cov = cv::Mat(),double a=0,double b=0,\
+			double s=0);
 
 		/** Trains the Gaussian process.
 		 */

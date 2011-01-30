@@ -99,6 +99,12 @@ cv::Mat mu, cv::Mat cov, double a, double b, double s){
  */
 void gaussianProcess::train(cv::Mat_<double> X, cv::Mat_<double> y,\
 double (gaussianProcess::*fFunction)(cv::Mat, cv::Mat, double),double sigmasq){
+	if(y.rows != X.rows){
+		std::cerr<<"In Gaussian Process - train: X and y need to be defined for the"<<\
+			" same number of points"<<std::endl;
+		exit(1);
+	}
+
 	this->kFunction = fFunction;
 	this->N         = X.rows; // NUMBER OF TRAINING DATA POINTS!
 	this->data      = X.clone();
@@ -122,6 +128,11 @@ double (gaussianProcess::*fFunction)(cv::Mat, cv::Mat, double),double sigmasq){
 		this->chlsky.decomposeCov(K);
 	}
 	this->chlsky.solve(y, this->alpha);
+
+	std::cout<<"N: ("<<this->N<<")"<<std::endl;
+	std::cout<<"size of alpha: ("<<this->alpha.cols<<","<<this->alpha.rows<<")"<<std::endl;
+	std::cout<<"size of data: ("<<this->data.cols<<","<<this->data.rows<<")"<<std::endl;
+
 	K.release();
 }
 //==============================================================================
@@ -131,13 +142,15 @@ void gaussianProcess::predict(cv::Mat x, gaussianProcess::prediction &predi){
 	cv::Mat kstar(this->data.rows, 1, cv::DataType<double>::type);
 
 	for(unsigned indy=0; indy<this->N; indy++){
-		kstar.at<double>(indy,1) = (this->*kFunction)(this->data.row(indy),x,1.0);
+		kstar.at<double>(indy,0) = (this->*kFunction)(this->data.row(indy),x,1.0);
 	}
-	predi.mean = kstar.dot(this->alpha);
+
+	for(int i=0; i<this->alpha.cols; i++){
+		predi.mean.push_back(kstar.dot(this->alpha.col(i)));
+	}
 	cv::Mat v;
 	this->chlsky.solveL(kstar,v);
-
-	predi.variance = (this->*kFunction)(x,x,1.0) - v.dot(v);
+	predi.variance.push_back((this->*kFunction)(x,x,1.0) - v.dot(v));
 	kstar.release();
 }
 //==============================================================================
@@ -185,7 +198,7 @@ void gaussianProcess::sampleGaussND(cv::Mat mu, cv::Mat cov, cv::Mat &smpl){
 	}
 
 	for(unsigned indy=0; indy<mu.cols; indy++){
-		smpl.at<double>(indy,1) = this->rand_normal();
+		smpl.at<double>(indy,0) = this->rand_normal();
 	}
 
 	smpl = mu + (this->chlsky.covar * smpl);
@@ -222,7 +235,7 @@ cv::Mat, double), cv::Mat inputs, cv::Mat &smpl){
 	cv::Mat cov;
 
 	for(unsigned indy=0; indy<inputs.cols; indy++){
-		mu.at<double>(indy,1) = 0.0;
+		mu.at<double>(indy,0) = 0.0;
 		for(unsigned indx=0; indx<inputs.cols; indx++){
 			cov.at<double>(indy,indx) = (this->*kFunction)(inputs.row(indy),\
 										inputs.row(indx),1.0);
@@ -278,3 +291,36 @@ double gaussianProcess::matern25(cv::Mat x1, cv::Mat x2, double l){
 		std::exp(-1.0 * std::sqrt(5.0)*result/l);
 }
 //==============================================================================
+
+int main(){
+	cv::Mat test(10, 100, cv::DataType<double>::type);
+	cv::Mat train(360, 100, cv::DataType<double>::type);
+	cv::Mat targets = cv::Mat::zeros(360, 2, cv::DataType<double>::type);
+	train = cv::Mat::zeros(360, 100, cv::DataType<double>::type);
+
+	for(unsigned i=0; i<360; i++){
+		cv::Mat stupid = train.row(i);
+		cv::add(stupid, cv::Scalar(i*10.0), stupid);
+		if(i<10){
+			cv::Mat stupid2 = test.row(i);
+			cv::add(stupid2, cv::Scalar((99.0-(i*10.0))*10.0), stupid2);
+		}
+		targets.at<double>(i,0) = std::sin(i*M_PI/180.0);
+		targets.at<double>(i,1) = std::cos(i*M_PI/180.0);
+	}
+
+	gaussianProcess gp;
+	gp.train(train, targets, &gaussianProcess::sqexp, 0.1);
+	gaussianProcess::prediction predi;
+
+	cv::Mat result;
+	for(unsigned i=0; i<test.rows; i++){
+		cv::Mat dummy = test(cv::Range(i,i+1),cv::Range::all());
+		gp.predict(dummy, predi);
+		std::cout<<"label: "<<std::sin(99.0-(i*10.0))<<" "<<\
+			std::cos(99.0-(i*10.0))<<" "<<\
+			" mean:"<<predi.mean[0]<<" "<<predi.mean[1]<<" variance:"<<\
+			predi.variance[0]<<std::endl;
+	}
+}
+

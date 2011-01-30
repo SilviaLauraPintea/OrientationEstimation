@@ -6,10 +6,12 @@
 /** Initializes the parameters of the tracker.
  */
 void featureDetector::init(std::string dataFolder){
-	delete this->producer;
+	this->producer = NULL;
 	this->producer = new ImgProducer(dataFolder.c_str(), true);
-	this->imgIndex = 0;
-	this->data.release();
+	for(size_t i=0; i<this->data.size(); i++){
+		this->data[i].release();
+	}
+	this->data.clear();
 }
 //==============================================================================
 /** Get perpendicular to a line given by 2 points A, B in point C.
@@ -94,9 +96,9 @@ std::vector<unsigned> borders, unsigned reshape){
 	edges = edges(cv::Range(borders[2],borders[3]),cv::Range(borders[0],borders[1]));
 
 	if(reshape){
-		cv::Mat continuousEdges(edges.size(),edges.type());
-		edges.copyTo(continuousEdges);
-		feature = (continuousEdges.clone()).reshape(0,1);
+		cv::Mat continuousEdges(cv::Size(100,100),cv::DataType<double>::type);
+		cv::resize(edges,continuousEdges,continuousEdges.size(),2,2,cv::INTER_CUBIC);
+		feature = (continuousEdges.clone()).reshape(1);
 		continuousEdges.release();
 	}else{
 		edges.copyTo(feature);
@@ -358,13 +360,17 @@ std::vector<CvPoint> templ){
  */
 void featureDetector::templateWindow(cv::Size imgSize, unsigned &minX, unsigned\
 &maxX, unsigned &minY, unsigned &maxY, std::vector<CvPoint> &templ, unsigned tplBorder){
-	cv::Point A((templ[14].x+templ[12].x)/2,(templ[14].y+templ[12].y)/2);
-	cv::Point B((templ[2].x+templ[0].x)/2,(templ[2].y+templ[0].y)/2);
-	cv::Point mid((A.x+B.x)/2,(A.y+B.y)/2);
-	minY = std::max((int)(mid.y-tplBorder/2),0);
-	maxY = std::min(imgSize.height,(int)(mid.y+tplBorder/2));
-	minX = std::max((int)(mid.x-tplBorder/2),0);
-	maxX = std::min(imgSize.width,(int)(mid.x+tplBorder/2));
+	// GET THE MIN/MAX SIZE OF THE TEMPLATE
+	for(unsigned i=0; i<templ.size(); i++){
+		if(minX>templ[i].x){minX = templ[i].x;}
+		if(maxX<templ[i].x){maxX = templ[i].x;}
+		if(minY>templ[i].y){minY = templ[i].y;}
+		if(maxY<templ[i].y){maxY = templ[i].y;}
+	}
+	minY = std::max((int)(minY-tplBorder),0);
+	maxY = std::min(imgSize.height,(int)(maxY+tplBorder));
+	minX = std::max((int)(minX-tplBorder),0);
+	maxX = std::min(imgSize.width,(int)(maxX+tplBorder));
 }
 //==============================================================================
 /** Get the foreground pixels corresponding to each person.
@@ -377,6 +383,11 @@ void featureDetector::allForegroundPixels(std::vector<featureDetector::people>\
 	cv::cvtColor(thsh, thrsh, CV_BGR2GRAY);
 	cv::threshold(thrsh, thrsh, threshold, 255, cv::THRESH_BINARY);
 	cv::Mat foregr(cvCloneImage(this->current->img));
+
+	std::vector<unsigned> tmpminX(existing.size(),thrsh.cols);
+	std::vector<unsigned> tmpmaxX(existing.size(),0);
+	std::vector<unsigned> tmpminY(existing.size(),thrsh.rows);
+	std::vector<unsigned> tmpmaxY(existing.size(),0);
 
 	// FOR EACH EXISTING TEMPLATE LOOK ON AN AREA OF 100 PIXELS AROUND IT
 	cout<<"number of templates: "<<existing.size()<<endl;
@@ -428,7 +439,19 @@ void featureDetector::allForegroundPixels(std::vector<featureDetector::people>\
 						// IF THE PIXEL HAS A DIFFERENT LABEL THEN THE CURR TEMPL
 						if(label != k || minDist>=persHeight/5){
 							colorRoi.at<cv::Vec3b>((int)y,(int)x) = cv::Vec3b(0,0,0);
+						// IF IS ASSIGNED TO CURR TEMPL, UPDATE THE BORDER
+						}else{
+							if(tmpminX[label]>x){tmpminX[label] = x;}
+							if(tmpmaxX[label]<x){tmpmaxX[label] = x;}
+							if(tmpminY[label]>y){tmpminY[label] = y;}
+							if(tmpmaxY[label]<y){tmpmaxY[label] = y;}
 						}
+						// IF IS ASSIGNED TO CURR TEMPL, UPDATE THE BORDER
+					}else{
+						if(tmpminX[k]>x){tmpminX[k] = x;}
+						if(tmpmaxX[k]<x){tmpmaxX[k] = x;}
+						if(tmpminY[k]>y){tmpminY[k] = y;}
+						if(tmpmaxY[k]<y){tmpmaxY[k] = y;}
 					}
 				// IF THE PIXEL VALUE IS BELOW THE THRESHOLD
 				}else{
@@ -436,14 +459,22 @@ void featureDetector::allForegroundPixels(std::vector<featureDetector::people>\
 				}
 			}
 		}
-		allPeople[k].relativeLoc = cv::Point(center.x - (int)(minX),\
-									center.y - (int)(minY));
+		if(tmpminX[k]==thrsh.cols){tmpminX[k]=0;}
+		if(tmpmaxX[k]==0){tmpmaxX[k]=maxX-minX;}
+		if(tmpminY[k]==thrsh.rows){tmpminY[k]=0;}
+		if(tmpmaxY[k]==0){tmpmaxY[k]=maxY-minY;}
+		allPeople[k].relativeLoc = cv::Point(center.x - (int)(minX + tmpminX[k]),\
+										center.y - (int)(minY + tmpminY[k]));
 		allPeople[k].borders.assign(4,0);
-		allPeople[k].borders[0] = minX;
-		allPeople[k].borders[1] = maxX;
-		allPeople[k].borders[2] = minY;
-		allPeople[k].borders[3] = maxY;
-		allPeople[k].pixels     = colorRoi.clone();
+		allPeople[k].borders[0] = tmpminX[k]+minX;
+		allPeople[k].borders[1] = tmpmaxX[k]+minX;
+		allPeople[k].borders[2] = tmpminY[k]+minY;
+		allPeople[k].borders[3] = tmpmaxY[k]+minY;
+
+		width  = tmpmaxX[k]-tmpminX[k];
+		height = tmpmaxY[k]-tmpminY[k];
+		allPeople[k].pixels = cv::Mat(colorRoi.clone(),\
+			cv::Rect(cv::Point(tmpminX[k],tmpminY[k]),cv::Size(width,height)));
 		if(this->plotTracks){
 			cv::imshow("people",allPeople[k].pixels);
 			cv::waitKey(0);
@@ -612,30 +643,10 @@ void featureDetector::extractDataRow(std::vector<unsigned> existing, IplImage *b
 				break;
 			 */
 		}
-		//data NEEDS TO BE ALLOCATED & copyTo NEEDS A REFERENCE,
-		if(this->data.empty()){
-			this->data.create(cv::Size(feature.cols,1), feature.type());
-		}else{
-			this->data.create(cv::Size(feature.cols,this->data.rows+1),\
-				feature.type());
-		}
-		cv::Mat dummy = this->data.row(this->imgIndex);
-		feature.copyTo(dummy);
-		this->data.convertTo(this->data, cv::DataType<double>::type);
-
-		//-------------------WEIRD----------------------
-		/*cv::imshow("tt", this->data.row(this->imgIndex).reshape(0,borders[3]-borders[2]));
-		cv::waitKey(0);
-		for(unsigned y=0; y<this->data.rows; y++){
-			for(unsigned x=0; x<5; x++){
-				cout<<"elements: "<<this->data.at<double>(y,x)<<endl;
-			}
-		}*/
-		//-------------------WEIRD----------------------
-
+		feature.convertTo(feature, cv::DataType<double>::type);
+		this->data.push_back(feature.clone());
 		feature.release();
 		imgRoi.release();
-		this->imgIndex += 1;
 	}
 }
 //==============================================================================

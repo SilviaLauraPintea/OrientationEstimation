@@ -16,6 +16,7 @@
 #include <exception>
 #include <opencv/cv.h>
 #include <opencv/highgui.h>
+//#include <opencv2/core/mat.hpp>
 #include "eigenbackground/src/Tracker.hh"
 #include "eigenbackground/src/Helpers.hh"
 
@@ -40,17 +41,21 @@ class featureDetector:public Tracker{
 		featureDetector(int argc,char** argv):Tracker(argc, argv, 10, true, true){
 			this->plotTracks  = true;
 			this->featureType = EDGES;
-			this->imgIndex    = 0;
 		}
 
 		featureDetector(int argc,char** argv,bool plot):Tracker(argc, argv, 10, \
 		true, true){
-			this->plotTracks  = false;
+			this->plotTracks  = plot;
 			this->featureType = EDGES;
-			this->imgIndex    = 0;
 		}
 
-		virtual ~featureDetector(){}
+		virtual ~featureDetector(){
+			this->producer = NULL;
+			for(size_t i=0; i<this->data.size(); i++){
+				this->data[i].release();
+			}
+			this->data.clear();
+		}
 
 		/** Function that gets the ROI corresponding to a head/feet of a person in
 		 * an image.
@@ -170,12 +175,6 @@ class featureDetector:public Tracker{
 		/** @var data
 		 * The training data obtained from the feature descriptors.
 		 */
-		cv::Mat data;
-
-		/** @var imgIndex
-		 * Indexes the number of images "processed".
-		 */
-		unsigned imgIndex;
-
+		std::vector<cv::Mat_<double> > data;
 };
 #endif /* FESTUREDETECTOR_H_ */

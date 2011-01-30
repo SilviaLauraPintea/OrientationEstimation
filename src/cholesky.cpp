@@ -61,21 +61,24 @@ void cholesky::solve(cv::Mat b, cv::Mat &x){
 		std::cerr<<"In Cholesky solve: in Ax=b, b has the wrong size"<<std::endl;
 		exit(1);
 	}
-	x = cv::Mat::zeros(cv::Size(1, this->covar.rows), cv::DataType<double>::type);
-	for(unsigned indy=0; indy<this->n; indy++){
-		double sum = b.at<double>(indy,1);
-		for(int k=indy-1; k>=0; --k){
-			sum -= this->covar.at<double>(indy,k)*x.at<double>(k,1);
+	x = cv::Mat::zeros(cv::Size(b.cols, this->covar.rows), cv::DataType<double>::type);
+	for(unsigned indx=0; indx<b.cols; indx++){
+		for(unsigned indy=0; indy<this->n; indy++){
+			double sum = b.at<double>(indy,indx);
+			for(int k=indy-1; k>=0; --k){
+				sum -= this->covar.at<double>(indy,k)*x.at<double>(k,indx);
+			}
+			x.at<double>(indy,indx) = sum/this->covar.at<double>(indy,indy);
 		}
-		x.at<double>(indy,1) = sum/this->covar.at<double>(indy,indy);
 	}
-
-	for(int indy=this->n-1; indy>=0; indy--){
-		double sum = x.at<double>(indy,1);
-		for(int k=indy+1; k<this->n; k++){
-			sum -= this->covar.at<double>(k,indy)*x.at<double>(k,1);
+	for(unsigned indx=0; indx<b.cols; indx++){
+		for(int indy=this->n-1; indy>=0; indy--){
+			double sum = x.at<double>(indy,indx);
+			for(int k=indy+1; k<this->n; k++){
+				sum -= this->covar.at<double>(k,indy)*x.at<double>(k,indx);
+			}
+			x.at<double>(indy,indx) = sum/this->covar.at<double>(indy,indy);
 		}
-		x.at<double>(indy,1) = sum/this->covar.at<double>(indy,indy);
 	}
 }
 //==============================================================================
@@ -89,11 +92,11 @@ void cholesky::solveL(cv::Mat b, cv::Mat &y){
 
 	y = cv::Mat::zeros(cv::Size(1, this->covar.rows), cv::DataType<double>::type);
 	for(unsigned indy=0; indy<this->n; indy++){
-		double sum = b.at<double>(indy,1);
+		double sum = b.at<double>(indy,0);
 		for(unsigned indx=0; indx<indy; indx++){
-			sum -= this->covar.at<double>(indy,indx) * y.at<double>(indx,1);
+			sum -= this->covar.at<double>(indy,indx) * y.at<double>(indx,0);
 		}
-		y.at<double>(indy,1) = sum/this->covar.at<double>(indy,indy);
+		y.at<double>(indy,0) = sum/this->covar.at<double>(indy,indy);
 	}
 }
 //==============================================================================
@@ -107,11 +110,11 @@ void cholesky::solveLTranspose(cv::Mat b, cv::Mat &y){
 
 	y = cv::Mat::zeros(cv::Size(1, this->covar.rows), cv::DataType<double>::type);
 	for(int indy=this->n-1; indy>=0; --indy){
-		double sum = b.at<double>(indy,1);
+		double sum = b.at<double>(indy,0);
 		for(unsigned indx=indy+1; indx<this->n; indx++){
-			sum -= this->covar.at<double>(indx,indy) * y.at<double>(indx,1);
+			sum -= this->covar.at<double>(indx,indy) * y.at<double>(indx,0);
 		}
-		y.at<double>(indy,1) = sum/this->covar.at<double>(indy,indy);
+		y.at<double>(indy,0) = sum/this->covar.at<double>(indy,indy);
 	}
 }
 //==============================================================================
