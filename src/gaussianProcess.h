@@ -56,11 +56,6 @@ class gaussianProcess {
 		 */
 		void predict(cv::Mat x, gaussianProcess::prediction &predi);
 
-		/** Returns the prediction for the test data, x (only one test data point) for
-		 * the case in which the targets are 2-dimensional.
-		 */
-		void predict2(cv::Mat x, gaussianProcess::prediction &predi);
-
 		/** Samples an N-dimensional Gaussian.
 		 */
 		void sampleGaussND(cv::Mat mu, cv::Mat cov, cv::Mat &smpl);

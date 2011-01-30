@@ -51,6 +51,10 @@ void classifyImages::trainGP(std::vector<std::string> options){
 			this->trainData.at<double>(i,j) = \
 				this->features->data[i].at<double>(0,j);
 		}
+		//-------------------------
+		cv::imshow("kkkkkkkt",this->trainData.row(i).reshape(0,100));
+		cv::waitKey(0);
+		//-------------------------
 	}
 	this->trainTargets = cv::Mat::zeros(cv::Size(2, this->trainData.rows),\
 							this->trainData.type());
@@ -87,6 +91,10 @@ void classifyImages::predictGP(std::vector<std::string> options){
 			this->testData.at<double>(i,j) = \
 				this->features->data[i].at<double>(0,j);
 		}
+		//-------------------------
+		cv::imshow("kkkkkkkt",this->testData.row(i).reshape(0,100));
+		cv::waitKey(0);
+		//-------------------------
 	}
 
 	std::vector<annotationsHandle::FULL_ANNOTATIONS> targetAnno;
@@ -109,11 +117,13 @@ void classifyImages::predictGP(std::vector<std::string> options){
 
 	for(unsigned i=0; i<this->testData.rows; i++){
 		gaussianProcess::prediction predi;
-		this->gp.predict2(this->testData.row(i), predi);
+		this->gp.predict(this->testData.row(i), predi);
 		std::cout<<"label: ("<<this->testTargets.at<double>(i,0)<<","<<\
 			this->testTargets.at<double>(i,1)<<\
 			") mean:("<<predi.mean[0]<<","<<predi.mean[1]<<\
 			") variance:"<<predi.variance[0]<<std::endl;
+		predi.mean.clear();
+		predi.variance.clear();
 	}
 }
 //==============================================================================

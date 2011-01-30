@@ -127,36 +127,12 @@ double (gaussianProcess::*fFunction)(cv::Mat, cv::Mat, double),double sigmasq){
 	if(!this->chlsky.checkDecomposition()){
 		this->chlsky.decomposeCov(K);
 	}
-	if(y.cols == 1){
-		this->chlsky.solve(y, this->alpha);
-	}else{
-		std::cout<<"HEREEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEE"<<std::endl;
-		this->chlsky.solve2(y, this->alpha);
-	}
+	this->chlsky.solve(y, this->alpha);
+
 	std::cout<<"N: ("<<this->N<<")"<<std::endl;
 	std::cout<<"size of alpha: ("<<this->alpha.cols<<","<<this->alpha.rows<<")"<<std::endl;
 	std::cout<<"size of data: ("<<this->data.cols<<","<<this->data.rows<<")"<<std::endl;
 	K.release();
-}
-//==============================================================================
-/** Returns the prediction for the test data, x (only one test data point) for
- * the case in which the targets are 2-dimensional.
- */
-void gaussianProcess::predict2(cv::Mat x, gaussianProcess::prediction &predi){
-	cv::Mat kstar(this->data.rows, 1, cv::DataType<double>::type);
-
-	for(unsigned indy=0; indy<this->N; indy++){
-		kstar.at<double>(indy,0) = (this->*kFunction)(this->data.row(indy),x,1.0);
-	}
-
-	for(unsigned i=0; i<this->alpha.cols; i++){
-		predi.mean.push_back(kstar.dot(this->alpha.col(i)));
-	}
-
-	cv::Mat v;
-	this->chlsky.solveL(kstar,v);
-	predi.variance.push_back((this->*kFunction)(x,x,1.0) - v.dot(v));
-	kstar.release();
 }
 //==============================================================================
 /** Returns the prediction for the test data, x (only one test data point).
@@ -168,7 +144,9 @@ void gaussianProcess::predict(cv::Mat x, gaussianProcess::prediction &predi){
 		kstar.at<double>(indy,0) = (this->*kFunction)(this->data.row(indy),x,1.0);
 	}
 
-	predi.mean.push_back(kstar.dot(this->alpha));
+	for(unsigned i=0; i<this->alpha.cols; i++){
+		predi.mean.push_back(kstar.dot(this->alpha.col(i)));
+	}
 
 	cv::Mat v;
 	this->chlsky.solveL(kstar,v);
@@ -342,7 +320,7 @@ int main(){
 	cv::Mat result;
 	for(unsigned i=0; i<test.rows; i++){
 		gaussianProcess::prediction predi;
-		gp.predict2(test.row(i), predi);
+		gp.predict(test.row(i), predi);
 		//std::cout<<"label: "<<ttargets.at<double>(i,0)<<" "<<\
 			predi.mean[0]<<" variance:"<<predi.variance[0]<<std::endl;
 		std::cout<<"label: "<<ttargets.at<double>(i,0)<<" "<<\
