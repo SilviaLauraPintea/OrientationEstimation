@@ -145,9 +145,8 @@ void gaussianProcess::predict(cv::Mat x, gaussianProcess::prediction &predi){
 		kstar.at<double>(indy,0) = (this->*kFunction)(this->data.row(indy),x,1.0);
 	}
 
-	for(int i=0; i<this->alpha.cols; i++){
-		predi.mean.push_back(kstar.dot(this->alpha.col(i)));
-	}
+	predi.mean.push_back(kstar.dot(this->alpha));
+
 	cv::Mat v;
 	this->chlsky.solveL(kstar,v);
 	predi.variance.push_back((this->*kFunction)(x,x,1.0) - v.dot(v));
@@ -294,30 +293,34 @@ double gaussianProcess::matern25(cv::Mat x1, cv::Mat x2, double l){
 
 int main(){
 	cv::Mat test(10, 100, cv::DataType<double>::type);
-	cv::Mat train(360, 100, cv::DataType<double>::type);
-	cv::Mat targets = cv::Mat::zeros(360, 2, cv::DataType<double>::type);
-	train = cv::Mat::zeros(360, 100, cv::DataType<double>::type);
+	cv::Mat train(100, 100, cv::DataType<double>::type);
+	cv::Mat targets = cv::Mat::zeros(100, 1, cv::DataType<double>::type);
+	cv::Mat ttargets = cv::Mat::zeros(10, 1, cv::DataType<double>::type);
+	train = cv::Mat::zeros(100, 100, cv::DataType<double>::type);
 
-	for(unsigned i=0; i<360; i++){
+	for(unsigned i=0; i<100; i++){
 		cv::Mat stupid = train.row(i);
 		cv::add(stupid, cv::Scalar(i*10.0), stupid);
 		if(i<10){
 			cv::Mat stupid2 = test.row(i);
 			cv::add(stupid2, cv::Scalar((99.0-(i*10.0))*10.0), stupid2);
+			ttargets.at<double>(i,0) = (99.0-(i*10.0));
 		}
-		targets.at<double>(i,0) = std::sin(i*M_PI/180.0);
-		targets.at<double>(i,1) = std::cos(i*M_PI/180.0);
+		targets.at<double>(i,0) = i;
+//		targets.at<double>(i,0) = std::sin(i*M_PI/180.0);
+//		targets.at<double>(i,1) = std::cos(i*M_PI/180.0);
 	}
 
 	gaussianProcess gp;
 	gp.train(train, targets, &gaussianProcess::sqexp, 0.1);
-	gaussianProcess::prediction predi;
 
 	cv::Mat result;
 	for(unsigned i=0; i<test.rows; i++){
-		cv::Mat dummy = test(cv::Range(i,i+1),cv::Range::all());
-		gp.predict(dummy, predi);
-		std::cout<<"label: "<<std::sin(99.0-(i*10.0))<<" "<<\
+		gaussianProcess::prediction predi;
+		gp.predict(test.row(i), predi);
+		std::cout<<"label: "<<ttargets.at<double>(i,0)<<" "<<\
+			predi.mean[0]<<" variance:"<<predi.variance[0]<<std::endl;
+		//std::cout<<"label: "<<std::sin(99.0-(i*10.0))<<" "<<\
 			std::cos(99.0-(i*10.0))<<" "<<\
 			" mean:"<<predi.mean[0]<<" "<<predi.mean[1]<<" variance:"<<\
 			predi.variance[0]<<std::endl;
