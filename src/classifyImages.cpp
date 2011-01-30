@@ -52,7 +52,7 @@ void classifyImages::trainGP(std::vector<std::string> options){
 				this->features->data[i].at<double>(0,j);
 		}
 	}
-	this->trainTargets = cv::Mat::zeros(cv::Size(1, this->trainData.rows),\
+	this->trainTargets = cv::Mat::zeros(cv::Size(2, this->trainData.rows),\
 							this->trainData.type());
 
 	std::vector<annotationsHandle::FULL_ANNOTATIONS> targetAnno;
@@ -61,15 +61,10 @@ void classifyImages::trainGP(std::vector<std::string> options){
 	for(std::size_t i=0; i<targetAnno.size(); i++){
 		for(std::size_t j=0; j<targetAnno[i].annos.size(); j++){
 			unsigned aSize = i*targetAnno[i].annos.size()+j;
-			//this->trainTargets.at<double>(aSize,0) = (static_cast<double>\
-				(targetAnno[i].annos[j].poses[annotationsHandle::ORIENTATION]));
-			this->trainTargets.at<double>(aSize,0) = std::sin(static_cast<double>\
-				(targetAnno[i].annos[j].poses[annotationsHandle::ORIENTATION]));
-			this->trainTargets.at<double>(aSize,1) = std::cos(static_cast<double>\
-				(targetAnno[i].annos[j].poses[annotationsHandle::ORIENTATION]));
-
-			//cout<<"targets "<<this->trainTargets.at<double>(aSize,0)<<" "<<\
-					this->trainTargets.at<double>(aSize,1)<<endl;
+			double angle = static_cast<double>\
+				(targetAnno[i].annos[j].poses[annotationsHandle::ORIENTATION]);
+			this->trainTargets.at<double>(aSize,0) = std::sin(angle*M_PI/180.0);
+			this->trainTargets.at<double>(aSize,1) = std::cos(angle*M_PI/180.0);
 		}
 	}
 	this->trainData.convertTo(this->trainData, cv::DataType<double>::type);
@@ -95,7 +90,7 @@ void classifyImages::predictGP(std::vector<std::string> options){
 	}
 
 	std::vector<annotationsHandle::FULL_ANNOTATIONS> targetAnno;
-	this->testTargets = cv::Mat::zeros(cv::Size(1, this->testData.rows),\
+	this->testTargets = cv::Mat::zeros(cv::Size(2, this->testData.rows),\
 						this->testData.type());
 
 	annotationsHandle::loadAnnotations(const_cast<char*>\
@@ -103,32 +98,25 @@ void classifyImages::predictGP(std::vector<std::string> options){
 	for(std::size_t i=0; i<targetAnno.size(); i++){
 		for(std::size_t j=0; j<targetAnno[i].annos.size(); j++){
 			unsigned aSize = i*targetAnno[i].annos.size()+j;
-			//this->testTargets.at<double>(aSize,0) = (static_cast<double>\
-				(targetAnno[i].annos[j].poses[annotationsHandle::ORIENTATION]));
-
-			this->testTargets.at<double>(aSize,0) = std::sin(static_cast<double>\
-				(targetAnno[i].annos[j].poses[annotationsHandle::ORIENTATION]));
-			this->testTargets.at<double>(aSize,1) = std::cos(static_cast<double>\
-				(targetAnno[i].annos[j].poses[annotationsHandle::ORIENTATION]));
-
-			//cout<<"test targets "<<this->testTargets.at<double>(aSize,0)<<" "<<\
-				this->testTargets.at<double>(aSize,1)<<endl;
+			double angle = static_cast<double>\
+				(targetAnno[i].annos[j].poses[annotationsHandle::ORIENTATION]);
+			this->testTargets.at<double>(aSize,0) = std::sin(angle*M_PI/180.0);
+			this->testTargets.at<double>(aSize,1) = std::cos(angle*M_PI/180.0);
 		}
 	}
-
-
 	this->testData.convertTo(this->testData, cv::DataType<double>::type);
 	this->testTargets.convertTo(this->testTargets, cv::DataType<double>::type);
-	gaussianProcess::prediction predi;
 
 	for(unsigned i=0; i<this->testData.rows; i++){
-		this->gp.predict(this->testData.row(i), predi);
-		std::cout<<"label: "<<this->testTargets.at<double>(i,0)<<\
-			" mean:"<<predi.mean<<" variance:"<<predi.variance<<std::endl;
+		gaussianProcess::prediction predi;
+		this->gp.predict2(this->testData.row(i), predi);
+		std::cout<<"label: ("<<this->testTargets.at<double>(i,0)<<","<<\
+			this->testTargets.at<double>(i,1)<<\
+			") mean:("<<predi.mean[0]<<","<<predi.mean[1]<<\
+			") variance:"<<predi.variance[0]<<std::endl;
 	}
 }
 //==============================================================================
-
 int main(int argc, char **argv){
 	classifyImages classi(argc, argv);
 	classi.trainGP();

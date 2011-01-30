@@ -79,6 +79,35 @@ void cholesky::solve(cv::Mat b, cv::Mat &x){
 	}
 }
 //==============================================================================
+/** Solves the general linear system: Ax = b and returns x for the case in which
+ * the targets (x) are 2-dimensional.
+ */
+void cholesky::solve2(cv::Mat b, cv::Mat &x){
+	if(b.rows != this->n){
+		std::cerr<<"In Cholesky solve: in Ax=b, b has the wrong size"<<std::endl;
+		exit(1);
+	}
+	x = cv::Mat::zeros(cv::Size(b.cols, this->covar.rows), cv::DataType<double>::type);
+	for(unsigned indx=0; indx<b.cols; indx++){
+		for(unsigned indy=0; indy<this->n; indy++){
+			double sum = b.at<double>(indy,indx);
+			for(int k=indy-1; k>=0; --k){
+				sum -= this->covar.at<double>(indy,k)*x.at<double>(k,indx);
+			}
+			x.at<double>(indy,indx) = sum/this->covar.at<double>(indy,indy);
+		}
+	}
+	for(unsigned indx=0; indx<x.cols; indx++){
+		for(int indy=this->n-1; indy>=0; indy--){
+			double sum = x.at<double>(indy,indx);
+			for(int k=indy+1; k<this->n; k++){
+				sum -= this->covar.at<double>(k,indy)*x.at<double>(k,indx);
+			}
+			x.at<double>(indy,indx) = sum/this->covar.at<double>(indy,indy);
+		}
+	}
+}
+//==============================================================================
 /** Solve the simplified equation Ly = b, and return y (where A=LL*).
  */
 void cholesky::solveL(cv::Mat b, cv::Mat &y){

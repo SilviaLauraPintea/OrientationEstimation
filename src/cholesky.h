@@ -42,6 +42,11 @@ class cholesky {
 		 */
 		void solve(cv::Mat b, cv::Mat &x);
 
+		/** Solves the general linear system: Ax = b and returns x for the case in which
+		 * the targets (x) are 2-dimensional.
+		 */
+		void solve2(cv::Mat b, cv::Mat &x);
+
 		/** Solve the simplified equation Ly = b, and return y (where A=LL*).
 		 */
 		void solveL(cv::Mat b, cv::Mat &y);
