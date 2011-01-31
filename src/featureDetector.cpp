@@ -98,7 +98,7 @@ std::vector<unsigned> borders, unsigned reshape){
 	if(reshape){
 		cv::Mat continuousEdges(cv::Size(100,100),cv::DataType<double>::type);
 		cv::resize(edges,continuousEdges,continuousEdges.size(),2,2,cv::INTER_CUBIC);
-		feature = (continuousEdges.clone()).reshape(1);
+		feature = (continuousEdges.clone()).reshape(0,1);
 		continuousEdges.release();
 	}else{
 		edges.copyTo(feature);

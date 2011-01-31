@@ -38,12 +38,13 @@ ADD_LIBRARY(helpers
   ${EIGEN_SRC}/Background.cc
   ${EIGEN_SRC}/ImgProducer.cc
   ${EIGEN_SRC}/Annotate.cc
-#  ${EIGEN_SRC}/Tracker.cc
+  ${EIGEN_SRC}/Tracker.cc
 
-#  ${MT_SRC}/Auxiliary.cpp
-#  ${MT_SRC}/featureDetector.cpp  
-#  ${MT_SRC}/cholesky.cpp  
-#  ${MT_SRC}/gaussianProcess.cpp    
+  ${MT_SRC}/Auxiliary.cpp
+  ${MT_SRC}/annotationsHandle.cpp
+  ${MT_SRC}/featureDetector.cpp  
+  ${MT_SRC}/cholesky.cpp  
+  ${MT_SRC}/gaussianProcess.cpp    
   )
 
 ADD_LIBRARY(calib
@@ -51,8 +52,8 @@ ADD_LIBRARY(calib
   ${EIGEN_SRC}/sample/xmlUtil.cpp
   )
 
-ADD_EXECUTABLE( Tracker ${EIGEN_SRC}/Tracker.cc )
-TARGET_LINK_LIBRARIES( Tracker helpers highgui  cmn tools iberty vnl_algo vnl v3p_netlib boost_date_time-mt boost_thread-mt ${XML2_LDFLAGS})
+#ADD_EXECUTABLE( Tracker ${EIGEN_SRC}/Tracker.cc )
+#TARGET_LINK_LIBRARIES( Tracker helpers highgui  cmn tools iberty vnl_algo vnl v3p_netlib boost_date_time-mt boost_thread-mt ${XML2_LDFLAGS})
 
 #ADD_EXECUTABLE( Annotate ${EIGEN_SRC}/Annotate.cc )
 #TARGET_LINK_LIBRARIES( Annotate helpers highgui  cmn tools iberty vnl_algo vnl v3p_netlib boost_date_time-mt boost_thread-mt ${XML2_LDFLAGS})
@@ -68,5 +69,5 @@ TARGET_LINK_LIBRARIES( Tracker helpers highgui  cmn tools iberty vnl_algo vnl v3
 #ADD_EXECUTABLE(gaussianProcess ${MT_SRC}/gaussianProcess.cpp)
 #TARGET_LINK_LIBRARIES(gaussianProcess helpers cv ml highgui cmn tools iberty vnl_algo vnl v3p_netlib ${XML2_LDFLAGS})
 
-#ADD_EXECUTABLE(classifyImages ${MT_SRC}/classifyImages.cpp)
-#TARGET_LINK_LIBRARIES(classifyImages helpers cv ml highgui cmn tools iberty vnl_algo vnl v3p_netlib boost_filesystem boost_date_time-mt boost_thread-mt ${XML2_LDFLAGS})
+ADD_EXECUTABLE(classifyImages ${MT_SRC}/classifyImages.cpp)
+TARGET_LINK_LIBRARIES(classifyImages helpers cv ml highgui cmn tools iberty vnl_algo vnl v3p_netlib boost_filesystem boost_date_time-mt boost_thread-mt ${XML2_LDFLAGS})

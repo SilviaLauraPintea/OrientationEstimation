@@ -45,16 +45,14 @@ void classifyImages::trainGP(std::vector<std::string> options){
 	this->trainData = cv::Mat::zeros(cv::Size(this->features->data[0].cols,\
 						this->features->data.size()),cv::DataType<double>::type);
 	for(std::size_t i=0; i<this->features->data.size(); i++){
-		//cv::Mat dummy = this->trainData.row(i);
-		//cv::Mat(this->features->data[i]).copyTo(dummy);
-		for(unsigned j=0; j<this->features->data[i].cols; j++){
-			this->trainData.at<double>(i,j) = \
-				this->features->data[i].at<double>(0,j);
-		}
-		//-------------------------
-		cv::imshow("kkkkkkkt",this->trainData.row(i).reshape(0,100));
+		cv::Mat dummy = this->trainData.row(i);
+		this->features->data[i].convertTo(this->features->data[i],cv::DataType<double>::type);
+		cv::Mat(this->features->data[i]).copyTo(dummy);
+
+		/*
+		cv::imshow("kkt",this->trainData.row(i).reshape(0,100));
 		cv::waitKey(0);
-		//-------------------------
+		*/
 	}
 	this->trainTargets = cv::Mat::zeros(cv::Size(2, this->trainData.rows),\
 							this->trainData.type());
@@ -73,7 +71,7 @@ void classifyImages::trainGP(std::vector<std::string> options){
 	}
 	this->trainData.convertTo(this->trainData, cv::DataType<double>::type);
 	this->trainTargets.convertTo(this->trainTargets, cv::DataType<double>::type);
-	this->gp.train(this->trainData,this->trainTargets,&gaussianProcess::sqexp,0.1);
+	this->gp.train(this->trainData,this->trainTargets,&gaussianProcess::expCovar,0.1);
 }
 //==============================================================================
 /** Creates the test data and applies \c GaussianProcess prediction on the test
@@ -85,16 +83,14 @@ void classifyImages::predictGP(std::vector<std::string> options){
 	this->testData = cv::Mat::zeros(cv::Size(this->features->data[0].cols,\
 					this->features->data.size()), cv::DataType<double>::type);
 	for(std::size_t i=0; i<this->features->data.size(); i++){
-		//cv::Mat dummy = this->testData.row(i);
-		//this->features->data[i].copyTo(dummy);
-		for(unsigned j=0; j<this->features->data[i].cols; j++){
-			this->testData.at<double>(i,j) = \
-				this->features->data[i].at<double>(0,j);
-		}
-		//-------------------------
+		cv::Mat dummy = this->testData.row(i);
+		this->features->data[i].convertTo(this->features->data[i],cv::DataType<double>::type);
+		this->features->data[i].copyTo(dummy);
+
+		/*
 		cv::imshow("kkkkkkkt",this->testData.row(i).reshape(0,100));
 		cv::waitKey(0);
-		//-------------------------
+		*/
 	}
 
 	std::vector<annotationsHandle::FULL_ANNOTATIONS> targetAnno;
