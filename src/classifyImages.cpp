@@ -49,10 +49,9 @@ void classifyImages::trainGP(std::vector<std::string> options){
 		this->features->data[i].convertTo(this->features->data[i],cv::DataType<double>::type);
 		cv::Mat(this->features->data[i]).copyTo(dummy);
 
-		/*
 		cv::imshow("kkt",this->trainData.row(i).reshape(0,100));
 		cv::waitKey(0);
-		*/
+
 	}
 	this->trainTargets = cv::Mat::zeros(cv::Size(2, this->trainData.rows),\
 							this->trainData.type());
@@ -71,7 +70,10 @@ void classifyImages::trainGP(std::vector<std::string> options){
 	}
 	this->trainData.convertTo(this->trainData, cv::DataType<double>::type);
 	this->trainTargets.convertTo(this->trainTargets, cv::DataType<double>::type);
-	this->gp.train(this->trainData,this->trainTargets,&gaussianProcess::expCovar,0.1);
+	this->gpCos.train(this->trainData,this->trainTargets.col(0),\
+		&gaussianProcess::expCovar, 0.1);
+	this->gpSin.train(this->trainData,this->trainTargets.col(1),\
+		&gaussianProcess::expCovar, 0.1);
 }
 //==============================================================================
 /** Creates the test data and applies \c GaussianProcess prediction on the test
@@ -87,10 +89,9 @@ void classifyImages::predictGP(std::vector<std::string> options){
 		this->features->data[i].convertTo(this->features->data[i],cv::DataType<double>::type);
 		this->features->data[i].copyTo(dummy);
 
-		/*
 		cv::imshow("kkkkkkkt",this->testData.row(i).reshape(0,100));
 		cv::waitKey(0);
-		*/
+
 	}
 
 	std::vector<annotationsHandle::FULL_ANNOTATIONS> targetAnno;
@@ -112,14 +113,21 @@ void classifyImages::predictGP(std::vector<std::string> options){
 	this->testTargets.convertTo(this->testTargets, cv::DataType<double>::type);
 
 	for(unsigned i=0; i<this->testData.rows; i++){
-		gaussianProcess::prediction predi;
-		this->gp.predict(this->testData.row(i), predi);
+		gaussianProcess::prediction prediCos;
+		this->gpCos.predict(this->testData.row(i), prediCos);
 		std::cout<<"label: ("<<this->testTargets.at<double>(i,0)<<","<<\
-			this->testTargets.at<double>(i,1)<<\
-			") mean:("<<predi.mean[0]<<","<<predi.mean[1]<<\
-			") variance:"<<predi.variance[0]<<std::endl;
-		predi.mean.clear();
-		predi.variance.clear();
+			") mean:("<<prediCos.mean[0]<<","<<prediCos.mean[1]<<\
+			") variance:"<<prediCos.variance[0]<<std::endl;
+		prediCos.mean.clear();
+		prediCos.variance.clear();
+
+		gaussianProcess::prediction prediSin;
+		this->gpSin.predict(this->testData.row(i), prediSin);
+		std::cout<<"label: ("<<this->testTargets.at<double>(i,1)<<\
+			") mean:("<<prediSin.mean[0]<<","<<prediSin.mean[1]<<\
+			") variance:"<<prediSin.variance[0]<<std::endl;
+		prediSin.mean.clear();
+		prediSin.variance.clear();
 	}
 }
 //==============================================================================

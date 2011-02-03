@@ -69,7 +69,12 @@ class classifyImages {
 		/** @var gaussianProcess
 		 * An instance of the class gaussianProcess.
 		 */
-		gaussianProcess gp;
+		gaussianProcess gpCos;
+
+		/** @var gaussianProcess
+		 * An instance of the class gaussianProcess.
+		 */
+		gaussianProcess gpSin;
 		//======================================================================
 	public:
 		classifyImages(int argc, char **argv);

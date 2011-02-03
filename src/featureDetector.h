@@ -108,13 +108,13 @@ class featureDetector:public Tracker{
 		 */
 		/** Gets strong corner points in an image.
 		 */
-		void getCornerPoints(cv::Mat &feature, cv::Mat imgage,\
-			std::vector<unsigned> borders);
+		void getCornerPoints(cv::Mat &feature, cv::Mat image, std::vector<unsigned> \
+			borders, cv::Mat thresholded);
 
 		/** Gets the edges in an image.
 		 */
-		void getEdges(cv::Mat &feature, cv::Mat image, std::vector<unsigned>\
-			borders, unsigned reshpae=1);
+		void getEdges(cv::Mat &feature, cv::Mat image, std::vector<unsigned> \
+			borders, unsigned reshape=1, cv::Mat thresholded=cv::Mat());
 
 		/** SURF descriptors (Speeded Up Robust Features).
 		 */
@@ -122,8 +122,8 @@ class featureDetector:public Tracker{
 
 		/** Blob detector in RGB color space.
 		 */
-		void blobDetector(cv::Mat &feature, cv::Mat image, std::vector<unsigned>\
-			borders, string featType="1d");
+		void blobDetector(cv::Mat &feature, cv::Mat image, std::vector<unsigned> \
+			borders, cv::Mat thresholded, string featType="1d");
 
 		/** Just displaying an image a bit larger to visualize it better.
 		 */
@@ -153,9 +153,8 @@ class featureDetector:public Tracker{
 
 		/** Returns the size of a window around a template centered in a given point.
 		 */
-		void templateWindow(cv::Size imgSize, unsigned &minX, unsigned &maxX,\
-		unsigned &minY, unsigned &maxY, std::vector<CvPoint> &templ,\
-		unsigned tplBorder = 60);
+		void templateWindow(cv::Size imgSize, int &minX, int &maxX,\
+		int &minY, int &maxY, std::vector<CvPoint> &templ, unsigned tplBorder = 60);
 
 		/** Initializes the parameters of the tracker.
 		 */
