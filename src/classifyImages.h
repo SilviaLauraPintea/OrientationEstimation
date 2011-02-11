@@ -74,6 +74,26 @@ class classifyImages {
 		 * An instance of the class gaussianProcess.
 		 */
 		gaussianProcess gpSin;
+
+		/** @var noise
+		 * The noise level of the data.
+		 */
+		double noise;
+
+		/** @var length
+		 * The length in the Gaussian Process.
+		 */
+		double length;
+
+		/** @var kFunction
+		 * The kernel function in the Gaussian Process.
+		 */
+		gaussianProcess::kernelFunction kFunction;
+
+		/** @var feature
+		 * Feature to be extracted.
+		 */
+		featureDetector::FEATURE feature;
 		//======================================================================
 	public:
 		classifyImages(int argc, char **argv);
@@ -82,12 +102,17 @@ class classifyImages {
 		/** Creates the training data (according to the options), the labels and
 		 * trains the a \c GaussianProcess on the data.
 		 */
-		void trainGP(featureDetector::FEATURE feature=featureDetector::EDGES);
+		void trainGP();
 
 		/** Creates the test data and applies \c GaussianProcess prediction on the test
 		 * data.
 		 */
-		void predictGP(featureDetector::FEATURE feature=featureDetector::EDGES);
+		void predictGP();
+
+		/** Initialize the options for the Gaussian Process regression.
+		 */
+		void init(double theNoise, double theLength, gaussianProcess::kernelFunction\
+		theKFunction, featureDetector::FEATURE theFeature);
 };
 
 #endif /* CLASSIFYIMAGES_H_ */

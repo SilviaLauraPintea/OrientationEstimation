@@ -185,6 +185,12 @@ class featureDetector:public Tracker{
 		 */
 		bool canBeAssigned(unsigned l,std::vector<double> &minDistances,\
 		unsigned k,double distance, std::vector<int> &assignment);
+
+		/** Fixes the angle to be relative to the camera position with respect to the
+		 * detected position.
+		 */
+		double fixAngle(cv::Point feetLocation, cv::Point cameraLocation,\
+			double angle);
 		//======================================================================
 	public:
 		/** @var plotTracks

@@ -132,20 +132,6 @@ double length){
 	}
 
 	this->chlsky.solve(y, this->alpha);
-
-	//----------------------------------------
-	/*
-	cv::Mat rezz;
-	rezz=K*this->alpha;
-	for(int i=0; i<rezz.rows; i++){
-		for(int j=0; j<rezz.cols; j++){
-			std::cout<<rezz.at<double>(i,j)<<" ";
-		}
-		std::cout<<std::endl;
-	}
-	*/
-	//----------------------------------------
-
 	std::cout<<"N: ("<<this->N<<")"<<std::endl;
 	std::cout<<"size of alpha: ("<<this->alpha.cols<<","<<this->alpha.rows<<")"<<std::endl;
 	std::cout<<"size of data: ("<<this->data.cols<<","<<this->data.rows<<")"<<std::endl;
@@ -158,39 +144,14 @@ double length){
 void gaussianProcess::predict(cv::Mat x, gaussianProcess::prediction &predi,\
 double length){
 	cv::Mat kstar(this->data.rows, 1, cv::DataType<double>::type);
-
 	for(unsigned indy=0; indy<this->N; indy++){
 		kstar.at<double>(indy,0) = (this->*kFunction)(this->data.row(indy),x,length);
 	}
-
-//	std::cout<<std::endl;
-
 	for(unsigned i=0; i<this->alpha.cols; i++){
 		predi.mean.push_back(kstar.dot(this->alpha.col(i)));
 	}
-
-	//std::cout<<"mean "<<predi.mean[0]<<std::endl;
-
 	cv::Mat v;
 	this->chlsky.solveL(kstar,v);
-
-	/*
-	for(int i=0; i<kstar.rows; i++){
-		for(int j=0; j<kstar.cols; j++){
-			std::cout<<kstar.at<double>(i,j)<<" ";
-		}
-	}
-	std::cout<<std::endl;
-
-	cv::Mat rezz;
-	rezz=this->chlsky.covar*v;
-	for(int i=0; i<rezz.rows; i++){
-		for(int j=0; j<rezz.cols; j++){
-			std::cout<<rezz.at<double>(i,j)<<" ";
-		}
-	}
-	*/
-
 	predi.variance.push_back((this->*kFunction)(x,x,length) - v.dot(v));
 	kstar.release();
 }

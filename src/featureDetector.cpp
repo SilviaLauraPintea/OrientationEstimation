@@ -732,17 +732,30 @@ unsigned k,double distance, std::vector<int> &assignment){
 	}
 	return true;
 }
+//==============================================================================
+/** Fixes the angle to be relative to the camera position with respect to the
+ * detected position.
+ */
+double featureDetector::fixAngle(cv::Point feetLocation, cv::Point cameraLocation,\
+double angle){
+	std::cout<<"before: "<<(angle*180.0/M_PI)<<std::endl;
+	double m,b;
+	this->getLinePerpendicular(cameraLocation,feetLocation,feetLocation,m,b);
+	double cameraAngle = std::atan(m);
+	//double cameraAngle = std::atan((double)(feetLocation.y-cameraLocation.y)/\
+							(double)(feetLocation.x-cameraLocation.x));
+	angle = angle+cameraAngle;
+	if(angle>=2*M_PI){angle -= 2*M_PI;}
 
+	std::cout<<"after: "<<(angle*180.0/M_PI)<<std::endl;
+	return angle;
+}
 //==============================================================================
 /** For each row added in the data matrix (each person detected for which we
  * have extracted some features) find the corresponding label.
  */
 void featureDetector::fixLabels(std::vector<cv::Point> feetPos, string imageName,\
 unsigned index){
-	std::cout<<"current image/index: "<<imageName<<" "<<index<<" "<<std::endl;
-	std::cout<<"The current image name is: "<<this->targetAnno[index].imgFile<<\
-		" =?= "<<imageName<<" (corresponding?)"<<std::endl;
-
 	// LOOP OVER ALL ANNOTATIONS FOR THE CURRENT IMAGE AND FIND THE CLOSEST ONES
 	std::vector<int> assignments(this->targetAnno[index].annos.size(),-1);
 	std::vector<double> minDistances(this->targetAnno[index].annos.size(),\
@@ -800,8 +813,11 @@ unsigned index){
 			cv::Mat tmp = cv::Mat::zeros(1,2,cv::DataType<double>::type);
 			double angle = static_cast<double>\
 				(targetAnno[index].annos[i].poses[annotationsHandle::ORIENTATION]);
-			tmp.at<double>(0,0) = std::sin(angle*M_PI/180.0);
-			tmp.at<double>(0,1) = std::cos(angle*M_PI/180.0);
+			angle = angle*M_PI/180.0;
+			angle = this->fixAngle(targetAnno[index].annos[i].location,\
+					cv::Point(camPosX,camPosY),angle);
+			tmp.at<double>(0,0) = std::sin(angle);
+			tmp.at<double>(0,1) = std::cos(angle);
 			this->targets[this->lastIndex+assignments[i]] = tmp.clone();
 			tmp.release();
 		}
@@ -813,6 +829,9 @@ unsigned index){
 
 	//-------------------------------------------------
 	/*
+	std::cout<<"current image/index: "<<imageName<<" "<<index<<" "<<std::endl;
+	std::cout<<"The current image name is: "<<this->targetAnno[index].imgFile<<\
+		" =?= "<<imageName<<" (corresponding?)"<<std::endl;
 	std::cout<<"Annotations: "<<std::endl;
 	for(std::size_t i=0; i<this->targetAnno[index].annos.size(); i++){
 		std::cout<<i<<":("<<targetAnno[index].annos[i].location.x<<","<<\
