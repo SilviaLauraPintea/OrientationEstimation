@@ -15,7 +15,6 @@
 #include "eigenbackground/src/Helpers.hh"
 #include "featureDetector.h"
 #include "gaussianProcess.h"
-#include "annotationsHandle.h"
 
 /** Class used for classifying the training data.
  */
@@ -83,12 +82,12 @@ class classifyImages {
 		/** Creates the training data (according to the options), the labels and
 		 * trains the a \c GaussianProcess on the data.
 		 */
-		void trainGP(std::vector<std::string> options = std::vector<std::string>(0));
+		void trainGP(featureDetector::FEATURE feature=featureDetector::EDGES);
 
 		/** Creates the test data and applies \c GaussianProcess prediction on the test
 		 * data.
 		 */
-		void predictGP(std::vector<std::string> options = std::vector<std::string>(0));
+		void predictGP(featureDetector::FEATURE feature=featureDetector::EDGES);
 };
 
 #endif /* CLASSIFYIMAGES_H_ */

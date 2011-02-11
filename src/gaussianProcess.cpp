@@ -98,16 +98,18 @@ cv::Mat mu, cv::Mat cov, double a, double b, double s){
 /** Trains the Gaussian process.
  */
 void gaussianProcess::train(cv::Mat_<double> X, cv::Mat_<double> y,\
-double (gaussianProcess::*fFunction)(cv::Mat, cv::Mat, double),double sigmasq){
+double (gaussianProcess::*fFunction)(cv::Mat, cv::Mat, double),double sigmasq,\
+double length){
 	if(y.rows != X.rows){
 		std::cerr<<"In Gaussian Process - train: X and y need to be defined for the"<<\
 			" same number of points"<<std::endl;
 		exit(1);
 	}
 
+	this->chlsky.init();
 	this->kFunction = fFunction;
 	this->N         = X.rows; // NUMBER OF TRAINING DATA POINTS!
-	this->data      = X.clone();
+	this->data      = X; // KEEP REFERENCE TO THE TRAINING DATA?
 
 	// BUILD THE KERNEL MARIX K: K(i,j) = k(x[i],x[j])
 	cv::Mat_<double> K = cv::Mat::zeros(cv::Size(this->N,this->N),\
@@ -115,7 +117,7 @@ double (gaussianProcess::*fFunction)(cv::Mat, cv::Mat, double),double sigmasq){
 	for(unsigned indy=0; indy<this->N; indy++){
 		for(unsigned indx=0; indx<this->N; indx++){
 			K.at<double>(indy,indx) = (this->*kFunction)(X.row(indy),\
-										X.row(indx), 1.0);
+										X.row(indx), length);
 		}
 	}
 
@@ -124,33 +126,72 @@ double (gaussianProcess::*fFunction)(cv::Mat, cv::Mat, double),double sigmasq){
 		K.at<double>(indy,indy) += sigmasq;
 	}
 
+    // BUILD THE CHOLESKY DECOMPOSITON IF IT WAS NOT BUILT YET
 	if(!this->chlsky.checkDecomposition()){
 		this->chlsky.decomposeCov(K);
 	}
+
 	this->chlsky.solve(y, this->alpha);
+
+	//----------------------------------------
+	/*
+	cv::Mat rezz;
+	rezz=K*this->alpha;
+	for(int i=0; i<rezz.rows; i++){
+		for(int j=0; j<rezz.cols; j++){
+			std::cout<<rezz.at<double>(i,j)<<" ";
+		}
+		std::cout<<std::endl;
+	}
+	*/
+	//----------------------------------------
 
 	std::cout<<"N: ("<<this->N<<")"<<std::endl;
 	std::cout<<"size of alpha: ("<<this->alpha.cols<<","<<this->alpha.rows<<")"<<std::endl;
 	std::cout<<"size of data: ("<<this->data.cols<<","<<this->data.rows<<")"<<std::endl;
+
 	K.release();
 }
 //==============================================================================
 /** Returns the prediction for the test data, x (only one test data point).
  */
-void gaussianProcess::predict(cv::Mat x, gaussianProcess::prediction &predi){
+void gaussianProcess::predict(cv::Mat x, gaussianProcess::prediction &predi,\
+double length){
 	cv::Mat kstar(this->data.rows, 1, cv::DataType<double>::type);
 
 	for(unsigned indy=0; indy<this->N; indy++){
-		kstar.at<double>(indy,0) = (this->*kFunction)(this->data.row(indy),x,1.0);
+		kstar.at<double>(indy,0) = (this->*kFunction)(this->data.row(indy),x,length);
 	}
+
+//	std::cout<<std::endl;
 
 	for(unsigned i=0; i<this->alpha.cols; i++){
 		predi.mean.push_back(kstar.dot(this->alpha.col(i)));
 	}
 
+	//std::cout<<"mean "<<predi.mean[0]<<std::endl;
+
 	cv::Mat v;
 	this->chlsky.solveL(kstar,v);
-	predi.variance.push_back((this->*kFunction)(x,x,1.0) - v.dot(v));
+
+	/*
+	for(int i=0; i<kstar.rows; i++){
+		for(int j=0; j<kstar.cols; j++){
+			std::cout<<kstar.at<double>(i,j)<<" ";
+		}
+	}
+	std::cout<<std::endl;
+
+	cv::Mat rezz;
+	rezz=this->chlsky.covar*v;
+	for(int i=0; i<rezz.rows; i++){
+		for(int j=0; j<rezz.cols; j++){
+			std::cout<<rezz.at<double>(i,j)<<" ";
+		}
+	}
+	*/
+
+	predi.variance.push_back((this->*kFunction)(x,x,length) - v.dot(v));
 	kstar.release();
 }
 //==============================================================================
@@ -252,7 +293,7 @@ cv::Mat, double), cv::Mat inputs, cv::Mat &smpl){
 //==============================================================================
 // Squared exponential kernel function.
 double gaussianProcess::sqexp(cv::Mat x1, cv::Mat x2, double l){
-	cv::Mat diff = x1-x2;
+	cv::Mat diff  = x1-x2;
 	double result = std::exp(-1.0 * diff.dot(diff)/(2.0*l));
 	diff.release();
 	return result;
@@ -260,7 +301,7 @@ double gaussianProcess::sqexp(cv::Mat x1, cv::Mat x2, double l){
 //==============================================================================
 // Matern05 kernel function.
 double gaussianProcess::matern05(cv::Mat x1, cv::Mat x2, double l){
-	cv::Mat diff = x1-x2;
+	cv::Mat diff  = x1-x2;
 	double result = std::sqrt(diff.dot(diff));
 	diff.release();
 	return std::exp(-1.0 * result/l);
@@ -268,7 +309,7 @@ double gaussianProcess::matern05(cv::Mat x1, cv::Mat x2, double l){
 //==============================================================================
 // Exponential Covariance kernel function.
 double gaussianProcess::expCovar(cv::Mat x1, cv::Mat x2, double l){
-	cv::Mat diff = x1-x2;
+	cv::Mat diff  = x1-x2;
 	double result = std::sqrt(diff.dot(diff));
 	diff.release();
 	return std::exp(-1.0 * result/l);
@@ -276,7 +317,7 @@ double gaussianProcess::expCovar(cv::Mat x1, cv::Mat x2, double l){
 //==============================================================================
 // Matern15 kernel function.
 double gaussianProcess::matern15(cv::Mat x1, cv::Mat x2, double l){
-	cv::Mat diff = x1-x2;
+	cv::Mat diff  = x1-x2;
 	double result = std::sqrt(diff.dot(diff));
 	diff.release();
 	return (1.0 + std::sqrt(3.0)*result/l) * std::exp(-1.0 * std::sqrt(3.0)*result/l);
@@ -284,7 +325,7 @@ double gaussianProcess::matern15(cv::Mat x1, cv::Mat x2, double l){
 //==============================================================================
 // Matern25 kernel function.
 double gaussianProcess::matern25(cv::Mat x1, cv::Mat x2, double l){
-	cv::Mat diff = x1-x2;
+	cv::Mat diff  = x1-x2;
 	double result = std::sqrt(diff.dot(diff));
 	diff.release();
 	return (1.0 + std::sqrt(5.0)*result/l + (5.0*result*result)/(3.0*l*l))*\
@@ -293,25 +334,25 @@ double gaussianProcess::matern25(cv::Mat x1, cv::Mat x2, double l){
 //==============================================================================
 /*
 int main(){
-	cv::Mat test(10, 100, cv::DataType<double>::type);
-	cv::Mat train(100, 100, cv::DataType<double>::type);
-	cv::Mat targets = cv::Mat::zeros(100, 2, cv::DataType<double>::type);
-	cv::Mat ttargets = cv::Mat::zeros(10, 2, cv::DataType<double>::type);
-	train = cv::Mat::zeros(100, 100, cv::DataType<double>::type);
+	cv::Mat test(10, 5, cv::DataType<double>::type);
+	cv::Mat train(100, 5, cv::DataType<double>::type);
+	cv::Mat targets = cv::Mat::zeros(100, 1, cv::DataType<double>::type);
+	cv::Mat ttargets = cv::Mat::zeros(10, 1, cv::DataType<double>::type);
+	train = cv::Mat::zeros(100, 5, cv::DataType<double>::type);
 
 	for(unsigned i=0; i<100; i++){
 		cv::Mat stupid = train.row(i);
-		cv::add(stupid, cv::Scalar(i*10.0), stupid);
+		cv::add(stupid, cv::Scalar(i), stupid);
+		targets.at<double>(i,0) = i;
+		//targets.at<double>(i,0) = std::sin(i*M_PI/180.0);
+		//targets.at<double>(i,1) = std::cos(i*M_PI/180.0);
 		if(i<10){
 			cv::Mat stupid2 = test.row(i);
-			cv::add(stupid2, cv::Scalar((99.0-(i*10.0))*10.0), stupid2);
-//			ttargets.at<double>(i,0) = (99.0-(i*10.0));
-			ttargets.at<double>(i,0) = std::sin((99.0-(i*10.0))*M_PI/180.0);
-			ttargets.at<double>(i,1) = std::cos((99.0-(i*10.0))*M_PI/180.0);
+			cv::add(stupid2, cv::Scalar(i*2.5), stupid2);
+			ttargets.at<double>(i,0) = i*2.5;
+			//ttargets.at<double>(i,0) = std::sin((99.0-(i*10.0))*M_PI/180.0);
+			//ttargets.at<double>(i,1) = std::cos((99.0-(i*10.0))*M_PI/180.0);
 		}
-//		targets.at<double>(i,0) = i;
-		targets.at<double>(i,0) = std::sin(i*M_PI/180.0);
-		targets.at<double>(i,1) = std::cos(i*M_PI/180.0);
 	}
 
 	gaussianProcess gp;
@@ -321,9 +362,9 @@ int main(){
 	for(unsigned i=0; i<test.rows; i++){
 		gaussianProcess::prediction predi;
 		gp.predict(test.row(i), predi);
-		//std::cout<<"label: "<<ttargets.at<double>(i,0)<<" "<<\
+		std::cout<<"label: "<<ttargets.at<double>(i,0)<<"\t"<<\
 			predi.mean[0]<<" variance:"<<predi.variance[0]<<std::endl;
-		std::cout<<"label: "<<ttargets.at<double>(i,0)<<" "<<\
+		//std::cout<<"label: "<<ttargets.at<double>(i,0)<<" "<<\
 				ttargets.at<double>(i,1)<<" "<<\
 			" mean:"<<predi.mean[0]<<" "<<predi.mean[1]<<" variance:"<<\
 			predi.variance[0]<<std::endl;

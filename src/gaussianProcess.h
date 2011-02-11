@@ -50,11 +50,12 @@ class gaussianProcess {
 		 */
 		void train(cv::Mat_<double> X, cv::Mat_<double> y,\
 			double (gaussianProcess::*fFunction)(cv::Mat, cv::Mat, double),\
-			double sigmasq);
+			double sigmasq, double length=1.0);
 
 		/** Returns the prediction for the test data, x (only one test data point).
 		 */
-		void predict(cv::Mat x, gaussianProcess::prediction &predi);
+		void predict(cv::Mat x, gaussianProcess::prediction &predi,\
+			double length=1.0);
 
 		/** Samples an N-dimensional Gaussian.
 		 */

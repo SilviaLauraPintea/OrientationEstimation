@@ -5,13 +5,33 @@
 //==============================================================================
 /** Initializes the parameters of the tracker.
  */
-void featureDetector::init(std::string dataFolder){
+void featureDetector::init(std::string dataFolder, std::string theAnnotationsFile){
 	this->producer = NULL;
 	this->producer = new ImgProducer(dataFolder.c_str(), true);
 	for(size_t i=0; i<this->data.size(); i++){
 		this->data[i].release();
 	}
+	for(size_t i=0; i<this->targets.size(); i++){
+		this->targets[i].release();
+	}
+	this->targets.clear();
 	this->data.clear();
+
+	// CLEAR THE ANNOTATIONS
+	for(std::size_t i=0; i<this->targetAnno.size(); i++){
+		for(std::size_t j=0; j<this->targetAnno[i].annos.size(); j++){
+			this->targetAnno[i].annos[j].poses.clear();
+		}
+		this->targetAnno[i].annos.clear();
+	}
+	this->targetAnno.clear();
+	this->lastIndex = 0;
+
+	// LOAD THE DESIRED ANNOTATIONS FROM THE FILE
+	if(!theAnnotationsFile.empty() && this->targetAnno.empty()){
+		annotationsHandle::loadAnnotations(const_cast<char*>\
+			(theAnnotationsFile.c_str()), this->targetAnno);
+	}
 }
 //==============================================================================
 /** Get perpendicular to a line given by 2 points A, B in point C.
@@ -100,10 +120,6 @@ borders, unsigned reshape, cv::Mat thresholded){
 									cv::DataType<double>::type);
 		if(!thresholded.empty()){
 			edges.copyTo(continuousEdges,thresholded);
-			//-------------------------------------
-			cv::imshow("edges",continuousEdges);
-			cv::waitKey(0);
-			//-------------------------------------
 		}else{
 			edges.copyTo(continuousEdges);
 		}
@@ -127,7 +143,10 @@ borders, unsigned reshape, cv::Mat thresholded){
 //==============================================================================
 /** SURF descriptors (Speeded Up Robust Features).
  */
-void featureDetector::getSURF(std::vector<float>& descriptors, cv::Mat image){
+void featureDetector::getSURF(cv::Mat &feature, cv::Mat image,\
+std::vector<unsigned> borders, cv::Mat thresholded){
+
+	std::vector<float> descriptors;
 	cv::Mat mask;
 	std::vector<cv::KeyPoint> keypoints;
 	cv::SURF aSURF = cv::SURF();
@@ -146,6 +165,20 @@ void featureDetector::getSURF(std::vector<float>& descriptors, cv::Mat image){
 						an object they belong to)
 	*/
 
+	for(std::size_t i=0; i<descriptors.size();i++){
+		if(borders[0]>keypoints[i].pt.x || borders[1]<keypoints[i].pt.x ||\
+		borders[2]>keypoints[i].pt.y || borders[3]<keypoints[i].pt.y){
+			descriptors.erase(descriptors.begin()+i);
+			break;
+		}else{
+			std::cout<<"descriptor: "<<descriptors[i]<<std::endl;
+		}
+	}
+
+	feature = cv::Mat(descriptors).reshape(0,1);
+
+	std::cout<<"feature size: "<<feature.cols<<" "<<feature.rows<<std::endl;
+
 	for(std::size_t i = 0; i <keypoints.size(); i++){
 		cv::circle(image, cv::Point(keypoints[i].pt.x, keypoints[i].pt.y),\
 			keypoints[i].size, cv::Scalar(0,0,255), 1, 8, 0);
@@ -160,7 +193,7 @@ void featureDetector::getSURF(std::vector<float>& descriptors, cv::Mat image){
 /** Blob detector in RGB color space.
  */
 void featureDetector::blobDetector(cv::Mat &feature, cv::Mat image,\
-std::vector<unsigned> borders, cv::Mat thresholded, string featType){
+std::vector<unsigned> borders, cv::Mat thresholded){
 	std::vector<std::vector<cv::Point> > msers;
 	/*
 	int _delta, _min_area, _max_area, _max_evolution, _edge_blur_size;
@@ -191,53 +224,40 @@ std::vector<unsigned> borders, cv::Mat thresholded, string featType){
 					break;
 				}
 			}
-			if(msers[x].empty()){ msers.erase(msers.begin()+x);
+			if(msers[x].empty()){
+				msers.erase(msers.begin()+x);
 				removed = 1;
 				break;
 			}
 		}
 	}
 
-	// SAVE IN A MATRIX
-	if(this->plotTracks){
-		cv::Mat tmp = cv::Mat::zeros(cv::Size(borders[3]-borders[2],\
-						borders[1]-borders[0]), CV_8UC1);
-		cv::drawContours(tmp, msers, -1, cv::Scalar(255,255,255), 1, 8);
-		cv::imshow("feature",tmp);
-		cv::waitKey(0);
-		tmp.release();
-	}
+	// TO REMOVE!!!!
+	cv::drawContours(image, msers, -1, cv::Scalar(255,255,255), 1, 8);
+	cv::imshow("kk blobs",image);
+	cv::waitKey(0);
 
-	if(featType == "2d"){
-		feature = cv::Mat(msers).reshape(0,1);
-		// THE VALUES IN THE FEATURES
-		for(int x=0; x<feature.cols; x++){
-			for(int y=0; y<feature.rows; y++){
-				cout<<"feature values: "<<(int)(feature.at<cv::Vec2b>(y,x)[0])<<" "<<\
-					(int)(feature.at<cv::Vec2b>(y,x)[1])<<endl;
-			}
-		}
+	cv::Mat tmpImg = image(cv::Range(borders[2],borders[3]),\
+						cv::Range(borders[0],borders[1]));
+	cv::Mat tmp = cv::Mat::zeros(cv::Size(borders[1]-borders[0],\
+					borders[3]-borders[2]), image.type());
+
+	std::cout<<"thresh: "<<thresholded.cols<<" "<<thresholded.rows<<std::endl;
+	std::cout<<"tmp: "<<tmp.cols<<" "<<tmp.rows<<std::endl;
+
+	if(!thresholded.empty()){
+		tmpImg.copyTo(tmp,thresholded);
 	}else{
-		//cv::Mat tmp = cv::Mat::zeros(cv::Size(borders[1]-borders[0],\
-						borders[3]-borders[2]), CV_8UC1);
-
-		cv::Mat tmp = cv::Mat::zeros(image.size(), CV_8UC1);
-		cv::drawContours(tmp, msers, -1, cv::Scalar(255,255,255), 1, 8);
-
-		cv::imshow("feature",tmp);
-		cv::waitKey(0);
-
-
-		feature = tmp.reshape(0,1);
-		/*
-		// THE VALUES IN THE FEATURES
-		for(int x=0; x<feature.cols; x++){
-			for(int y=0; y<feature.rows; y++){
-				cout<<"feature vales: "<<(int)(feature.at<uchar>(y,x))<<endl;
-			}
-		}
-		*/
+		tmpImg.copyTo(tmp);
 	}
+
+	cv::imshow("kk tmp", tmp);
+	cv::imshow("kk foregr",image);
+	cv::waitKey(0);
+
+	feature = tmp.reshape(1,1);
+	tmp.release();
+	tmpImg.release();
 }
 //==============================================================================
 /** Just displaying an image a bit larger to visualize it better.
@@ -617,11 +637,14 @@ void featureDetector::extractDataRow(std::vector<unsigned> existing, IplImage *b
 	std::vector<featureDetector::people> allPeople(existing.size());
 	this->allForegroundPixels(allPeople, existing, bg, 7.0);
 
+	this->lastIndex = this->data.size();
 	// FOR EACH LOCATION IN THE IMAGE EXTRACT FEATURES, FILTER THEM AND RESHAPE
+	std::vector<cv::Point> allLocations;
 	for(std::size_t i=0; i<existing.size(); i++){
 
 		// CONSIDER ONLY A WINDOW OF 100X100 AROUND THE TEMPLATE
 		cv::Point center = this->cvPoint(existing[i]);
+		allLocations.push_back(center);
 		std::vector<CvPoint> templ;
 		genTemplate2(center, persHeight, camHeight, templ);
 		int minY=image.rows, maxY=0, minX=image.cols, maxX=0;
@@ -641,12 +664,6 @@ void featureDetector::extractDataRow(std::vector<unsigned> existing, IplImage *b
 		cv::Mat thresholded;
 		cv::inRange(allPeople[i].pixels,cv::Scalar(1,1,1),cv::Scalar(255,225,225),\
 			thresholded);
-		//------------------------------------------
-		cv::imshow("mask",thresholded);
-		cv::imshow("foreground",allPeople[i].pixels);
-		cv::waitKey(0);
-		//------------------------------------------
-
 		switch(this->featureType){
 			case (featureDetector::BLOB):
 				this->blobDetector(feature, imgRoi, borders, thresholded);
@@ -656,6 +673,9 @@ void featureDetector::extractDataRow(std::vector<unsigned> existing, IplImage *b
 				break;
 			case featureDetector::EDGES:
 				this->getEdges(feature, imgRoi, borders, 1, thresholded);
+				break;
+			case featureDetector::SURF:
+				this->getSURF(feature, imgRoi, borders, thresholded);
 				break;
 
 			/*
@@ -681,10 +701,140 @@ void featureDetector::extractDataRow(std::vector<unsigned> existing, IplImage *b
 		}
 		feature.convertTo(feature, cv::DataType<double>::type);
 		this->data.push_back(feature.clone());
+
 		thresholded.release();
 		feature.release();
 		imgRoi.release();
 	}
+	// FIX THE LABELS TO CORRESPOND TO THE PEOPLE DETECTED IN THE IMAGE
+	this->fixLabels(allLocations, this->current->sourceName, this->current->index);
+}
+//==============================================================================
+/** Checks to see if an annotation can be assigned to a detection.
+ */
+bool featureDetector::canBeAssigned(unsigned l,std::vector<double> &minDistances,\
+unsigned k,double distance, std::vector<int> &assignment){
+	unsigned isThere = 1;
+	while(isThere){
+		isThere = 0;
+		for(std::size_t i=0; i<assignment.size(); i++){
+			// IF THERE IS ANOTHER ASSIGNMENT FOR K WITH A LARGER DIST
+			if(assignment[i] == k && i!=l && minDistances[i]>distance){
+				assignment[i]   = -1;
+				minDistances[i] = (double)INFINITY;
+				isThere         = 1;
+				break;
+			// IF THERE IS ANOTHER ASSIGNMENT FOR K WITH A SMALLER DIST
+			}else if(assignment[i] == k && i!=l && minDistances[i]<distance){
+				return false;
+			}
+		}
+	}
+	return true;
+}
+
+//==============================================================================
+/** For each row added in the data matrix (each person detected for which we
+ * have extracted some features) find the corresponding label.
+ */
+void featureDetector::fixLabels(std::vector<cv::Point> feetPos, string imageName,\
+unsigned index){
+	std::cout<<"current image/index: "<<imageName<<" "<<index<<" "<<std::endl;
+	std::cout<<"The current image name is: "<<this->targetAnno[index].imgFile<<\
+		" =?= "<<imageName<<" (corresponding?)"<<std::endl;
+
+	// LOOP OVER ALL ANNOTATIONS FOR THE CURRENT IMAGE AND FIND THE CLOSEST ONES
+	std::vector<int> assignments(this->targetAnno[index].annos.size(),-1);
+	std::vector<double> minDistances(this->targetAnno[index].annos.size(),\
+		(double)INFINITY);
+	unsigned canAssign = 1;
+	while(canAssign){
+		canAssign = 0;
+		for(std::size_t l=0; l<this->targetAnno[index].annos.size(); l++){
+			// EACH ANNOTATION NEEDS TO BE ASSIGNED TO THE CLOSEST DETECTION
+			double distance    = (double)INFINITY;
+			unsigned annoIndex = -1;
+			for(std::size_t k=0; k<feetPos.size(); k++){
+				double dstnc = dist(this->targetAnno[index].annos[l].location,\
+								feetPos[k]);
+				if(distance>dstnc && this->canBeAssigned(l,minDistances,k,dstnc,\
+				assignments)){
+					distance  = dstnc;
+					annoIndex = k;
+				}
+			}
+			assignments[l]  = annoIndex;
+			minDistances[l] = distance;
+		}
+	}
+
+	// DELETE DETECTED LOCATIONS THAT ARE NOT LABELLED
+	std::vector<unsigned> unlabelled;
+	for(std::size_t k=0; k<feetPos.size(); k++){
+		bool inThere = false;
+		for(std::size_t i=0; i<assignments.size(); i++){
+			if(assignments[i]==k){
+				inThere = true;
+				break;
+			}
+		}
+		if(!inThere){
+			this->data.erase(this->data.begin()+(this->lastIndex+k));
+			unlabelled.push_back(k);
+		}
+	}
+
+	unsigned extra = 0;
+	for(std::size_t i=0; i<assignments.size(); i++){
+		if(assignments[i] != -1){
+			extra++;
+		}
+	}
+	extra += unlabelled.size();
+
+	// STORE THE CPRRESPONDING LABELS
+	this->targets.resize(this->lastIndex+extra,\
+		cv::Mat::zeros(1,2,cv::DataType<double>::type));
+	for(std::size_t i=0; i<assignments.size(); i++){
+		if(assignments[i] != -1){
+			cv::Mat tmp = cv::Mat::zeros(1,2,cv::DataType<double>::type);
+			double angle = static_cast<double>\
+				(targetAnno[index].annos[i].poses[annotationsHandle::ORIENTATION]);
+			tmp.at<double>(0,0) = std::sin(angle*M_PI/180.0);
+			tmp.at<double>(0,1) = std::cos(angle*M_PI/180.0);
+			this->targets[this->lastIndex+assignments[i]] = tmp.clone();
+			tmp.release();
+		}
+	}
+
+	for(std::size_t i=0; i<unlabelled.size(); i++){
+		this->targets.erase(this->targets.begin()+(this->lastIndex+unlabelled[i]));
+	}
+
+	//-------------------------------------------------
+	/*
+	std::cout<<"Annotations: "<<std::endl;
+	for(std::size_t i=0; i<this->targetAnno[index].annos.size(); i++){
+		std::cout<<i<<":("<<targetAnno[index].annos[i].location.x<<","<<\
+			targetAnno[index].annos[i].location.y<<") ";
+	}
+	std::cout<<std::endl;
+	std::cout<<"Detections: "<<std::endl;
+	for(std::size_t i=0; i<feetPos.size(); i++){
+		std::cout<<i<<":("<<feetPos[i].x<<","<<feetPos[i].y<<") ";
+	}
+	std::cout<<std::endl;
+	std::cout<<"Assignments: "<<std::endl;
+	for(std::size_t i=0; i<assignments.size(); i++){
+		std::cout<<"annot["<<i<<"]=>"<<assignments[i]<<" ";
+	}
+	std::cout<<std::endl;
+	for(std::size_t i=0; i<this->targets.size(); i++){
+		std::cout<<"("<<this->targets[i].at<double>(0,0)<<","<<\
+			this->targets[i].at<double>(0,1)<<")";
+	}
+	*/
+	//-------------------------------------------------
 }
 //==============================================================================
 /** Overwrites the \c doFindPeople function from the \c Tracker class to make it

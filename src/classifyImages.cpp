@@ -38,102 +38,84 @@ classifyImages::~classifyImages(){
 /** Creates the training data (according to the options), the labels and
  * trains the a \c GaussianProcess on the data.
  */
-void classifyImages::trainGP(std::vector<std::string> options){
-	this->features->init(this->trainFolder);
+void classifyImages::trainGP(featureDetector::FEATURE feature){
+	this->features->setFeatureType(feature);
+	this->features->init(this->trainFolder, this->annotationsTrain);
 	this->features->run();
-
 	this->trainData = cv::Mat::zeros(cv::Size(this->features->data[0].cols,\
 						this->features->data.size()),cv::DataType<double>::type);
+	this->trainTargets = cv::Mat::zeros(cv::Size(this->features->targets[0].cols,\
+							this->features->targets.size()),cv::DataType<double>::type);
+
+	std::cout<<"SIZE: "<<this->trainData.cols<<" "<<this->trainData.rows<<std::endl;
+	std::cout<<"SIZE: "<<this->trainTargets.cols<<" "<<this->trainTargets.rows<<std::endl;
+
+	// CONVERT FROM VECTOR OF CV::MAT TO MAT
 	for(std::size_t i=0; i<this->features->data.size(); i++){
-		cv::Mat dummy = this->trainData.row(i);
-		this->features->data[i].convertTo(this->features->data[i],cv::DataType<double>::type);
-		cv::Mat(this->features->data[i]).copyTo(dummy);
+		cv::Mat dummy1 = this->trainData.row(i);
+		cv::Mat(this->features->data[i]).copyTo(dummy1);
 
-		cv::imshow("kkt",this->trainData.row(i).reshape(0,100));
-		cv::waitKey(0);
-
+		cv::Mat dummy2 = this->trainTargets.row(i);
+		cv::Mat(this->features->targets[i]).copyTo(dummy2);
 	}
-	this->trainTargets = cv::Mat::zeros(cv::Size(2, this->trainData.rows),\
-							this->trainData.type());
 
-	std::vector<annotationsHandle::FULL_ANNOTATIONS> targetAnno;
-	annotationsHandle::loadAnnotations(const_cast<char*>\
-		(this->annotationsTrain.c_str()), targetAnno);
-	for(std::size_t i=0; i<targetAnno.size(); i++){
-		for(std::size_t j=0; j<targetAnno[i].annos.size(); j++){
-			unsigned aSize = i*targetAnno[i].annos.size()+j;
-			double angle = static_cast<double>\
-				(targetAnno[i].annos[j].poses[annotationsHandle::ORIENTATION]);
-			this->trainTargets.at<double>(aSize,0) = std::sin(angle*M_PI/180.0);
-			this->trainTargets.at<double>(aSize,1) = std::cos(angle*M_PI/180.0);
-		}
-	}
 	this->trainData.convertTo(this->trainData, cv::DataType<double>::type);
 	this->trainTargets.convertTo(this->trainTargets, cv::DataType<double>::type);
-	this->gpCos.train(this->trainData,this->trainTargets.col(0),\
+
+	// TRAIN THE SIN AND COS SEPARETELY
+	this->gpSin.train(this->trainData,this->trainTargets.col(0),\
 		&gaussianProcess::expCovar, 0.1);
-	this->gpSin.train(this->trainData,this->trainTargets.col(1),\
+	this->gpCos.train(this->trainData,this->trainTargets.col(1),\
 		&gaussianProcess::expCovar, 0.1);
 }
 //==============================================================================
 /** Creates the test data and applies \c GaussianProcess prediction on the test
  * data.
  */
-void classifyImages::predictGP(std::vector<std::string> options){
-	this->features->init(this->testFolder);
+void classifyImages::predictGP(featureDetector::FEATURE feature){
+	this->features->setFeatureType(feature);
+	this->features->init(this->testFolder, this->annotationsTest);
 	this->features->run();
 	this->testData = cv::Mat::zeros(cv::Size(this->features->data[0].cols,\
 					this->features->data.size()), cv::DataType<double>::type);
+	this->testTargets = cv::Mat::zeros(cv::Size(this->features->targets[0].cols,\
+							this->features->targets.size()),cv::DataType<double>::type);
+
+	// CONVERT FROM VECTOR OF CV::MAT TO MAT
 	for(std::size_t i=0; i<this->features->data.size(); i++){
-		cv::Mat dummy = this->testData.row(i);
-		this->features->data[i].convertTo(this->features->data[i],cv::DataType<double>::type);
-		this->features->data[i].copyTo(dummy);
+		cv::Mat dummy1 = this->testData.row(i);
+		this->features->data[i].copyTo(dummy1);
 
-		cv::imshow("kkkkkkkt",this->testData.row(i).reshape(0,100));
-		cv::waitKey(0);
-
-	}
-
-	std::vector<annotationsHandle::FULL_ANNOTATIONS> targetAnno;
-	this->testTargets = cv::Mat::zeros(cv::Size(2, this->testData.rows),\
-						this->testData.type());
-
-	annotationsHandle::loadAnnotations(const_cast<char*>\
-		(this->annotationsTest.c_str()),targetAnno);
-	for(std::size_t i=0; i<targetAnno.size(); i++){
-		for(std::size_t j=0; j<targetAnno[i].annos.size(); j++){
-			unsigned aSize = i*targetAnno[i].annos.size()+j;
-			double angle = static_cast<double>\
-				(targetAnno[i].annos[j].poses[annotationsHandle::ORIENTATION]);
-			this->testTargets.at<double>(aSize,0) = std::sin(angle*M_PI/180.0);
-			this->testTargets.at<double>(aSize,1) = std::cos(angle*M_PI/180.0);
-		}
+		cv::Mat dummy2 = this->testTargets.row(i);
+		cv::Mat(this->features->targets[i]).copyTo(dummy2);
 	}
 	this->testData.convertTo(this->testData, cv::DataType<double>::type);
 	this->testTargets.convertTo(this->testTargets, cv::DataType<double>::type);
 
+	// FOR EACH ROW IN THE TEST MATRIX PREDICT
 	for(unsigned i=0; i<this->testData.rows; i++){
-		gaussianProcess::prediction prediCos;
-		this->gpCos.predict(this->testData.row(i), prediCos);
-		std::cout<<"label: ("<<this->testTargets.at<double>(i,0)<<","<<\
-			") mean:("<<prediCos.mean[0]<<","<<prediCos.mean[1]<<\
-			") variance:"<<prediCos.variance[0]<<std::endl;
-		prediCos.mean.clear();
-		prediCos.variance.clear();
-
 		gaussianProcess::prediction prediSin;
 		this->gpSin.predict(this->testData.row(i), prediSin);
-		std::cout<<"label: ("<<this->testTargets.at<double>(i,1)<<\
-			") mean:("<<prediSin.mean[0]<<","<<prediSin.mean[1]<<\
-			") variance:"<<prediSin.variance[0]<<std::endl;
+		std::cout<<"SIN label: "<<this->testTargets.at<double>(i,0)<<\
+			" mean:"<<prediSin.mean[0]<<\
+			" variance:"<<prediSin.variance[0]<<std::endl;
 		prediSin.mean.clear();
 		prediSin.variance.clear();
+
+		gaussianProcess::prediction prediCos;
+		this->gpCos.predict(this->testData.row(i), prediCos);
+		std::cout<<"COS label: "<<this->testTargets.at<double>(i,1)<<","<<\
+			" mean:"<<prediCos.mean[0]<<\
+			" variance:"<<prediCos.variance[0]<<std::endl;
+		prediCos.mean.clear();
+		prediCos.variance.clear();
 	}
 }
 //==============================================================================
 int main(int argc, char **argv){
 	classifyImages classi(argc, argv);
-	classi.trainGP();
-	classi.predictGP();
+	classi.trainGP(featureDetector::EDGES);
+	classi.predictGP(featureDetector::EDGES);
 }
+
 

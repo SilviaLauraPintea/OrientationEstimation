@@ -5,7 +5,7 @@
 //==============================================================================
 /** Reads images from a dir and stores them into a vector of strings.
  */
-vector<string> readImages(const char* dirName){
+vector<string> readAllImages(const char* dirName){
 	DIR *dirPoint;
 	if((dirPoint = opendir(dirName)) == NULL){
 		std::cerr<<"Error opening "<<dirName<<endl;
@@ -47,7 +47,24 @@ IplImage* mat2ipl(cv::Mat image){
 	return ipl_image;
 }
 //==============================================================================
-
+/** Convert the values from a cv::Mat of doubles to be between 0 and 1.
+ */
+void normalizeMat(cv::Mat &matrix){
+	double min = matrix.at<double>(0,0), max = matrix.at<double>(0,0);
+	for(int x=0; x<matrix.cols; x++){
+		for(int y=0; y<matrix.rows; y++){
+			if(min>matrix.at<double>(y,x)){
+				min = matrix.at<double>(y,x);
+			}
+			if(max<matrix.at<double>(y,x)){
+				max = matrix.at<double>(y,x);
+			}
+		}
+	}
+	matrix -= min;
+	matrix /= (max-min);
+}
+//==============================================================================
 
 
 

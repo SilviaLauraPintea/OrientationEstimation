@@ -19,6 +19,7 @@
 //#include <opencv2/core/mat.hpp>
 #include "eigenbackground/src/Tracker.hh"
 #include "eigenbackground/src/Helpers.hh"
+#include "annotationsHandle.h"
 
 /** Class used for detecting useful features in the images that can be later
  * used for training and classifying.
@@ -39,14 +40,14 @@ class featureDetector:public Tracker{
 		enum FEATURE {BLOB, ELLIPSE, CORNER, EDGES, GABOR, SURF};
 		//======================================================================
 		featureDetector(int argc,char** argv):Tracker(argc, argv, 10, true, true){
-			this->plotTracks  = true;
-			this->featureType = EDGES;
+			this->plotTracks      = true;
+			this->featureType     = EDGES;
 		}
 
 		featureDetector(int argc,char** argv,bool plot):Tracker(argc, argv, 10, \
 		true, true){
-			this->plotTracks  = plot;
-			this->featureType = EDGES;
+			this->plotTracks      = plot;
+			this->featureType     = EDGES;
 		}
 
 		virtual ~featureDetector(){
@@ -54,7 +55,20 @@ class featureDetector:public Tracker{
 			for(size_t i=0; i<this->data.size(); i++){
 				this->data[i].release();
 			}
+			for(size_t i=0; i<this->targets.size(); i++){
+				this->targets[i].release();
+			}
+			this->targets.clear();
 			this->data.clear();
+
+			// CLEAR THE ANNOTATIONS
+			for(std::size_t i=0; i<this->targetAnno.size(); i++){
+				for(std::size_t j=0; j<this->targetAnno[i].annos.size(); j++){
+					this->targetAnno[i].annos[j].poses.clear();
+				}
+				this->targetAnno[i].annos.clear();
+			}
+			this->targetAnno.clear();
 		}
 
 		/** Function that gets the ROI corresponding to a head/feet of a person in
@@ -118,12 +132,13 @@ class featureDetector:public Tracker{
 
 		/** SURF descriptors (Speeded Up Robust Features).
 		 */
-		void getSURF(std::vector<float>& descriptors, cv::Mat image);
+		void getSURF(cv::Mat &feature, cv::Mat image,\
+			std::vector<unsigned> borders, cv::Mat thresholded);
 
 		/** Blob detector in RGB color space.
 		 */
 		void blobDetector(cv::Mat &feature, cv::Mat image, std::vector<unsigned> \
-			borders, cv::Mat thresholded, string featType="1d");
+			borders, cv::Mat thresholded);
 
 		/** Just displaying an image a bit larger to visualize it better.
 		 */
@@ -151,6 +166,12 @@ class featureDetector:public Tracker{
 		 */
 		void extractDataRow(std::vector<unsigned> existing, IplImage *bg);
 
+		/** For each row added in the data matrix (each person detected for which we
+		 * have extracted some features) find the corresponding label.
+		 */
+		void fixLabels(std::vector<cv::Point> feetPos, string imageName,\
+		unsigned index);
+
 		/** Returns the size of a window around a template centered in a given point.
 		 */
 		void templateWindow(cv::Size imgSize, int &minX, int &maxX,\
@@ -158,7 +179,12 @@ class featureDetector:public Tracker{
 
 		/** Initializes the parameters of the tracker.
 		 */
-		void init(std::string dataFolder);
+		void init(std::string dataFolder, std::string theAnnotationsFile);
+
+		/** Checks to see if an annotation can be assigned to a detection.
+		 */
+		bool canBeAssigned(unsigned l,std::vector<double> &minDistances,\
+		unsigned k,double distance, std::vector<int> &assignment);
 		//======================================================================
 	public:
 		/** @var plotTracks
@@ -175,5 +201,20 @@ class featureDetector:public Tracker{
 		 * The training data obtained from the feature descriptors.
 		 */
 		std::vector<cv::Mat_<double> > data;
+
+		/** @var data
+		 * The targets/labels of the data.
+		 */
+		std::vector<cv::Mat_<double> > targets;
+
+		/** @var annotations
+		 * Loaded annotations for the read images.
+		 */
+		std::vector<annotationsHandle::FULL_ANNOTATIONS> targetAnno;
+
+		/** @var lastIndex
+		 * The previous size of the data matrix before adding new detections.
+		 */
+		unsigned lastIndex;
 };
 #endif /* FESTUREDETECTOR_H_ */
