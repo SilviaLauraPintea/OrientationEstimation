@@ -744,9 +744,12 @@ double angle){
 	double cameraAngle = std::atan(m);
 	//double cameraAngle = std::atan((double)(feetLocation.y-cameraLocation.y)/\
 							(double)(feetLocation.x-cameraLocation.x));
-	angle = angle+cameraAngle;
-	if(angle>=2*M_PI){angle -= 2*M_PI;}
-
+	angle = angle-cameraAngle;
+	if(angle>=2.0*M_PI){
+		angle -= 2.0*M_PI;
+	}else if(angle < 0){
+		angle += 2.0*M_PI;
+	}
 	std::cout<<"after: "<<(angle*180.0/M_PI)<<std::endl;
 	return angle;
 }

@@ -130,7 +130,7 @@ void classifyImages::predictGP(){
 //==============================================================================
 int main(int argc, char **argv){
 	classifyImages classi(argc, argv);
-	classi.init(1e-3,1000,&gaussianProcess::expCovar,featureDetector::EDGES);
+	classi.init(1e-3,100.0,&gaussianProcess::sqexp,featureDetector::EDGES);
 	classi.trainGP();
 	classi.predictGP();
 }
