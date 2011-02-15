@@ -8,9 +8,7 @@
 #include <string>
 #include <cmath>
 #include <exception>
-#include <opencv/cv.h>
-#include <opencv/highgui.h>
-#include <opencv/ml.h>
+#include <opencv2/opencv.hpp>
 #include "eigenbackground/src/Tracker.hh"
 #include "eigenbackground/src/Helpers.hh"
 #include "featureDetector.h"

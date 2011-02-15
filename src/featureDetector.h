@@ -14,9 +14,7 @@
 #include <string>
 #include <cmath>
 #include <exception>
-#include <opencv/cv.h>
-#include <opencv/highgui.h>
-//#include <opencv2/core/mat.hpp>
+#include <opencv2/opencv.hpp>
 #include "eigenbackground/src/Tracker.hh"
 #include "eigenbackground/src/Helpers.hh"
 #include "annotationsHandle.h"
@@ -137,8 +135,8 @@ class featureDetector:public Tracker{
 
 		/** Blob detector in RGB color space.
 		 */
-		void blobDetector(cv::Mat &feature, cv::Mat image, std::vector<unsigned> \
-			borders, cv::Mat thresholded);
+		void interestPointsGrid(cv::Mat &feature, cv::Mat image, std::vector<CvPoint> \
+		templ, unsigned minX, unsigned minY);
 
 		/** Just displaying an image a bit larger to visualize it better.
 		 */

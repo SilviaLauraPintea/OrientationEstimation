@@ -123,6 +123,12 @@ borders, unsigned reshape, cv::Mat thresholded){
 		}else{
 			edges.copyTo(continuousEdges);
 		}
+		if(this->plotTracks){
+			cv::imshow("Edges", continuousEdges);
+			cv::waitKey(0);
+			cvDestroyWindow("Edges");
+		}
+
 		feature = (continuousEdges.clone()).reshape(0,1);
 		continuousEdges.release();
 	}else{
@@ -131,11 +137,6 @@ borders, unsigned reshape, cv::Mat thresholded){
 		}else{
 			edges.copyTo(feature);
 		}
-	}
-	if(this->plotTracks){
-		cv::imshow("Edges", edges);
-		cv::waitKey(0);
-		cvDestroyWindow("Edges");
 	}
 	gray.release();
 	edges.release();
@@ -192,21 +193,16 @@ std::vector<unsigned> borders, cv::Mat thresholded){
 //==============================================================================
 /** Blob detector in RGB color space.
  */
-void featureDetector::blobDetector(cv::Mat &feature, cv::Mat image,\
-std::vector<unsigned> borders, cv::Mat thresholded){
-	std::vector<std::vector<cv::Point> > msers;
-	/*
-	int _delta, _min_area, _max_area, _max_evolution, _edge_blur_size;
-	float _max_variation, _min_diversity;
-	double _area_threshold, _min_margin;
-	cv::MSER aMSER = cv::MSER(_delta, _min_area, _max_area, _max_variation,\
-		_min_diversity, _max_evolution, _area_threshold, _min_margin, _edge_blur_size );
-	 */
-	cv::MSER aMSER;
+void featureDetector::interestPointsGrid(cv::Mat &feature, cv::Mat image,\
+std::vector<CvPoint> templ, unsigned minX, unsigned minY){
+	for(std::size_t i=0; i<templ.size();i++){
+		templ[i].x -= minX;
+		templ[i].y -= minY;
+	}
 
-	// runs the extractor on the specified image; returns the MSERs,
-	// each encoded as a contour the optional mask marks the area where MSERs
-	// are searched for
+	//EXTRACT MAXIMALLY STABLE BLOBS
+	std::vector<std::vector<cv::Point> > msers;
+	cv::MSER aMSER;
 	cv::Mat mask;
 	aMSER(image, msers, mask);
 	mask.release();
@@ -217,47 +213,76 @@ std::vector<unsigned> borders, cv::Mat thresholded){
 		removed = 0;
 		for(std::size_t x=0; x<msers.size(); x++){
 			for(std::size_t y=0; y<msers[x].size(); y++){
-				if(borders[0]>msers[x][y].x || borders[1]<msers[x][y].x ||\
-				borders[2]>msers[x][y].y || borders[3]<msers[x][y].y){
-					msers[x].erase(msers[x].begin()+y);
+				// IF ONE POINT OF THE CONTOUR IS NOT INSIDE THEN REMOVE THE IT
+				if(!this->isInTemplate(msers[x][y].x,msers[x][y].y,templ)){
+					msers.erase(msers.begin()+x);
 					removed = 1;
 					break;
 				}
 			}
-			if(msers[x].empty()){
-				msers.erase(msers.begin()+x);
+			if(removed){
+				break;
+			}
+		}
+	}
+
+	if(this->plotTracks){
+		cv::drawContours(image, msers, -1, cv::Scalar(255,255,255), 1, 8);
+		cv::imshow("Blobs",image);
+		cv::waitKey(0);
+	}
+	feature                 = cv::Mat(1,17,cv::DataType<double>::type);
+	feature.at<double>(0,0) = msers.size();
+
+	cv::imshow("roi",image);
+	cv::waitKey(0);
+
+	// HISTOGRAM OF NICE FEATURES
+	std::vector<cv::Point2f> corners;
+	cv::Ptr<cv::FeatureDetector> detector = \
+		new cv::GoodFeaturesToTrackDetector(1600, 0.001, 1.0);
+	cv::GridAdaptedFeatureDetector gafd(detector, 1600, 4, 4);
+	std::vector<cv::KeyPoint> keys;
+	gafd.detect(image, keys);
+	cv::Mat histo = cv::Mat::zeros(1,16,cv::DataType<double>::type);
+
+	//KEEP ONLY INTEREST POINTS IN THE TEMPLATE
+	removed = 1;
+	while(removed){
+		removed = 0;
+		for(std::size_t i=0; i<keys.size(); i++){
+			if(!this->isInTemplate(keys[i].pt.x,keys[i].pt.y,templ)){
+				keys.erase(keys.begin()+i);
 				removed = 1;
 				break;
 			}
 		}
 	}
 
-	// TO REMOVE!!!!
-	cv::drawContours(image, msers, -1, cv::Scalar(255,255,255), 1, 8);
-	cv::imshow("kk blobs",image);
-	cv::waitKey(0);
-
-	cv::Mat tmpImg = image(cv::Range(borders[2],borders[3]),\
-						cv::Range(borders[0],borders[1]));
-	cv::Mat tmp = cv::Mat::zeros(cv::Size(borders[1]-borders[0],\
-					borders[3]-borders[2]), image.type());
-
-	std::cout<<"thresh: "<<thresholded.cols<<" "<<thresholded.rows<<std::endl;
-	std::cout<<"tmp: "<<tmp.cols<<" "<<tmp.rows<<std::endl;
-
-	if(!thresholded.empty()){
-		tmpImg.copyTo(tmp,thresholded);
-	}else{
-		tmpImg.copyTo(tmp);
+	std::cout<<"keys left: "<<keys.size()<<std::endl;
+	//COUNT THE INTEREST POINTS IN EACH CELL
+	unsigned contor = 0;
+	for(double x=0.0; x<image.cols; x+=image.cols/4.0){
+		for(double y=0.0; y<image.rows; y+=image.rows/4.0){
+			for(std::size_t i=0; i<keys.size(); i++){
+				if(x<=keys[i].pt.x && keys[i].pt.x<x+image.cols/4.0\
+				&& y<=keys[i].pt.y && keys[i].pt.y<=y+image.rows/4.0){
+					histo.at<double>(0,contor) += 1;
+				}
+			}
+			contor +=1;
+		}
 	}
 
-	cv::imshow("kk tmp", tmp);
-	cv::imshow("kk foregr",image);
-	cv::waitKey(0);
+	cv::Mat stupid = feature.colRange(1,17);
+	histo.copyTo(stupid);
 
-	feature = tmp.reshape(1,1);
-	tmp.release();
-	tmpImg.release();
+	for(int i=0; i<feature.cols; i++){
+		std::cout<<feature.at<double>(0,i)<<" ";
+	}
+	std::cout<<std::endl;
+
+	histo.release();
 }
 //==============================================================================
 /** Just displaying an image a bit larger to visualize it better.
@@ -268,7 +293,6 @@ void featureDetector::showZoomedImage(cv::Mat image, const std::string title){
 	cv::imshow(title, image);
 	cv::waitKey(0);
 	cvDestroyWindow(title.c_str());
-
 	large.release();
 }
 //==============================================================================
@@ -430,6 +454,10 @@ void featureDetector::allForegroundPixels(std::vector<featureDetector::people>\
 		std::vector<CvPoint> templ;
 		genTemplate2(center, persHeight, camHeight, templ);
 
+		plotTemplate2(this->current->img,center,persHeight,camHeight,\
+				cv::Scalar(255,0,0));
+		cv::imshow("template",this->current->img);
+
 		int minY=thrsh.rows, maxY=0, minX=thrsh.cols, maxX=0;
 		this->templateWindow(cv::Size(foregr.cols,foregr.rows),minX, maxX,\
 			minY, maxY, templ);
@@ -488,11 +516,13 @@ void featureDetector::allForegroundPixels(std::vector<featureDetector::people>\
 				}
 			}
 		}
+		// THE ACTUAL SIZE OF THE FOREGROUND PIXELS
 		if(tmpminX[k]==thrsh.cols){tmpminX[k]=0;}
 		if(tmpmaxX[k]==0){tmpmaxX[k]=maxX-minX;}
 		if(tmpminY[k]==thrsh.rows){tmpminY[k]=0;}
 		if(tmpmaxY[k]==0){tmpmaxY[k]=maxY-minY;}
 
+		// FIX THE FOREGROUND IMAGE TO BE 100/100 BY ADDING BLACK BORDERS
 		width  = tmpmaxX[k]-tmpminX[k];
 		height = tmpmaxY[k]-tmpminY[k];
 		if(width!=100){
@@ -506,9 +536,6 @@ void featureDetector::allForegroundPixels(std::vector<featureDetector::people>\
 		if(tmpmaxX[k]-tmpminX[k]!=100){tmpmaxX[k] += 100-(tmpmaxX[k]-tmpminX[k]);}
 		if(tmpmaxY[k]-tmpminY[k]!=100){tmpmaxY[k] += 100-(tmpmaxY[k]-tmpminY[k]);}
 
-		cout<<tmpmaxX[k]<<" "<<tmpminX[k]<<endl;
-		cout<<tmpmaxY[k]<<" "<<tmpminY[k]<<endl;
-
 		allPeople[k].relativeLoc = cv::Point(center.x - (int)(minX + tmpminX[k]),\
 									center.y - (int)(minY + tmpminY[k]));
 		allPeople[k].borders.assign(4,0);
@@ -517,6 +544,7 @@ void featureDetector::allForegroundPixels(std::vector<featureDetector::people>\
 		allPeople[k].borders[2] = tmpminY[k]+minY;
 		allPeople[k].borders[3] = tmpmaxY[k]+minY;
 
+		// COPY THE FOREGROUND PIXELS INTO A CLEAN, SEPARATE IMAGE
 		width  = tmpmaxX[k]-tmpminX[k];
 		height = tmpmaxY[k]-tmpminY[k];
 		allPeople[k].pixels = cv::Mat(colorRoi.clone(),\
@@ -660,13 +688,12 @@ void featureDetector::extractDataRow(std::vector<unsigned> existing, IplImage *b
 		std::vector<unsigned> borders = allPeople[i].borders;
 		borders[0] -= minX; borders[1] -= minX;
 		borders[2] -= minY; borders[3] -= minY;
-
 		cv::Mat thresholded;
 		cv::inRange(allPeople[i].pixels,cv::Scalar(1,1,1),cv::Scalar(255,225,225),\
 			thresholded);
 		switch(this->featureType){
 			case (featureDetector::BLOB):
-				this->blobDetector(feature, imgRoi, borders, thresholded);
+				this->interestPointsGrid(feature, imgRoi, templ, minX, minY);
 				break;
 			case featureDetector::CORNER:
 				this->getCornerPoints(feature, imgRoi, borders, thresholded);
@@ -739,11 +766,8 @@ unsigned k,double distance, std::vector<int> &assignment){
 double featureDetector::fixAngle(cv::Point feetLocation, cv::Point cameraLocation,\
 double angle){
 	std::cout<<"before: "<<(angle*180.0/M_PI)<<std::endl;
-	double m,b;
-	this->getLinePerpendicular(cameraLocation,feetLocation,feetLocation,m,b);
-	double cameraAngle = std::atan(m);
-	//double cameraAngle = std::atan((double)(feetLocation.y-cameraLocation.y)/\
-							(double)(feetLocation.x-cameraLocation.x));
+	double cameraAngle = std::atan2((feetLocation.y-cameraLocation.y),\
+						(feetLocation.x-cameraLocation.x));
 	angle = angle-cameraAngle;
 	if(angle>=2.0*M_PI){
 		angle -= 2.0*M_PI;

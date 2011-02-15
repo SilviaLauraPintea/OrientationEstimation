@@ -9,8 +9,7 @@
 #include <cmath>
 #include <err.h>
 #include <exception>
-#include <opencv/cv.h>
-#include <opencv/highgui.h>
+#include <opencv2/opencv.hpp>
 
 /** The \c Cholesky decomposition is used to solve Ax = b; if A is symmetric and
  * positive definite => we can decompose A = LL* and instead of solving Ax = b,

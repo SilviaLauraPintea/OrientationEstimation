@@ -8,8 +8,7 @@
 #include <cmath>
 #include <fstream>
 #include <string>
-#include <opencv/cv.h>
-#include <opencv/highgui.h>
+#include <opencv2/opencv.hpp>
 #include <boost/thread.hpp>
 #include <boost/version.hpp>
 #include <boost/filesystem/operations.hpp>

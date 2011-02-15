@@ -12,16 +12,16 @@ classifyImages::classifyImages(int argc, char **argv){
 	}else{
 		for(unsigned i=0; i<argc; i++){
 			if(i==4){
-				this->trainFolder = (std::string)argv[i];
+				this->trainFolder = static_cast<std::string>(argv[i]);
 			}else if(i==5){
-				this->annotationsTrain = (std::string)argv[i];
-				argv[i] = "";
+				this->annotationsTrain = static_cast<std::string>(argv[i]);
+				argv[i]="";
 			}else if(i==6){
-				this->testFolder = (std::string)argv[i];
-				argv[i] = "";
+				this->testFolder = static_cast<std::string>(argv[i]);
+				argv[i]="";
 			}else if(i==7){
-				this->annotationsTest = (std::string)argv[i];
-				argv[i] = "";
+				this->annotationsTest = static_cast<std::string>(argv[i]);
+				argv[i]="";
 			}
 		}
 		argc -= 3;
@@ -130,7 +130,7 @@ void classifyImages::predictGP(){
 //==============================================================================
 int main(int argc, char **argv){
 	classifyImages classi(argc, argv);
-	classi.init(1e-3,100.0,&gaussianProcess::sqexp,featureDetector::EDGES);
+	classi.init(1e-3,100.0,&gaussianProcess::sqexp,featureDetector::BLOB);
 	classi.trainGP();
 	classi.predictGP();
 }

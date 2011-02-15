@@ -9,9 +9,9 @@
 #include <string>
 #include <cmath>
 #include <exception>
-#include <opencv/cv.h>
-#include <opencv/highgui.h>
+#include <opencv2/opencv.hpp>
 #include "cholesky.h"
+
 /** Class implementing the Gaussian Process Regression.
  */
 class gaussianProcess {

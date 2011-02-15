@@ -11,9 +11,6 @@ pkg_check_modules(XML2 REQUIRED libxml-2.0)
 #PROJECT TO BE BUILT_______________________________________________________ 
 PROJECT(Social_Groups_Detection)
 
-#OPENCV PACKAGE REQUIRED___________________________________________________
-#FIND_PACKAGE(OpenCV REQUIRED)
-
 #SET VARIABLES' NAMES______________________________________________________
 SET(CMAKE_CXX_FLAGS ${XML2_CFLAGS}) #??????????????????
 
@@ -22,16 +19,16 @@ SET(MT_SRC /data/Documents/masterProject/Social_Groups_Detection/src CACHE PATH 
 
 SET(EXECUTABLE_OUTPUT_PATH /data/Documents/masterProject/Social_Groups_Detection/bin CACHE PATH "Location of the compiled files")
 
-#SET(OPENCV /usr/local/include/opencv CACHE PATH "Location of the OpenCV headers")
-SET(OPENCV1 /opt/OpenCV/include/opencv CACHE PATH "Location of the OpenCV headers")
+#SET(OPENCV1 /opt/OpenCV/include/opencv CACHE PATH "Location of the OpenCV headers")
 SET(OPENCV2 /opt/OpenCV/include/opencv2 CACHE PATH "Location of the OpenCV headers (version 2.2)")
+SET(OPENCV2LIB /usr/local/lib CACHE PATH "Lib")
 
 SET(VXL_BIN /opt/vxlbin CACHE PATH "Location of the VXL compiled library")
 SET(CMN_SRC /data/Documents/masterProject/Social_Groups_Detection/src/cmn/src CACHE PATH "Location of the CMN library source code")
 SET(CMN_BIN /data/Documents/masterProject/Social_Groups_Detection/src/cmn/bin CACHE PATH "Location of the CMN compiled library")
 
-INCLUDE_DIRECTORIES(${OPENCV1} ${OPENCV2} ${VXL_BIN} ${VXL_BIN} ${VXL_BIN}/contrib/tbl ${VXL_BIN}/core ${VXL_BIN}/vcl ${CMN_SRC} ${EIGEN_SRC})
-LINK_DIRECTORIES(${VXL_BIN}/lib ${CMN_BIN})
+INCLUDE_DIRECTORIES(${OPENCV2} ${VXL_BIN} ${VXL_BIN} ${VXL_BIN}/contrib/tbl ${VXL_BIN}/core ${VXL_BIN}/vcl ${CMN_SRC} ${EIGEN_SRC})
+LINK_DIRECTORIES(${VXL_BIN}/lib ${CMN_BIN} ${OPENCV2LIB})
 
 ADD_LIBRARY(helpers
   ${EIGEN_SRC}/Helpers.cc
@@ -52,22 +49,22 @@ ADD_LIBRARY(calib
   ${EIGEN_SRC}/sample/xmlUtil.cpp
   )
 
-#ADD_EXECUTABLE( Tracker ${EIGEN_SRC}/Tracker.cc )
-#TARGET_LINK_LIBRARIES( Tracker helpers highgui  cmn tools iberty vnl_algo vnl v3p_netlib boost_date_time-mt boost_thread-mt ${XML2_LDFLAGS})
+#ADD_EXECUTABLE(Tracker ${EIGEN_SRC}/Tracker.cc )
+#TARGET_LINK_LIBRARIES(Tracker helpers opencv_core opencv_imgproc opencv_highgui cmn tools iberty vnl_algo vnl v3p_netlib boost_date_time-mt boost_thread-mt ${XML2_LDFLAGS})
 
-#ADD_EXECUTABLE( Annotate ${EIGEN_SRC}/Annotate.cc )
-#TARGET_LINK_LIBRARIES( Annotate helpers highgui  cmn tools iberty vnl_algo vnl v3p_netlib boost_date_time-mt boost_thread-mt ${XML2_LDFLAGS})
+#ADD_EXECUTABLE(Annotate ${EIGEN_SRC}/Annotate.cc )
+#TARGET_LINK_LIBRARIES(Annotate helpers opencv_core opencv_imgproc opencv_highgui cmn tools iberty vnl_algo vnl v3p_netlib boost_date_time-mt boost_thread-mt ${XML2_LDFLAGS})
 #_________________________________________________________________________________________________________________________________________
 # FROM NOW ON MY FILES WILL COME
 
 #ADD_EXECUTABLE(annotationsHandle ${MT_SRC}/annotationsHandle.cpp)
-#TARGET_LINK_LIBRARIES(annotationsHandle helpers cv highgui cmn tools iberty vnl_algo vnl v3p_netlib boost_filesystem boost_date_time-mt boost_thread-mt ${XML2_LDFLAGS})
+#TARGET_LINK_LIBRARIES(annotationsHandle helpers opencv_core opencv_imgproc opencv_highgui cmn tools iberty vnl_algo vnl v3p_netlib boost_filesystem boost_date_time-mt boost_thread-mt ${XML2_LDFLAGS})
 
 #ADD_EXECUTABLE(featureDetector ${MT_SRC}/featureDetector.cpp)
-#TARGET_LINK_LIBRARIES(featureDetector helpers cv highgui cmn tools iberty vnl_algo vnl v3p_netlib boost_filesystem boost_date_time-mt boost_thread-mt ${XML2_LDFLAGS})
+#TARGET_LINK_LIBRARIES(featureDetector helpers opencv_core opencv_imgproc opencv_highgui cmn tools iberty vnl_algo vnl v3p_netlib boost_filesystem boost_date_time-mt boost_thread-mt ${XML2_LDFLAGS})
 
 #ADD_EXECUTABLE(gaussianProcess ${MT_SRC}/gaussianProcess.cpp)
-#TARGET_LINK_LIBRARIES(gaussianProcess helpers cv ml highgui cmn tools iberty vnl_algo vnl v3p_netlib ${XML2_LDFLAGS})
+#TARGET_LINK_LIBRARIES(gaussianProcess helpers opencv_core opencv_imgproc opencv_highgui cmn tools iberty vnl_algo vnl v3p_netlib ${XML2_LDFLAGS})
 
 ADD_EXECUTABLE(classifyImages ${MT_SRC}/classifyImages.cpp)
-TARGET_LINK_LIBRARIES(classifyImages helpers cv ml highgui cmn tools iberty vnl_algo vnl v3p_netlib boost_filesystem boost_date_time-mt boost_thread-mt ${XML2_LDFLAGS})
+TARGET_LINK_LIBRARIES(classifyImages helpers opencv_core opencv_imgproc opencv_highgui opencv_features2d cmn tools iberty vnl_algo vnl v3p_netlib boost_filesystem boost_date_time-mt boost_thread-mt ${XML2_LDFLAGS})
