@@ -35,7 +35,7 @@ class featureDetector:public Tracker{
 
 		/** All available feature types.
 		 */
-		enum FEATURE {BLOB, ELLIPSE, CORNER, EDGES, GABOR, SURF};
+		enum FEATURE {IPOINTS, ELLIPSE, CORNER, EDGES, GABOR, SURF};
 		//======================================================================
 		featureDetector(int argc,char** argv):Tracker(argc, argv, 10, true, true){
 			this->plotTracks      = true;
@@ -125,18 +125,18 @@ class featureDetector:public Tracker{
 
 		/** Gets the edges in an image.
 		 */
-		void getEdges(cv::Mat &feature, cv::Mat image, std::vector<unsigned> \
-			borders, unsigned reshape=1, cv::Mat thresholded=cv::Mat());
+		void getEdges(cv::Mat &feature, cv::Mat image, unsigned reshape=1,\
+			cv::Mat thresholded=cv::Mat());
 
 		/** SURF descriptors (Speeded Up Robust Features).
 		 */
-		void getSURF(cv::Mat &feature, cv::Mat image,\
-			std::vector<unsigned> borders, cv::Mat thresholded);
+		void getSURF(cv::Mat &feature, cv::Mat image, unsigned minX,\
+			unsigned minY, std::vector<CvPoint> templ);
 
-		/** Blob detector in RGB color space.
+		/** Creates a "histogram" of interest points + number of blobs.
 		 */
-		void interestPointsGrid(cv::Mat &feature, cv::Mat image, std::vector<CvPoint> \
-		templ, unsigned minX, unsigned minY);
+		void interestPointsGrid(cv::Mat &feature, cv::Mat image,\
+			std::vector<CvPoint> templ, int minX, int minY);
 
 		/** Just displaying an image a bit larger to visualize it better.
 		 */
@@ -173,7 +173,7 @@ class featureDetector:public Tracker{
 		/** Returns the size of a window around a template centered in a given point.
 		 */
 		void templateWindow(cv::Size imgSize, int &minX, int &maxX,\
-		int &minY, int &maxY, std::vector<CvPoint> &templ, unsigned tplBorder = 60);
+		int &minY, int &maxY, std::vector<CvPoint> &templ, unsigned tplBorder = 50);
 
 		/** Initializes the parameters of the tracker.
 		 */
@@ -189,6 +189,10 @@ class featureDetector:public Tracker{
 		 */
 		double fixAngle(cv::Point feetLocation, cv::Point cameraLocation,\
 			double angle);
+
+		/** Compares SURF 2 descriptors and returns the boolean value of their comparison.
+		 */
+		bool compareDescriptors(const cv::KeyPoint k1, const cv::KeyPoint k2);
 		//======================================================================
 	public:
 		/** @var plotTracks
