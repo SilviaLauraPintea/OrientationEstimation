@@ -5,38 +5,58 @@
 
 //==============================================================================
 classifyImages::classifyImages(int argc, char **argv){
-	if(argc != 8){
+	// DEAFAULT INITIALIZATION
+	this->trainFolder      = "";
+	this->testFolder       = "";
+	this->annotationsTrain = "";
+	this->annotationsTest  = "";
+	this->noise            = 0.01;
+	this->length           = 1.0;
+	this->kFunction        = &gaussianProcess::sqexp;
+	this->feature          = featureDetector::EDGES;
+
+	// READ THE COMMAND LINE ARGUMENTS
+	if(argc != 8 && argc!=5){
 		cerr<<"Usage: classifier <bgTrain|bgModel> <calib> <prior> "<<\
 			"<trainFolder> <annotationsTrain> <testFolder> <annotationsTest>"<<endl;
 		exit(1);
-	}else{
+	}else if(argc==8){
 		for(unsigned i=0; i<argc; i++){
 			if(i==4){
-				this->trainFolder = static_cast<std::string>(argv[i]);
+				this->trainFolder = std::string(argv[i]);
 			}else if(i==5){
-				this->annotationsTrain = static_cast<std::string>(argv[i]);
+				this->annotationsTrain = std::string(argv[i]);
 				argv[i]="";
 			}else if(i==6){
-				this->testFolder = static_cast<std::string>(argv[i]);
+				this->testFolder = std::string(argv[i]);
 				argv[i]="";
 			}else if(i==7){
-				this->annotationsTest = static_cast<std::string>(argv[i]);
+				this->annotationsTest = std::string(argv[i]);
 				argv[i]="";
 			}
 		}
 		argc -= 3;
 		this->features = new featureDetector(argc,argv,false);
+	}else if(argc==5){
+		for(unsigned i=0; i<argc; i++){
+			if(i==4){
+				this->trainFolder = std::string(argv[i]);
+			}
+			this->annotationsTrain = "";
+			this->testFolder       = "";
+			this->annotationsTest  = "";
+		}
+		this->features = new featureDetector(argc,argv,false);
 	}
-	this->feature=featureDetector::EDGES;
 }
 //==============================================================================
 classifyImages::~classifyImages(){
+	delete this->features;
 	this->trainData.release();
 	this->testData.release();
 	this->trainTargets.release();
 	this->testTargets.release();
 }
-
 //==============================================================================
 /** Initialize the options for the Gaussian Process regression.
  */
@@ -128,9 +148,24 @@ void classifyImages::predictGP(){
 	}
 }
 //==============================================================================
+/** Build dictionary for vector quantization.
+ */
+void classifyImages::buildDictionary(cv::Mat &entry, cv::Mat image){
+	// EXTRACT FEATURES
+	this->features->setFeatureType(featureDetector::SIFT);
+	this->features->init(this->trainFolder, "");
+	this->features->run();
+	this->trainData = cv::Mat::zeros(cv::Size(this->features->data[0].cols,\
+						this->features->data.size()),cv::DataType<double>::type);
+
+	// DO K-means
+
+	// STORE IT
+}
+//==============================================================================
 int main(int argc, char **argv){
 	classifyImages classi(argc, argv);
-	classi.init(1e-3,100.0,&gaussianProcess::sqexp,featureDetector::SURF);
+	classi.init(1e-3,100.0,&gaussianProcess::sqexp,featureDetector::EDGES);
 	classi.trainGP();
 	classi.predictGP();
 }

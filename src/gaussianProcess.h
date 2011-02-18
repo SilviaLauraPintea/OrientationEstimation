@@ -25,6 +25,10 @@ class gaussianProcess {
 		struct prediction {
 		  std::vector<double> mean;
 		  std::vector<double> variance;
+		  ~prediction(){
+			  this->mean.clear();
+			  this->variance.clear();
+		  }
 		};
 
 		/** All available distributions for the functions.
@@ -34,10 +38,15 @@ class gaussianProcess {
 		gaussianProcess(){
 			this->_norm_fast = false;
 			this->_norm_max  = RAND_MAX/2.0;
+			this->_norm_next = 0.0;
 			this->rand_x     = 0;
 			this->rand_y     = 1;
+			this->N          = 0;
 		};
-		virtual ~gaussianProcess(){};
+		virtual ~gaussianProcess(){
+			this->alpha.release();
+			this->data.release();
+		};
 
 		/** Generates a selected distribution of the functions given the parameters (the
 		 * mean: mu, the covariance: cov, the data x).

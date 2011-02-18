@@ -10,6 +10,7 @@
 #endif
 #include <boost/thread/xtime.hpp>
 #include <iostream>
+#include <algorithm>
 #include <fstream>
 #include <string>
 #include <cmath>
@@ -31,25 +32,49 @@ class featureDetector:public Tracker{
 			cv::Point relativeLoc;
 			std::vector<unsigned> borders;
 			cv::Mat_<cv::Vec3b> pixels;
+			people(){
+				this->absoluteLoc = cv::Point(0,0);
+				this->relativeLoc = cv::Point(0,0);
+			}
+			~people(){
+				this->borders.clear();
+				this->pixels.release();
+			}
 		};
 
 		/** All available feature types.
 		 */
-		enum FEATURE {IPOINTS, ELLIPSE, CORNER, EDGES, GABOR, SURF};
+		enum FEATURE {IPOINTS, ELLIPSE, CORNER, EDGES, GABOR, SURF, SIFT};
+
+		/** Structure for storing keypoints and descriptors.
+		 */
+		struct keyDescr {
+			cv::KeyPoint keys;
+			std::vector<float> descr;
+			~keyDescr(){
+				descr.clear();
+			}
+		};
 		//======================================================================
 		featureDetector(int argc,char** argv):Tracker(argc, argv, 10, true, true){
-			this->plotTracks      = true;
-			this->featureType     = EDGES;
+			this->plotTracks  = true;
+			this->featureType = EDGES;
+			this->lastIndex   = 0;
+			this->producer    = NULL;
 		}
 
 		featureDetector(int argc,char** argv,bool plot):Tracker(argc, argv, 10, \
 		true, true){
-			this->plotTracks      = plot;
-			this->featureType     = EDGES;
+			this->producer    = NULL;
+			this->plotTracks  = plot;
+			this->featureType = EDGES;
+			this->lastIndex   = 0;
 		}
 
 		virtual ~featureDetector(){
-			this->producer = NULL;
+			if(this->producer!=NULL){
+				delete this->producer;
+			}
 			for(size_t i=0; i<this->data.size(); i++){
 				this->data[i].release();
 			}
@@ -60,12 +85,6 @@ class featureDetector:public Tracker{
 			this->data.clear();
 
 			// CLEAR THE ANNOTATIONS
-			for(std::size_t i=0; i<this->targetAnno.size(); i++){
-				for(std::size_t j=0; j<this->targetAnno[i].annos.size(); j++){
-					this->targetAnno[i].annos[j].poses.clear();
-				}
-				this->targetAnno[i].annos.clear();
-			}
 			this->targetAnno.clear();
 		}
 
@@ -130,8 +149,8 @@ class featureDetector:public Tracker{
 
 		/** SURF descriptors (Speeded Up Robust Features).
 		 */
-		void getSURF(cv::Mat &feature, cv::Mat image, unsigned minX,\
-			unsigned minY, std::vector<CvPoint> templ);
+		void getSURF(cv::Mat &feature, cv::Mat image, int minX, int minY,\
+			std::vector<CvPoint> templ);
 
 		/** Creates a "histogram" of interest points + number of blobs.
 		 */
@@ -173,7 +192,7 @@ class featureDetector:public Tracker{
 		/** Returns the size of a window around a template centered in a given point.
 		 */
 		void templateWindow(cv::Size imgSize, int &minX, int &maxX,\
-		int &minY, int &maxY, std::vector<CvPoint> &templ, unsigned tplBorder = 50);
+		int &minY, int &maxY, std::vector<CvPoint> &templ, unsigned tplBorder = 100);
 
 		/** Initializes the parameters of the tracker.
 		 */
@@ -192,7 +211,8 @@ class featureDetector:public Tracker{
 
 		/** Compares SURF 2 descriptors and returns the boolean value of their comparison.
 		 */
-		bool compareDescriptors(const cv::KeyPoint k1, const cv::KeyPoint k2);
+		static bool compareDescriptors(const featureDetector::keyDescr k1,\
+			const featureDetector::keyDescr k2);
 		//======================================================================
 	public:
 		/** @var plotTracks

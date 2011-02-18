@@ -8,6 +8,7 @@
 #include <cmath>
 #include <fstream>
 #include <string>
+#include <stdio.h>
 #include <opencv2/opencv.hpp>
 #include <boost/thread.hpp>
 #include <boost/version.hpp>
@@ -35,14 +36,27 @@ class annotationsHandle {
 		struct ANNOTATION {
 			short int id;
 			cv::Point location;
-			vector<unsigned int> poses;
+			std::vector<unsigned int> poses;
+			ANNOTATION(){
+				this->id    = 0;
+				this->poses = std::vector<unsigned int>(4,0);
+			}
+			~ANNOTATION(){
+				this->poses.clear();
+			}
 		};
 
 		/** Structure containing a vector of annotations for each image.
 		 */
 		struct FULL_ANNOTATIONS {
 			string imgFile;
-			vector<ANNOTATION> annos;
+			std::vector<annotationsHandle::ANNOTATION> annos;
+			FULL_ANNOTATIONS(){
+				this->imgFile = "";
+			}
+			~FULL_ANNOTATIONS(){
+				this->annos.clear();
+			}
 		};
 
 		/** Shows which id from the old annotations is assigned to which id from
@@ -52,16 +66,19 @@ class annotationsHandle {
 			short int id;
 			short int to;
 			double dist;
+			ASSIGNED(){
+				this->id   = 0;
+				this->to   = 0;
+				this->dist = 0.0;
+			}
 		};
 		//======================================================================
 		annotationsHandle(){};
 
 		virtual ~annotationsHandle(){
 			//free annotations
-			for(unsigned ind=0; ind<annotations.size(); ind++){
-				annotations[ind].poses.clear();
-			}
 			annotations.clear();
+			cvReleaseImage(&image);
 		};
 
 		/** Mouse handler for annotating people's positions and poses.
@@ -75,7 +92,7 @@ class annotationsHandle {
 
 		/** Plots the hull indicated by the parameter \c hull on the given image.
 		 */
-		static void plotHull(IplImage *img, vector<CvPoint> &hull);
+		static void plotHull(IplImage *img, std::vector<CvPoint> &hull);
 
 		/** Starts the annotation of the images. The parameters that need to be
 		 * indicated are:
@@ -96,32 +113,34 @@ class annotationsHandle {
 
 		/** Load annotations from file.
 		 */
-		static void loadAnnotations(char* filename, vector<FULL_ANNOTATIONS> \
-			&loadedAnno);
+		static void loadAnnotations(char* filename,\
+			std::vector<annotationsHandle::FULL_ANNOTATIONS> &loadedAnno);
 
 		/** Computes the average distance from the predicted location and the
 		 * annotated one, the number of unpredicted people in each image and
 		 * the differences in the pose estimation.
 		 */
-		static void annoDifferences(vector<FULL_ANNOTATIONS> &train, \
-			vector<FULL_ANNOTATIONS> &test, double &avgDist, double &Ndiff, \
-			double avgOrientDiff, double poseDiff);
+		static void annoDifferences(std::vector<annotationsHandle::FULL_ANNOTATIONS>\
+			&train, std::vector<annotationsHandle::FULL_ANNOTATIONS> &test,\
+			double &avgDist, double &Ndiff, double avgOrientDiff, double poseDiff);
 
 		/** Correlate annotations' from locations in \c annoOld to locations in
 		 * \c annoNew through IDs.
 		 */
-		static void correltateLocs(vector<ANNOTATION> &annoOld, vector<ANNOTATION> \
-			&annoNew,vector<ASSIGNED> &idAssignedTo);
+		static void correltateLocs(std::vector<annotationsHandle::ANNOTATION> &annoOld,\
+			std::vector<annotationsHandle::ANNOTATION> &annoNew,\
+			std::vector<annotationsHandle::ASSIGNED> &idAssignedTo);
 
 		/** Checks to see if a location can be assigned to a specific ID given the
 		 * new distance.
 		 */
-		static bool canBeAssigned(vector<ASSIGNED> &idAssignedTo, short int id, \
+		static bool canBeAssigned(std::vector<annotationsHandle::ASSIGNED> &idAssignedTo, short int id, \
 			double newDist, short int to);
 
 		/** Displays the complete annotations for all images.
 		 */
-		static void displayFullAnns(vector<FULL_ANNOTATIONS> &fullAnns);
+		static void displayFullAnns(std::vector<annotationsHandle::FULL_ANNOTATIONS>\
+			&fullAnns);
 
 		/** Starts the annotation of the images. The parameters that need to be
 		 * indicated are:
@@ -144,7 +163,7 @@ class annotationsHandle {
 		 * An instance of the structure \c ANNOTATIONS storing the annotations
 		 * for each image.
 		 */
-		static vector<ANNOTATION> annotations;
+		static std::vector<annotationsHandle::ANNOTATION> annotations;
 		/** @var choice
 		 * Indicates if the pose was defined for the current frame.
 		 */

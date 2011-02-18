@@ -2,11 +2,23 @@
  * Author: Silvia-Laura Pintea
  */
 #include "featureDetector.h"
+
+//==============================================================================
+struct onScanline{
+	public:
+		unsigned pixelY;
+		onScanline(const unsigned pixelY){this->pixelY=pixelY;}
+		bool operator()(const scanline_t line)const{
+			return (line.line == this->pixelY);
+		}
+};
 //==============================================================================
 /** Initializes the parameters of the tracker.
  */
 void featureDetector::init(std::string dataFolder, std::string theAnnotationsFile){
-	this->producer = NULL;
+	if(this->producer!=NULL){
+		delete this->producer;
+	}
 	this->producer = new ImgProducer(dataFolder.c_str(), true);
 	for(size_t i=0; i<this->data.size(); i++){
 		this->data[i].release();
@@ -32,6 +44,8 @@ void featureDetector::init(std::string dataFolder, std::string theAnnotationsFil
 		annotationsHandle::loadAnnotations(const_cast<char*>\
 			(theAnnotationsFile.c_str()), this->targetAnno);
 	}
+
+	std::cout<<"done with init";
 }
 //==============================================================================
 /** Get perpendicular to a line given by 2 points A, B in point C.
@@ -138,19 +152,21 @@ cv::Mat thresholded){
 //==============================================================================
 /** Compares SURF 2 descriptors and returns the boolean value of their comparison.
  */
-bool featureDetector::compareDescriptors(const cv::KeyPoint k1, const cv::KeyPoint k2){
-	return (k1.response<k2.response);
+bool featureDetector::compareDescriptors(const featureDetector::keyDescr k1,\
+const featureDetector::keyDescr k2){
+	return (k1.keys.response>k2.keys.response);
 }
+
 //==============================================================================
 /** SURF descriptors (Speeded Up Robust Features).
  */
-void featureDetector::getSURF(cv::Mat &feature, cv::Mat image, unsigned minX,\
-unsigned minY, std::vector<CvPoint> templ){
+void featureDetector::getSURF(cv::Mat &feature, cv::Mat image, int minX,\
+int minY, std::vector<CvPoint> templ){
 	// EXTRACT THE SURF KEYPOINTS AND THE DESCRIPTORS
 	std::vector<float> descriptors;
 	cv::Mat mask;
 	std::vector<cv::KeyPoint> keypoints;
-	cv::SURF aSURF = cv::SURF();
+	cv::SURF aSURF = cv::SURF(10,3,4,false);
 
 	// FINDS MIN AND MAX IN TEMPLATE
 	double minTmplX = std::max(0,templ[0].x-minX),
@@ -165,45 +181,48 @@ unsigned minY, std::vector<CvPoint> templ){
 		if(minTmplX>templ[i].x) minTmplX  = templ[i].x;
 		if(maxTmplX<=templ[i].x) maxTmplX = templ[i].x;
 	}
-	image = image(cv::Range(minTmplY,maxTmplY),cv::Range(minTmplX,maxTmplX));
 	cv::Mat_<double> gray;
 	cv::cvtColor(image, gray, CV_BGR2GRAY);
 	aSURF(gray, mask, keypoints, descriptors, false);
 
 	// KEEP THE DESCRIPTORS WITHIN THE BORDERS ONLY
-	uchar removed = 1;
-	while(removed){
-		removed = 0;
-		for(std::size_t i=0; i<descriptors.size();i++){
-			if(this->isInTemplate(keypoints[i].pt.x,keypoints[i].pt.y,templ)){
-				descriptors.erase(descriptors.begin()+i);
-				removed = 1;
-				break;
+	std::vector<featureDetector::keyDescr> kD;
+	for(std::size_t i=0; i<descriptors.size();i++){
+		if(this->isInTemplate(keypoints[i].pt.x,keypoints[i].pt.y,templ)){
+			featureDetector::keyDescr tmp;
+			for(int j=0; j<aSURF.descriptorSize();j++){
+				tmp.descr.push_back(descriptors[i*aSURF.descriptorSize()+j]);
 			}
+			tmp.keys = keypoints[i];
+			kD.push_back(tmp);
 		}
 	}
 
-	// SORT THE REMAINING DESCRIPTORS AND KEEP ONLY THE FIRST 10
-	std::sort(descriptors.begin(),descriptors.end(),this->compareDescriptors);
-	if(descriptors.size()>10){
-		descriptors.erase(descriptors.begin()+10,descriptors.end());
-	}
-	for(std::size_t i=0; i<descriptors.size(); i++){
-		std::cout<<"descriptors: "<<descriptors[i].response;
+	// SORT THE REMAINING DESCRIPTORS AND KEEP ONLY THE FIRST ?
+	std::sort(kD.begin(),kD.end(),(&featureDetector::compareDescriptors));
+	std::vector<float> keptDescr;
+	feature = cv::Mat::zeros(cv::Size(10*aSURF.descriptorSize(),1),\
+				cv::DataType<double>::type);
+	for(unsigned i=0; i<std::min(10,static_cast<int>(kD.size())); i++){
+		cv::Mat stupid1 = cv::Mat(kD[i].descr).t();
+		cv::Mat stupid2 = feature.colRange(i*aSURF.descriptorSize(),\
+							i*aSURF.descriptorSize()+aSURF.descriptorSize());
+		stupid1.convertTo(stupid2,cv::DataType<double>::type);
+		stupid1.release();
 	}
 
-	feature = cv::Mat(descriptors).reshape(0,1);
-	std::cout<<"feature size: "<<feature.cols<<" "<<feature.rows<<std::endl;
+	std::cout<<"key-size:"<<kD.size()<<" feat-size:"<<feature.cols<<std::endl;
 
 	if(this->plotTracks){
-		for(std::size_t i = 0; i <keypoints.size(); i++){
-			cv::circle(image, cv::Point(keypoints[i].pt.x, keypoints[i].pt.y),\
-				keypoints[i].size, cv::Scalar(0,0,255), 1, 8, 0);
+		for(std::size_t i=0; i<kD.size(); i++){
+			cv::circle(image, cv::Point(kD[i].keys.pt.x, kD[i].keys.pt.y),\
+				kD[i].keys.size, cv::Scalar(0,0,255), 1, 8, 0);
 		}
 		cv::imshow("SURFS", image);
 		cv::waitKey(0);
 	}
 	mask.release();
+	gray.release();
 }
 //==============================================================================
 /** Creates a "histogram" of interest points + number of blobs.
@@ -216,12 +235,10 @@ std::vector<CvPoint> templ, int minX, int minY){
 		minTmplY = std::max(0,templ[0].y-minY),\
 		maxTmplY = std::max(0,templ[0].y-minY);
 	for(std::size_t i=0; i<templ.size();i++){
-		templ[i].y = std::max(0, templ[i].y - minY);
-		templ[i].x = std::max(0, templ[i].x - minX);
-		if(minTmplY>templ[i].y) minTmplY  = templ[i].y;
-		if(maxTmplY<=templ[i].y) maxTmplY = templ[i].y;
-		if(minTmplX>templ[i].x) minTmplX  = templ[i].x;
-		if(maxTmplX<=templ[i].x) maxTmplX = templ[i].x;
+		if(minTmplY>templ[i].y-minY) minTmplY  = templ[i].y - minY;
+		if(maxTmplY<=templ[i].y-minY) maxTmplY = templ[i].y - minY;
+		if(minTmplX>templ[i].x-minX) minTmplX  = templ[i].x - minX;
+		if(maxTmplX<=templ[i].x-minX) maxTmplX = templ[i].x - minX;
 	}
 
 	// EXTRACT MAXIMALLY STABLE BLOBS
@@ -235,7 +252,7 @@ std::vector<CvPoint> templ, int minX, int minY){
 	uchar msersTmpl = 0;
 	for(std::size_t x=0; x<msers.size(); x++){
 		for(std::size_t y=0; y<msers[x].size(); y++){
-			if(this->isInTemplate(msers[x][y].x,msers[x][y].y,templ)){
+			if(this->isInTemplate(msers[x][y].x+minX,msers[x][y].y+minY,templ)){
 				msersTmpl++;
 			}
 		}
@@ -247,9 +264,9 @@ std::vector<CvPoint> templ, int minX, int minY){
 		cv::waitKey(0);
 	}
 
-	unsigned no             = 6;
+	unsigned no             = 10;
 	feature                 = cv::Mat(1,no*no+1,cv::DataType<double>::type);
-	feature.at<double>(0,0) = msersTmpl;
+	feature.at<double>(0,0) = static_cast<double>(msersTmpl);
 
 	// HISTOGRAM OF NICE FEATURES
 	std::vector<cv::Point2f> corners;
@@ -258,8 +275,6 @@ std::vector<CvPoint> templ, int minX, int minY){
 	cv::GridAdaptedFeatureDetector gafd(detector, 5000, no, no);
 	std::vector<cv::KeyPoint> keys;
 	std::vector<unsigned> indices;
-
-	image = image(cv::Range(minTmplY,maxTmplY),cv::Range(minTmplX,maxTmplX));
 	gafd.detect(image, keys);
 
 	//COUNT THE INTEREST POINTS IN EACH CELL
@@ -269,10 +284,10 @@ std::vector<CvPoint> templ, int minX, int minY){
 		for(double y=minTmplY; y<maxTmplY; y+=(maxTmplY-minTmplY)/no){
 			if(indices.empty()){
 				for(std::size_t i=0; i<keys.size(); i++){
-					if(this->isInTemplate(keys[i].pt.x,keys[i].pt.y,templ)){
+					if(this->isInTemplate(keys[i].pt.x+minX,keys[i].pt.y+minY,templ)){
 						indices.push_back(i);
 						if(x<=keys[i].pt.x && keys[i].pt.x<x+(maxTmplX-minTmplX)/no\
-						&& y<=keys[i].pt.y && keys[i].pt.y<y+(maxTmplX-minTmplX)/no){
+						&& y<=keys[i].pt.y && keys[i].pt.y<y+(maxTmplY-minTmplY)/no){
 							histo.at<double>(0,contor) += 1.0;
 						}
 					}
@@ -292,13 +307,12 @@ std::vector<CvPoint> templ, int minX, int minY){
 	cv::Mat stupid = feature.colRange(1,no*no+1);
 	histo.copyTo(stupid);
 	histo.release();
+
 	//-----------------REMOVE--------------------------
-	/*
 	for(int i=0; i<feature.cols; i++){
 		std::cout<<feature.at<double>(0,i)<<" ";
 	}
 	std::cout<<std::endl;
-	*/
 	//-------------------------------------------------
 }
 //==============================================================================
@@ -422,12 +436,24 @@ std::vector<CvPoint> templ){
 	convexHull(templ, hull);
 	std::vector<scanline_t> lines;
 	getScanLines(hull, lines);
-	for(std::vector<scanline_t>::const_iterator i=lines.begin();i!=lines.end();++i){
-		if(i->line==pixelY && i->start<=pixelX && i->end>=pixelX){
-			return true;
-		};
+
+	std::vector<scanline_t>::iterator iter = std::find_if(lines.begin(),\
+		lines.end(), onScanline(pixelY));
+	if(iter == lines.end()) return false;
+
+/*
+	cout << "iter->line=" << iter->line << endl;
+	cout << "PixelX=" << pixelX << endl;
+	cout << "PixelY=" << pixelY << endl;
+	cout << "iter->start=" << iter->start << endl;
+	cout << "iter->end=" << iter->end << endl;
+*/
+
+	if(iter->line==pixelY && iter->start<=pixelX && iter->end>=pixelX){
+		return true;
+	}else{
+		return false;
 	}
-	return false;
 }
 //==============================================================================
 /** Returns the size of a window around a template centered in a given point.
@@ -441,10 +467,31 @@ int &minY, int &maxY, std::vector<CvPoint> &templ, unsigned tplBorder){
 		if(minY>templ[i].y){minY = templ[i].y;}
 		if(maxY<templ[i].y){maxY = templ[i].y;}
 	}
-	minY = std::max((int)(minY-tplBorder),0);
-	maxY = std::min(imgSize.height,(int)(maxY+tplBorder));
-	minX = std::max((int)(minX-tplBorder),0);
-	maxX = std::min(imgSize.width,(int)(maxX+tplBorder));
+
+	// TRY TO ADD BORDERS TO MAKE IT 100
+	int diffX = (tplBorder - (maxX-minX))/2;
+	int diffY = (tplBorder - (maxY-minY))/2;
+	minY = std::max(minY-diffY,0);
+	maxY = std::min(maxY+diffY,imgSize.height);
+	minX = std::max(minX-diffX,0);
+	maxX = std::min(maxX+diffX,imgSize.width);
+
+	if(minX-maxX!=tplBorder){
+		int diffX2 = tplBorder-(maxX-minX);
+		if(minX>diffX2){
+			minX += diffX2;
+		}else if(maxX<imgSize.width-diffX2){
+			minX += diffX2;
+		}
+	}
+	if(minY-maxY!=tplBorder){
+		int diffY2 = tplBorder-(maxY-minY);
+		if(minY>diffY2){
+			minY += diffY2;
+		}else if(maxY<imgSize.height-diffY2){
+			minY += diffY2;
+		}
+	}
 }
 //==============================================================================
 /** Get the foreground pixels corresponding to each person.
@@ -458,11 +505,6 @@ void featureDetector::allForegroundPixels(std::vector<featureDetector::people>\
 	cv::threshold(thrsh, thrsh, threshold, 255, cv::THRESH_BINARY);
 	cv::Mat foregr(cvCloneImage(this->current->img));
 
-	std::vector<int> tmpminX(existing.size(),thrsh.cols);
-	std::vector<int> tmpmaxX(existing.size(),0);
-	std::vector<int> tmpminY(existing.size(),thrsh.rows);
-	std::vector<int> tmpmaxY(existing.size(),0);
-
 	// FOR EACH EXISTING TEMPLATE LOOK ON AN AREA OF 100 PIXELS AROUND IT
 	cout<<"number of templates: "<<existing.size()<<endl;
 	for(unsigned k=0; k<existing.size();k++){
@@ -471,20 +513,12 @@ void featureDetector::allForegroundPixels(std::vector<featureDetector::people>\
 		std::vector<CvPoint> templ;
 		genTemplate2(center, persHeight, camHeight, templ);
 
-		//-------------REMOVE--------------------
-		/*
-		plotTemplate2(this->current->img,center,persHeight,camHeight,\
-				cv::Scalar(255,0,0));
-		cv::imshow("template",this->current->img);
-		*/
-		//---------------------------------------------
-
+		// GET THE 100X100 WINDOW ON THE TEMPLATE
 		int minY=thrsh.rows, maxY=0, minX=thrsh.cols, maxX=0;
 		this->templateWindow(cv::Size(foregr.cols,foregr.rows),minX, maxX,\
 			minY, maxY, templ);
-
-		int width   = maxX-minX;
-		int height  = maxY-minY;
+		int width        = maxX-minX;
+		int height       = maxY-minY;
 		cv::Mat colorRoi = cv::Mat(foregr.clone(),cv::Rect(cv::Point(minX,minY),\
 							cv::Size(width,height)));
 
@@ -492,6 +526,7 @@ void featureDetector::allForegroundPixels(std::vector<featureDetector::people>\
 		for(unsigned x=0; x<maxX-minX; x++){
 			for(unsigned y=0; y<maxY-minY; y++){
 				if((int)(thrsh.at<uchar>((int)(y+minY),(int)(x+minX)))>0){
+
 					// IF THE PIXEL IS NOT INSIDE OF THE TEMPLATE
 					if(!this->isInTemplate((x+minX),(y+minY),templ)){
 						double minDist = thrsh.rows*thrsh.cols;
@@ -513,68 +548,39 @@ void featureDetector::allForegroundPixels(std::vector<featureDetector::people>\
 								}
 							}
 						}
-
 						// IF THE PIXEL HAS A DIFFERENT LABEL THEN THE CURR TEMPL
 						if(label != k || minDist>=persHeight/5){
 							colorRoi.at<cv::Vec3b>((int)y,(int)x) = cv::Vec3b(0,0,0);
-						// IF IS ASSIGNED TO CURR TEMPL, UPDATE THE BORDER
-						}else{
-							if(tmpminX[label]>x){tmpminX[label] = x;}
-							if(tmpmaxX[label]<x){tmpmaxX[label] = x;}
-							if(tmpminY[label]>y){tmpminY[label] = y;}
-							if(tmpmaxY[label]<y){tmpmaxY[label] = y;}
 						}
-						// IF IS ASSIGNED TO CURR TEMPL, UPDATE THE BORDER
-					}else{
-						if(tmpminX[k]>x){tmpminX[k] = x;}
-						if(tmpmaxX[k]<x){tmpmaxX[k] = x;}
-						if(tmpminY[k]>y){tmpminY[k] = y;}
-						if(tmpmaxY[k]<y){tmpmaxY[k] = y;}
 					}
-				// IF THE PIXEL VALUE IS BELOW THE THRESHOLD
 				}else{
 					colorRoi.at<cv::Vec3b>((int)y,(int)x) = cv::Vec3b(0,0,0);
 				}
 			}
 		}
-		// THE ACTUAL SIZE OF THE FOREGROUND PIXELS
-		if(tmpminX[k]==thrsh.cols){tmpminX[k]=0;}
-		if(tmpmaxX[k]==0){tmpmaxX[k]=maxX-minX;}
-		if(tmpminY[k]==thrsh.rows){tmpminY[k]=0;}
-		if(tmpmaxY[k]==0){tmpmaxY[k]=maxY-minY;}
-
-		// FIX THE FOREGROUND IMAGE TO BE 100/100 BY ADDING BLACK BORDERS
-		width  = tmpmaxX[k]-tmpminX[k];
-		height = tmpmaxY[k]-tmpminY[k];
-		if(width!=100){
-			tmpmaxX[k] += static_cast<int>((100-width)/2.0);
-			tmpminX[k] -= static_cast<int>((100-width)/2.0);
-		}
-		if(height!=100){
-			tmpmaxY[k] += static_cast<int>((100-height)/2.0);
-			tmpminY[k] -= static_cast<int>((100-height)/2.0);
-		}
-		if(tmpmaxX[k]-tmpminX[k]!=100){tmpmaxX[k] += 100-(tmpmaxX[k]-tmpminX[k]);}
-		if(tmpmaxY[k]-tmpminY[k]!=100){tmpmaxY[k] += 100-(tmpmaxY[k]-tmpminY[k]);}
-
-		allPeople[k].relativeLoc = cv::Point(center.x - (int)(minX + tmpminX[k]),\
-									center.y - (int)(minY + tmpminY[k]));
+		allPeople[k].relativeLoc = cv::Point(center.x - (int)(minX),\
+									center.y - (int)(minY));
 		allPeople[k].borders.assign(4,0);
-		allPeople[k].borders[0] = tmpminX[k]+minX;
-		allPeople[k].borders[1] = tmpmaxX[k]+minX;
-		allPeople[k].borders[2] = tmpminY[k]+minY;
-		allPeople[k].borders[3] = tmpmaxY[k]+minY;
-
-		// COPY THE FOREGROUND PIXELS INTO A CLEAN, SEPARATE IMAGE
-		width  = tmpmaxX[k]-tmpminX[k];
-		height = tmpmaxY[k]-tmpminY[k];
-		allPeople[k].pixels = cv::Mat(colorRoi.clone(),\
-			cv::Rect(cv::Point(tmpminX[k],tmpminY[k]),cv::Size(width,height)));
+		allPeople[k].borders[0] = minX;
+		allPeople[k].borders[1] = maxX;
+		allPeople[k].borders[2] = minY;
+		allPeople[k].borders[3] = maxY;
+		allPeople[k].pixels     = cv::Mat(colorRoi.clone());
 		if(this->plotTracks){
 			cv::imshow("people",allPeople[k].pixels);
 			cv::waitKey(0);
 		}
 		colorRoi.release();
+
+		//-------------REMOVE--------------------
+		/*
+		plotTemplate2(this->current->img,center,persHeight,camHeight,\
+				cv::Scalar(255,0,0));
+		cv::imshow("template",this->current->img);
+		cv::imshow("PPL",allPeople[k].pixels);
+		cv::waitKey(0);
+		*/
+		//---------------------------------------------
 	}
 	thrsh.release();
 	foregr.release();
@@ -681,7 +687,7 @@ void featureDetector::setFeatureType(featureDetector::FEATURE type){
  * descriptors.
  */
 void featureDetector::extractDataRow(std::vector<unsigned> existing, IplImage *bg){
-	cv::Mat image(this->current->img);
+	cv::Mat image(cvCloneImage(this->current->img));
 	cv::cvtColor(image, image, CV_BGR2Lab);
 
 	// REDUCE THE IMAGE TO ONLY THE INTERESTING AREA
@@ -703,9 +709,9 @@ void featureDetector::extractDataRow(std::vector<unsigned> existing, IplImage *b
 		std::vector<unsigned> borders = allPeople[i].borders;
 		unsigned width  = allPeople[i].borders[1]-allPeople[i].borders[0];
 		unsigned height = allPeople[i].borders[3]-allPeople[i].borders[2];
-		cv::Mat imgRoi  = cv::Mat(image.clone(),cv::Rect(cv::Point(\
-							allPeople[i].borders[0],allPeople[i].borders[2]),\
-							cv::Size(width,height)));
+		cv::Mat imgRoi(image.clone(),cv::Rect(cv::Point(\
+			allPeople[i].borders[0],allPeople[i].borders[2]),\
+			cv::Size(width,height)));
 		cv::Mat thresholded;
 		cv::inRange(allPeople[i].pixels,cv::Scalar(1,1,1),cv::Scalar(255,225,225),\
 			thresholded);
@@ -763,6 +769,7 @@ void featureDetector::extractDataRow(std::vector<unsigned> existing, IplImage *b
 	}
 	// FIX THE LABELS TO CORRESPOND TO THE PEOPLE DETECTED IN THE IMAGE
 	this->fixLabels(allLocations, this->current->sourceName, this->current->index);
+	image.release();
 }
 //==============================================================================
 /** Checks to see if an annotation can be assigned to a detection.
@@ -793,7 +800,6 @@ unsigned k,double distance, std::vector<int> &assignment){
  */
 double featureDetector::fixAngle(cv::Point feetLocation, cv::Point cameraLocation,\
 double angle){
-	std::cout<<"before: "<<(angle*180.0/M_PI)<<std::endl;
 	double cameraAngle = std::atan2((feetLocation.y-cameraLocation.y),\
 						(feetLocation.x-cameraLocation.x));
 	angle = angle-cameraAngle;
@@ -802,7 +808,6 @@ double angle){
 	}else if(angle < 0){
 		angle += 2.0*M_PI;
 	}
-	std::cout<<"after: "<<(angle*180.0/M_PI)<<std::endl;
 	return angle;
 }
 //==============================================================================
@@ -972,18 +977,13 @@ const FLOAT logBGProb,const vnl_vector<FLOAT> &logSumPixelBGProb){
 			cv::Point pt = this->cvPoint(existing[i]);
 			plotTemplate2(bg,pt,persHeight,camHeight,CV_RGB(255,255,255));
 			plotScanLines(this->current->img,mask,CV_RGB(0,255,0),0.3);
-			cv::Mat tmp = cv::Mat(cvCloneImage(this->current->img));
-			char buffer[50];
-			sprintf(buffer,"%u",i);
-			cv::putText(tmp,(string)buffer,pt,3,3.0,cv::Scalar(0,0,255),1,8,false);
-			tmp.release();
 		}
 		cvShowImage("bg", bg);
 		cvShowImage("image",src);
 	}
 	//8) WHILE NOT q WAS PRESSED PROCESS THE NEXT IMAGES
-	return this->imageProcessingMenu();
 	cvReleaseImage(&bg);
+	return this->imageProcessingMenu();
 }
 //==============================================================================
 /** Simple "menu" for skipping to the next image or quitting the processing.

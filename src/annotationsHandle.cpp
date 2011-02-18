@@ -36,7 +36,7 @@ void annotationsHandle::mouseHandlerAnn(int event, int x, int y, int flags, void
 				cout<<"Left button up at >>> ("<<x<<","<<y<<")"<<endl;
 				choice = ' ';
 				down = false;
-				ANNOTATION temp;
+				annotationsHandle::ANNOTATION temp;
 				temp.location = pt;
 				temp.id       = annotations.size();
 				temp.poses.assign(4, 0);
@@ -147,8 +147,8 @@ void annotationsHandle::showMenu(cv::Point center){
  */
 void annotationsHandle::trackBarHandleFct(int position,void *param){
 	//trackbarMutex.lock();
-	unsigned int *ii    = (unsigned int *)(param);
-	ANNOTATION lastAnno = annotations.back();
+	unsigned int *ii                       = (unsigned int *)(param);
+	annotationsHandle::ANNOTATION lastAnno = annotations.back();
 	annotations.pop_back();
 	if(lastAnno.poses.size()==0){
 		lastAnno.poses.assign(4,0);
@@ -193,7 +193,7 @@ void annotationsHandle::trackbar_callback(int position,void *param){
 //==============================================================================
 /** Plots the hull indicated by the parameter \c hull on the given image.
  */
-void annotationsHandle::plotHull(IplImage *img, vector<CvPoint> &hull){
+void annotationsHandle::plotHull(IplImage *img, std::vector<CvPoint> &hull){
 	hull.push_back(hull.front());
 	for(unsigned i=1; i<hull.size(); ++i){
 		cvLine(img, hull[i-1],hull[i],CV_RGB(255,0,0),2);
@@ -222,12 +222,12 @@ int annotationsHandle::runAnn(int argc, char **argv){
 		"> press 'n' to skip to the next image without saving the current one;\n"<< \
 		"> press 's' to save the annotations for the current image and go to the next one;\n"<<endl;
 	}
-	unsigned index      = 0;
-	vector<string> imgs = readImages(argv[1]);
+	unsigned index                = 0;
+	std::vector<std::string> imgs = readImages(argv[1]);
 	loadCalibration(argv[2]);
 
 	// load the priors
-	vector<CvPoint> priorHull;
+	std::vector<CvPoint> priorHull;
 	cerr<<"Loading the location prior...."<< argv[3] << endl;
 	loadPriorHull(argv[3], priorHull);
 
@@ -344,53 +344,64 @@ int annotationsHandle::runAnn(int argc, char **argv){
 //==============================================================================
 /** Load annotations from file.
  */
-void annotationsHandle::loadAnnotations(char* filename, vector<FULL_ANNOTATIONS> \
-	&loadedAnno){
+void annotationsHandle::loadAnnotations(char* filename, \
+std::vector<annotationsHandle::FULL_ANNOTATIONS> &loadedAnno){
 	ifstream annoFile(filename);
-	vector<char*> lineVect;
 
-	char *line = new char[1024];
+	std::cout<<"Loading annotations of...."<<filename<<std::endl;
 	if(annoFile.is_open()){
-		FULL_ANNOTATIONS tmpFullAnno;
+		annotationsHandle::FULL_ANNOTATIONS tmpFullAnno;
 		while(annoFile.good()){
+			char *line = new char[1024];
 			annoFile.getline(line,sizeof(char*)*1024);
-			lineVect            = splitWhite(line,true);
-			tmpFullAnno.imgFile = lineVect[0];
-			for(unsigned i=1; i<lineVect.size();i++){
-				ANNOTATION tmpAnno;
-				vector<char *> subVect = splitLine(lineVect[i],'|');
-				for(unsigned j=0; j<subVect.size();j++){
-					string temp(subVect[j]);
-					if(temp.find('(')!=string::npos){
-						temp.erase(temp.find('('),1);
-					}
-					if(temp.find(')')!=string::npos){
-						temp.erase(temp.find(')'),1);
-					}
-					subVect[j] = (char*)temp.c_str();
-					if(j==0){ // location is on the first position
-						vector<char *> locVect = splitLine(subVect[j],',');
-						if(locVect.size()==2){
-							tmpAnno.location.x = atoi(locVect[0]);
-							tmpAnno.location.y = atoi(locVect[1]);
+			std::vector<std::string> lineVect = splitLine(line,' ');
+
+			// IF IT IS NOT AN EMPTY FILE
+			if(lineVect.size()>0){
+				tmpFullAnno.imgFile = std::string(lineVect[0]);
+				for(unsigned i=1; i<lineVect.size();i++){
+					annotationsHandle::ANNOTATION tmpAnno;
+					std::vector<std::string> subVect = \
+						splitLine(const_cast<char*>(lineVect[i].c_str()),'|');
+					for(unsigned j=0; j<subVect.size();j++){
+						std::string temp(subVect[j]);
+						if(temp.find("(")!=string::npos){
+							temp.erase(temp.find("("),1);
 						}
-					}else{
-						if(tmpAnno.poses.size()<4){
-							for(unsigned l=0; l<4;l++){
-								tmpAnno.poses.push_back(0);
+						if(temp.find(")")!=string::npos){
+							temp.erase(temp.find(")"),1);
+						}
+						subVect[j] = temp;
+						if(j==0){
+							// location is on the first position
+							std::vector<std::string> locVect = \
+								splitLine(const_cast<char*>(subVect[j].c_str()),',');
+							if(locVect.size()==2){
+								char *pEndX, *pEndY;
+								tmpAnno.location.x = strtol(locVect[0].c_str(),&pEndX,10);
+								tmpAnno.location.y = strtol(locVect[1].c_str(),&pEndY,10);
+							}
+						}else{
+							if(tmpAnno.poses.empty()){
+								tmpAnno.poses = std::vector<unsigned int>(4,0);
+							}
+							std::vector<std::string> poseVect = \
+								splitLine(const_cast<char*>(subVect[j].c_str()),':');
+							if(poseVect.size()==2){
+								char *pEndP;
+								tmpAnno.poses[(POSE)(j-1)] = \
+									strtol(poseVect[1].c_str(),&pEndP,10);
 							}
 						}
-						vector<char *> poseVect = splitLine(subVect[j],':');
-						if(poseVect.size()==2){
-							tmpAnno.poses[(POSE)(j-1)] = atoi(poseVect[1]);
-						}
 					}
+					tmpAnno.id = tmpFullAnno.annos.size();
+					tmpFullAnno.annos.push_back(tmpAnno);
+					tmpAnno.poses.clear();
 				}
-				tmpAnno.id = tmpFullAnno.annos.size();
-				tmpFullAnno.annos.push_back(tmpAnno);
+				loadedAnno.push_back(tmpFullAnno);
+				tmpFullAnno.annos.clear();
 			}
-			loadedAnno.push_back(tmpFullAnno);
-			tmpFullAnno.annos.clear();
+			delete [] line;
 		}
 		annoFile.close();
 	}
@@ -399,8 +410,8 @@ void annotationsHandle::loadAnnotations(char* filename, vector<FULL_ANNOTATIONS>
 /** Checks to see if a location can be assigned to a specific ID given the
  * new distance.
  */
-bool annotationsHandle::canBeAssigned(vector<ASSIGNED> &idAssignedTo, short int \
-	id, double newDist, short int to){
+bool annotationsHandle::canBeAssigned(std::vector<annotationsHandle::ASSIGNED>\
+&idAssignedTo, short int id, double newDist, short int to){
 	bool isHere = false;
 	for(unsigned int i=0; i<idAssignedTo.size(); i++){
 		if(idAssignedTo[i].id == id){
@@ -419,7 +430,7 @@ bool annotationsHandle::canBeAssigned(vector<ASSIGNED> &idAssignedTo, short int 
 				alreadyTo = true;
 				if(idAssignedTo[i].dist>newDist){
 					//assigned the id to this one and un-assign the old one
-					ASSIGNED temp;
+					annotationsHandle::ASSIGNED temp;
 					temp.id   = id;
 					temp.to   = to;
 					temp.dist = newDist;
@@ -430,7 +441,7 @@ bool annotationsHandle::canBeAssigned(vector<ASSIGNED> &idAssignedTo, short int 
 			}
 		}
 		if(!alreadyTo){
-			ASSIGNED temp;
+			annotationsHandle::ASSIGNED temp;
 			temp.id   = id;
 			temp.to   = to;
 			temp.dist = newDist;
@@ -444,13 +455,14 @@ bool annotationsHandle::canBeAssigned(vector<ASSIGNED> &idAssignedTo, short int 
 /** Correlate annotations' from locations in \c annoOld to locations in \c
  * annoNew through IDs.
  */
-void annotationsHandle::correltateLocs(vector<ANNOTATION> &annoOld, \
-	vector<ANNOTATION> &annoNew, vector<ASSIGNED> &idAssignedTo){
-	vector< vector<double> > distMatrix;
+void annotationsHandle::correltateLocs(std::vector<annotationsHandle::ANNOTATION>\
+&annoOld, std::vector<annotationsHandle::ANNOTATION> &annoNew,\
+std::vector<annotationsHandle::ASSIGNED> &idAssignedTo){
+	std::vector< std::vector<double> > distMatrix;
 
 	//1. compute the distances between all annotations
 	for(unsigned k=0;k<annoNew.size();k++){
-		distMatrix.push_back(vector<double>());
+		distMatrix.push_back(std::vector<double>());
 		for(unsigned l=0;l<annoOld.size();l++){
 			distMatrix[k].push_back(0.0);
 			distMatrix[k][l] = dist(annoNew[k].location, annoOld[l].location);
@@ -496,9 +508,9 @@ void annotationsHandle::correltateLocs(vector<ANNOTATION> &annoOld, \
  * one, the number of unpredicted people in each image and the differences in the
  * pose estimation.
  */
-void annotationsHandle::annoDifferences(vector<FULL_ANNOTATIONS> &train, \
-	vector<FULL_ANNOTATIONS> &test, double &avgDist, double &Ndiff, double \
-	ssdOrientDiff, double poseDiff){
+void annotationsHandle::annoDifferences(std::vector<annotationsHandle::FULL_ANNOTATIONS>\
+&train, std::vector<annotationsHandle::FULL_ANNOTATIONS> &test, double &avgDist,\
+double &Ndiff, double ssdOrientDiff, double poseDiff){
 	if(train.size() != test.size()) {exit(1);}
 	for(unsigned i=0;i<train.size();i++){
 		if(train[i].imgFile != test[i].imgFile) {
@@ -507,7 +519,7 @@ void annotationsHandle::annoDifferences(vector<FULL_ANNOTATIONS> &train, \
 
 		/* the images might not be in the same ordered so they need to be assigned
 		 * to the closest one to them */
-		vector<ASSIGNED> idAssignedTo;
+		std::vector<annotationsHandle::ASSIGNED> idAssignedTo;
 		//0. if one of them is 0 then no correlation can be done
 		if(train[i].annos.size()!=0 && test[i].annos.size()!=0){
 			correltateLocs(train[i].annos, test[i].annos,idAssignedTo);
@@ -563,7 +575,8 @@ void annotationsHandle::annoDifferences(vector<FULL_ANNOTATIONS> &train, \
 //==============================================================================
 /** Displays the complete annotations for all images.
  */
-void annotationsHandle::displayFullAnns(vector<FULL_ANNOTATIONS> &fullAnns){
+void annotationsHandle::displayFullAnns(std::vector<annotationsHandle::FULL_ANNOTATIONS>\
+&fullAnns){
 	for(unsigned int i=0; i<fullAnns.size();i++){
 		cout<<"Image name: "<<fullAnns[i].imgFile<<endl;
 		for(unsigned int j=0; j<fullAnns[i].annos.size();j++){
@@ -594,8 +607,8 @@ int annotationsHandle::runEvaluation(int argc, char **argv){
 		exit(-1);
 	}
 
-	vector<FULL_ANNOTATIONS> allAnnoTrain;
-	vector<FULL_ANNOTATIONS> allAnnoTest;
+	std::vector<annotationsHandle::FULL_ANNOTATIONS> allAnnoTrain;
+	std::vector<annotationsHandle::FULL_ANNOTATIONS> allAnnoTest;
 	loadAnnotations(argv[1],allAnnoTrain);
 	loadAnnotations(argv[2],allAnnoTest);
 
@@ -609,7 +622,7 @@ int annotationsHandle::runEvaluation(int argc, char **argv){
 char annotationsHandle::choice;
 boost::mutex annotationsHandle::trackbarMutex;
 IplImage *annotationsHandle::image;
-vector<annotationsHandle::ANNOTATION> annotationsHandle::annotations;
+std::vector<annotationsHandle::ANNOTATION> annotationsHandle::annotations;
 //==============================================================================
 /*
 int main(int argc, char **argv){

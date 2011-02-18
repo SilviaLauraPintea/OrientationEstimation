@@ -97,6 +97,10 @@ class classifyImages {
 		classifyImages(int argc, char **argv);
 		virtual ~classifyImages();
 
+		/** Build dictionary for vector quantization.
+		 */
+		void buildDictionary(cv::Mat &entry, cv::Mat image);
+
 		/** Creates the training data (according to the options), the labels and
 		 * trains the a \c GaussianProcess on the data.
 		 */
