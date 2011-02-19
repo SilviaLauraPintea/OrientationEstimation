@@ -21,7 +21,12 @@ class cholesky {
 		cholesky(){
 			this->n = 0;
 		};
-		virtual ~cholesky(){ this->covar.release(); };
+		virtual ~cholesky(){
+			cv::Mat a;
+			if(!this->covar.empty()){
+				this->covar.release();
+			}
+		}
 
 		/** (Re)Initializes the class variables so the same instance of the class
 		 * can be used for multiple decompositions.

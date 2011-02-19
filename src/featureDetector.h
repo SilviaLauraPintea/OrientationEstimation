@@ -37,8 +37,12 @@ class featureDetector:public Tracker{
 				this->relativeLoc = cv::Point(0,0);
 			}
 			~people(){
-				this->borders.clear();
-				this->pixels.release();
+				if(!this->borders.empty()){
+					this->borders.clear();
+				}
+				if(!this->pixels.empty()){
+					this->pixels.release();
+				}
 			}
 		};
 
@@ -52,7 +56,9 @@ class featureDetector:public Tracker{
 			cv::KeyPoint keys;
 			std::vector<float> descr;
 			~keyDescr(){
-				descr.clear();
+				if(!this->descr.empty()){
+					this->descr.clear();
+				}
 			}
 		};
 		//======================================================================
@@ -72,20 +78,21 @@ class featureDetector:public Tracker{
 		}
 
 		virtual ~featureDetector(){
-			if(this->producer!=NULL){
+			if(this->producer){
 				delete this->producer;
+				this->producer = NULL;
 			}
-			for(size_t i=0; i<this->data.size(); i++){
-				this->data[i].release();
+			if(!this->targets.empty()){
+				this->targets.clear();
 			}
-			for(size_t i=0; i<this->targets.size(); i++){
-				this->targets[i].release();
+			if(!this->data.empty()){
+				this->data.clear();
 			}
-			this->targets.clear();
-			this->data.clear();
 
 			// CLEAR THE ANNOTATIONS
-			this->targetAnno.clear();
+			if(!this->targetAnno.empty()){
+				this->targetAnno.clear();
+			}
 		}
 
 		/** Function that gets the ROI corresponding to a head/feet of a person in

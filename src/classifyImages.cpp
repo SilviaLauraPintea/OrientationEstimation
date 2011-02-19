@@ -14,6 +14,7 @@ classifyImages::classifyImages(int argc, char **argv){
 	this->length           = 1.0;
 	this->kFunction        = &gaussianProcess::sqexp;
 	this->feature          = featureDetector::EDGES;
+	this->features         = NULL;
 
 	// READ THE COMMAND LINE ARGUMENTS
 	if(argc != 8 && argc!=5){
@@ -51,11 +52,23 @@ classifyImages::classifyImages(int argc, char **argv){
 }
 //==============================================================================
 classifyImages::~classifyImages(){
-	delete this->features;
-	this->trainData.release();
-	this->testData.release();
-	this->trainTargets.release();
-	this->testTargets.release();
+	if(this->features){
+		delete this->features;
+		this->features = NULL;
+	}
+
+	if(!this->trainData.empty()){
+		this->trainData.release();
+	}
+	if(!this->testData.empty()){
+		this->testData.release();
+	}
+	if(!this->trainTargets.empty()){
+		this->trainTargets.release();
+	}
+	if(!this->testTargets.empty()){
+		this->testTargets.release();
+	}
 }
 //==============================================================================
 /** Initialize the options for the Gaussian Process regression.
@@ -86,10 +99,10 @@ void classifyImages::trainGP(){
 	// CONVERT FROM VECTOR OF CV::MAT TO MAT
 	for(std::size_t i=0; i<this->features->data.size(); i++){
 		cv::Mat dummy1 = this->trainData.row(i);
-		cv::Mat(this->features->data[i]).copyTo(dummy1);
+		this->features->data[i].copyTo(dummy1);
 
 		cv::Mat dummy2 = this->trainTargets.row(i);
-		cv::Mat(this->features->targets[i]).copyTo(dummy2);
+		this->features->targets[i].copyTo(dummy2);
 	}
 
 	normalizeMat(this->trainData);
@@ -107,6 +120,8 @@ void classifyImages::trainGP(){
  * data.
  */
 void classifyImages::predictGP(){
+	std::cout<<"predict on"<<std::endl;
+
 	this->features->setFeatureType(this->feature);
 	this->features->init(this->testFolder, this->annotationsTest);
 	this->features->run();
@@ -121,7 +136,7 @@ void classifyImages::predictGP(){
 		this->features->data[i].copyTo(dummy1);
 
 		cv::Mat dummy2 = this->testTargets.row(i);
-		cv::Mat(this->features->targets[i]).copyTo(dummy2);
+		this->features->targets[i].copyTo(dummy2);
 	}
 
 	normalizeMat(this->testData);

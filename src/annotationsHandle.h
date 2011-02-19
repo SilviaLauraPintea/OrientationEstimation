@@ -42,7 +42,9 @@ class annotationsHandle {
 				this->poses = std::vector<unsigned int>(4,0);
 			}
 			~ANNOTATION(){
-				this->poses.clear();
+				if(!this->poses.empty()){
+					this->poses.clear();
+				}
 			}
 		};
 
@@ -55,7 +57,9 @@ class annotationsHandle {
 				this->imgFile = "";
 			}
 			~FULL_ANNOTATIONS(){
-				this->annos.clear();
+				if(!this->annos.empty()){
+					this->annos.clear();
+				}
 			}
 		};
 
@@ -73,12 +77,18 @@ class annotationsHandle {
 			}
 		};
 		//======================================================================
-		annotationsHandle(){};
+		annotationsHandle(){
+			image  = NULL;
+			choice = ' ';
+		};
 
 		virtual ~annotationsHandle(){
 			//free annotations
 			annotations.clear();
-			cvReleaseImage(&image);
+			if(image){
+				cvReleaseImage(&image);
+				image = NULL;
+			}
 		};
 
 		/** Mouse handler for annotating people's positions and poses.

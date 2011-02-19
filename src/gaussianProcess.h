@@ -26,8 +26,12 @@ class gaussianProcess {
 		  std::vector<double> mean;
 		  std::vector<double> variance;
 		  ~prediction(){
-			  this->mean.clear();
-			  this->variance.clear();
+			  if(!this->mean.empty()){
+				  this->mean.clear();
+			  }
+			  if(!this->variance.empty()){
+				  this->variance.clear();
+			  }
 		  }
 		};
 
@@ -42,10 +46,15 @@ class gaussianProcess {
 			this->rand_x     = 0;
 			this->rand_y     = 1;
 			this->N          = 0;
+			this->kFunction  = &gaussianProcess::sqexp;
 		};
 		virtual ~gaussianProcess(){
-			this->alpha.release();
-			this->data.release();
+			if(!this->alpha.empty()){
+				this->alpha.release();
+			}
+			if(!this->data.empty()){
+				this->data.release();
+			}
 		};
 
 		/** Generates a selected distribution of the functions given the parameters (the

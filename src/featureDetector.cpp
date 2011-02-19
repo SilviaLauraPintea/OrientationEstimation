@@ -16,16 +16,10 @@ struct onScanline{
 /** Initializes the parameters of the tracker.
  */
 void featureDetector::init(std::string dataFolder, std::string theAnnotationsFile){
-	if(this->producer!=NULL){
-		delete this->producer;
-	}
-	this->producer = new ImgProducer(dataFolder.c_str(), true);
-	for(size_t i=0; i<this->data.size(); i++){
-		this->data[i].release();
-	}
-	for(size_t i=0; i<this->targets.size(); i++){
-		this->targets[i].release();
-	}
+	std::cout<<"I can;t delete the producer"<<std::endl;
+	this->initProducer(dataFolder.c_str(), true);
+	std::cout<<"I can;t delete the producer???"<<std::endl;
+
 	this->targets.clear();
 	this->data.clear();
 
@@ -45,7 +39,7 @@ void featureDetector::init(std::string dataFolder, std::string theAnnotationsFil
 			(theAnnotationsFile.c_str()), this->targetAnno);
 	}
 
-	std::cout<<"done with init";
+	std::cout<<"after init"<<std::endl;
 }
 //==============================================================================
 /** Get perpendicular to a line given by 2 points A, B in point C.
@@ -980,6 +974,7 @@ const FLOAT logBGProb,const vnl_vector<FLOAT> &logSumPixelBGProb){
 		}
 		cvShowImage("bg", bg);
 		cvShowImage("image",src);
+		cv::waitKey(0);
 	}
 	//8) WHILE NOT q WAS PRESSED PROCESS THE NEXT IMAGES
 	cvReleaseImage(&bg);
