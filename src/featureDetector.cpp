@@ -16,12 +16,21 @@ struct onScanline{
 /** Initializes the parameters of the tracker.
  */
 void featureDetector::init(std::string dataFolder, std::string theAnnotationsFile){
-	std::cout<<"I can;t delete the producer"<<std::endl;
 	this->initProducer(dataFolder.c_str(), true);
-	std::cout<<"I can;t delete the producer???"<<std::endl;
 
-	this->targets.clear();
-	this->data.clear();
+	// CLEAR DATA AND TARGETS
+	if(!this->targets.empty()){
+		for(std::size_t i=0; i<this->targets.size(); i++){
+			this->targets[i].release();
+		}
+		this->targets.clear();
+	}
+	if(!this->data.empty()){
+		for(std::size_t i=0; i<this->data.size(); i++){
+			this->data[i].release();
+		}
+		this->data.clear();
+	}
 
 	// CLEAR THE ANNOTATIONS
 	for(std::size_t i=0; i<this->targetAnno.size(); i++){
@@ -38,8 +47,6 @@ void featureDetector::init(std::string dataFolder, std::string theAnnotationsFil
 		annotationsHandle::loadAnnotations(const_cast<char*>\
 			(theAnnotationsFile.c_str()), this->targetAnno);
 	}
-
-	std::cout<<"after init"<<std::endl;
 }
 //==============================================================================
 /** Get perpendicular to a line given by 2 points A, B in point C.
@@ -80,44 +87,12 @@ cv::Point offset){
 	}
 }
 //==============================================================================
-/** Gets strong corner points in an image.
- */
-void featureDetector::getCornerPoints(cv::Mat &feature, cv::Mat image,\
-std::vector<unsigned> borders, cv::Mat thresholded){
-	std::vector<cv::Point2f> corners;
-	cv::Mat_<uchar> gray;
-	cv::cvtColor(image, gray, CV_BGR2GRAY);
-	cv::goodFeaturesToTrack(gray, corners, 100, 0.001, image.rows/4);
-
-	for(std::size_t i = 0; i <corners.size(); i++){
-		// IF THE CORNERS ARE OUTSIDE THE BORDERS OF FOREGROUND PATCH
-		if(borders[0]>corners[i].x || borders[1]<corners[i].x ||\
-		borders[2]>corners[i].y || borders[3]<corners[i].y){
-			corners.erase(corners.begin()+i);
-		}
-		if(this->plotTracks){
-			cv::circle(image, cv::Point(corners[i].x, corners[i].y), 1,\
-				cv::Scalar(0,0,255), 1, 8, 0);
-		}
-	}
-
-	// some feature extractor!!!
-
-	if(this->plotTracks){
-		cv::imshow("Corners", image);
-		cv::waitKey(0);
-		cvDestroyWindow("Corners");
-	}
-
-	gray.release();
-}
-//==============================================================================
 /** Gets the edges in an image.
  */
 void featureDetector::getEdges(cv::Mat &feature, cv::Mat image, unsigned reshape,\
 cv::Mat thresholded){
 	// GET THE EDGES
-	cv::Mat_<double> gray, edges;
+	cv::Mat gray, edges;
 	cv::cvtColor(image, gray, CV_BGR2GRAY);
 	cv::medianBlur(gray, gray, 3);
 	cv::Canny(gray, edges, 60, 30, 3, true);
@@ -150,7 +125,6 @@ bool featureDetector::compareDescriptors(const featureDetector::keyDescr k1,\
 const featureDetector::keyDescr k2){
 	return (k1.keys.response>k2.keys.response);
 }
-
 //==============================================================================
 /** SURF descriptors (Speeded Up Robust Features).
  */
@@ -175,7 +149,7 @@ int minY, std::vector<CvPoint> templ){
 		if(minTmplX>templ[i].x) minTmplX  = templ[i].x;
 		if(maxTmplX<=templ[i].x) maxTmplX = templ[i].x;
 	}
-	cv::Mat_<double> gray;
+	cv::Mat gray;
 	cv::cvtColor(image, gray, CV_BGR2GRAY);
 	aSURF(gray, mask, keypoints, descriptors, false);
 
@@ -433,15 +407,9 @@ std::vector<CvPoint> templ){
 
 	std::vector<scanline_t>::iterator iter = std::find_if(lines.begin(),\
 		lines.end(), onScanline(pixelY));
-	if(iter == lines.end()) return false;
-
-/*
-	cout << "iter->line=" << iter->line << endl;
-	cout << "PixelX=" << pixelX << endl;
-	cout << "PixelY=" << pixelY << endl;
-	cout << "iter->start=" << iter->start << endl;
-	cout << "iter->end=" << iter->end << endl;
-*/
+	if(iter == lines.end()){
+		return false;
+	}
 
 	if(iter->line==pixelY && iter->start<=pixelX && iter->end>=pixelX){
 		return true;
@@ -493,11 +461,11 @@ int &minY, int &maxY, std::vector<CvPoint> &templ, unsigned tplBorder){
 void featureDetector::allForegroundPixels(std::vector<featureDetector::people>\
 &allPeople, std::vector<unsigned> existing, IplImage *bg, double threshold){
 	// INITIALIZING STUFF
-	cv::Mat thsh(cvCloneImage(bg));
+	cv::Mat thsh(bg);
 	cv::Mat thrsh(thsh.rows, thsh.cols, CV_8UC1);
 	cv::cvtColor(thsh, thrsh, CV_BGR2GRAY);
 	cv::threshold(thrsh, thrsh, threshold, 255, cv::THRESH_BINARY);
-	cv::Mat foregr(cvCloneImage(this->current->img));
+	cv::Mat foregr(this->current->img);
 
 	// FOR EACH EXISTING TEMPLATE LOOK ON AN AREA OF 100 PIXELS AROUND IT
 	cout<<"number of templates: "<<existing.size()<<endl;
@@ -577,7 +545,6 @@ void featureDetector::allForegroundPixels(std::vector<featureDetector::people>\
 		//---------------------------------------------
 	}
 	thrsh.release();
-	foregr.release();
 }
 //==============================================================================
 /** Convolves an image with a Gabor filter with the given parameters and
@@ -681,7 +648,7 @@ void featureDetector::setFeatureType(featureDetector::FEATURE type){
  * descriptors.
  */
 void featureDetector::extractDataRow(std::vector<unsigned> existing, IplImage *bg){
-	cv::Mat image(cvCloneImage(this->current->img));
+	cv::Mat image(this->current->img);
 	cv::cvtColor(image, image, CV_BGR2Lab);
 
 	// REDUCE THE IMAGE TO ONLY THE INTERESTING AREA
@@ -733,23 +700,12 @@ void featureDetector::extractDataRow(std::vector<unsigned> existing, IplImage *b
 				this->getSURF(feature, imgRoi, allPeople[i].borders[0],\
 					allPeople[i].borders[2], templ);
 				break;
-			case featureDetector::CORNER:
-				this->getCornerPoints(feature, imgRoi, allPeople[i].borders, thresholded);
-				break;
+			case featureDetector::SIFT:
+				this->getSIFT(feature, imgRoi, allPeople[i].borders[0],\
+					allPeople[i].borders[2], templ);
 
 			/*
-			case featureDetector::ELLIPSE:
-				cv::Point2f boxCenter(0.f,0.f);
-				cv::Size2f boxSize(0,0);
-				cv::RotatedRect finalBox(boxCenter, boxSize, 0);
-				this->skinEllipses(finalBox,imgRoi,center,cv::Point(minX,minY),\
-				20,60);
-				if(!(finalBox.center == boxCenter && finalBox.angle == 0 && \
-				finalBox.size == boxSize)){
-					break;
-				}
 			case featureDetector::GABOR:
-				cv::Mat response;
 				this->getGabor(response, imgRoi);
 				break;
 			 */
@@ -763,7 +719,72 @@ void featureDetector::extractDataRow(std::vector<unsigned> existing, IplImage *b
 	}
 	// FIX THE LABELS TO CORRESPOND TO THE PEOPLE DETECTED IN THE IMAGE
 	this->fixLabels(allLocations, this->current->sourceName, this->current->index);
-	image.release();
+}
+//==============================================================================
+/** SIFT descriptors (Scale Invariant Feature Transform).
+ */
+void featureDetector::extractSIFT(cv::Mat &feature, cv::Mat image, int minX,\
+int minY, std::vector<CvPoint> templ){
+	// EXTRACT THE SURF KEYPOINTS AND THE DESCRIPTORS
+	std::vector<cv::KeyPoint> keypoints;
+	cv::SIFT::DetectorParams detectP  = cv::SIFT::DetectorParams(0.1,10.0);
+	cv::SIFT::DescriptorParams descrP = cv::SIFT::DescriptorParams(3.0,true,true);
+	cv::SIFT::CommonParams commonP    = cv::SIFT::CommonParams();
+	cv::SIFT aSIFT(commonP, detectP, descrP);
+
+	// FINDS MIN AND MAX IN TEMPLATE
+	double minTmplX = std::max(0,templ[0].x-minX),
+		maxTmplX = std::max(0,templ[0].x-minX),\
+		minTmplY = std::max(0,templ[0].y-minY),\
+		maxTmplY = std::max(0,templ[0].y-minY);
+	for(std::size_t i=0; i<templ.size();i++){
+		templ[i].y = std::max(0, templ[i].y - minY);
+		templ[i].x = std::max(0, templ[i].x - minX);
+		if(minTmplY>templ[i].y) minTmplY  = templ[i].y;
+		if(maxTmplY<=templ[i].y) maxTmplY = templ[i].y;
+		if(minTmplX>templ[i].x) minTmplX  = templ[i].x;
+		if(maxTmplX<=templ[i].x) maxTmplX = templ[i].x;
+	}
+	cv::Mat gray, mask;
+	cv::cvtColor(image, gray, CV_BGR2GRAY);
+	aSIFT(gray, mask, keypoints);
+
+	cv::vector<cv::KeyPoint> goodKP;
+	// KEEP THE DESCRIPTORS WITHIN THE BORDERS ONLY
+	for(std::size_t i=0; i<keypoints.size();i++){
+		if(this->isInTemplate(keypoints[i].pt.x,keypoints[i].pt.y,templ)){
+			goodKP.push_back(keypoints[i]);
+		}
+	}
+
+	cv::Mat descriptors;
+	aSIFT(gray, mask, goodKP, descriptors, true);
+
+	std::cout<<"SIFT size: "<<descriptors.cols<<" "<<descriptors.rows<<std::endl;
+
+	feature = descriptors.clone().reshape(0,1);
+
+	if(this->plotTracks){
+		for(std::size_t i=0; i<goodKP.size(); i++){
+			cv::circle(image, cv::Point(goodKP[i].pt.x, goodKP[i].pt.y),\
+				goodKP[i].response, cv::Scalar(0,0,255), 1, 8, 0);
+		}
+		cv::imshow("SIFT", image);
+		cv::waitKey(0);
+	}
+	mask.release();
+	gray.release();
+}
+//==============================================================================
+/** Compute the features from the SIFT descriptors by doing vector quantization.
+ */
+void featureDetector::getSIFT(cv::Mat &feature, cv::Mat image, int minX,\
+int minY, std::vector<CvPoint> templ){
+	this->extractSIFT(feature, image, minX, minY, templ);
+
+	// IF DICTIONARY EXISTS THEN LOAD IT, ELSE CREATE IT AND STORE IT.
+
+	// QUANTIZE THE DESCRIPTORS AND COMPUTE THE HISTOGRAM
 }
 //==============================================================================
 /** Checks to see if an annotation can be assigned to a detection.
@@ -797,7 +818,7 @@ double angle){
 	double cameraAngle = std::atan2((feetLocation.y-cameraLocation.y),\
 						(feetLocation.x-cameraLocation.x));
 	angle = angle-cameraAngle;
-	if(angle>=2.0*M_PI){
+	if(angle >= 2.0*M_PI){
 		angle -= 2.0*M_PI;
 	}else if(angle < 0){
 		angle += 2.0*M_PI;
@@ -969,8 +990,8 @@ const FLOAT logBGProb,const vnl_vector<FLOAT> &logSumPixelBGProb){
 		this->plotHull(bg, this->priorHull);
 		for(unsigned i=0; i!=existing.size(); ++i){
 			cv::Point pt = this->cvPoint(existing[i]);
-			plotTemplate2(bg,pt,persHeight,camHeight,CV_RGB(255,255,255));
-			plotScanLines(this->current->img,mask,CV_RGB(0,255,0),0.3);
+			plotTemplate2(bg, pt, persHeight, camHeight, CV_RGB(255,255,255));
+			plotScanLines(src, mask, CV_RGB(0,255,0), 0.3);
 		}
 		cvShowImage("bg", bg);
 		cvShowImage("image",src);

@@ -22,7 +22,6 @@ class cholesky {
 			this->n = 0;
 		};
 		virtual ~cholesky(){
-			cv::Mat a;
 			if(!this->covar.empty()){
 				this->covar.release();
 			}
@@ -64,6 +63,6 @@ class cholesky {
 	//==========================================================================
 	public:
 		unsigned n;
-		cv::Mat_<double> covar;
+		cv::Mat covar;
 };
 #endif /* CHOLESKY_H_ */

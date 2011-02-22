@@ -17,7 +17,7 @@ cv::Mat mu, cv::Mat cov, double a, double b, double s){
 		case (gaussianProcess::BETA):
 			if(x.cols!=1 || x.rows!=1){
 				std::cerr<<"GaussianProcess BETA distribution: size(x) = (1,1)!"<<std::endl;
-				exit(1);
+				goto err;
 			}
 			result = (gamma(a+b)*(std::pow(x.at<double>(0,0),(a-1.0)))*\
 						(std::pow(1.0-x.at<double>(0,0),(b-1.0))))/(gamma(a)+gamma(b));
@@ -25,11 +25,11 @@ cv::Mat mu, cv::Mat cov, double a, double b, double s){
 		case (gaussianProcess::GAUSS):
 			if(x.cols!=1 || x.rows!=1){
 				std::cerr<<"GaussianProcess GAUSS distribution: size(x) = (1,1)!"<<std::endl;
-				exit(1);
+				goto err;
 			}
 			if(mu.cols!=1 || mu.rows!=1){
 				std::cerr<<"GaussianProcess GAUSS distribution: size(mu) = (1,1)!(mean)"<<std::endl;
-				exit(1);
+				goto err;
 			}
 			result = std::exp(-std::pow((x.at<double>(0,0)-mu.at<double>(0,0)),2)/\
 						(2.0*std::pow(s,2)))/(std::sqrt(2.0*M_PI)*s);
@@ -37,15 +37,15 @@ cv::Mat mu, cv::Mat cov, double a, double b, double s){
 		case (gaussianProcess::GAUSS2D):
 			if(x.cols!=2 || x.rows!=1){
 				std::cerr<<"GaussianProcess GAUSS2D distribution: size(x)=(1,2)!(x.x,x.y)"<<std::endl;
-				exit(1);
+				goto err;
 			}
 			if(mu.cols!=2 || mu.rows!=1){
 				std::cerr<<"GaussianProcess GAUSS2D distribution: size(mu)=(1,2)!(mu.x,mu.y)"<<std::endl;
-				exit(1);
+				goto err;
 			}
 			if(cov.cols!=2 || cov.rows!=2){
 				std::cerr<<"GaussianProcess GAUSS2D distribution: size(cov)=(2,2)!(covariance)"<<std::endl;
-				exit(1);
+				goto err;
 			}
 			det2   = (cov.at<double>(0,0)*cov.at<double>(1,1) -\
 							cov.at<double>(0,1)*cov.at<double>(1,0));
@@ -56,11 +56,11 @@ cv::Mat mu, cv::Mat cov, double a, double b, double s){
 		case (gaussianProcess::GAUSSnD):
 			if(x.cols<2 || x.rows!=1){
 				std::cerr<<"GaussianProcess GAUSSnD distribution: size(x)=(1,n)!(a row)"<<std::endl;
-				exit(1);
+				goto err;
 			}
 			if(mu.cols<2 || mu.rows!=1){
 				std::cerr<<"GaussianProcess GAUSSnD distribution: size(mu)=(1,n)!(a row)"<<std::endl;
-				exit(1);
+				goto err;
 			}
 			// IF NO DECOMPOSITION WAS DONE, DO THAT
 			if(!this->chlsky.checkDecomposition()){
@@ -74,11 +74,11 @@ cv::Mat mu, cv::Mat cov, double a, double b, double s){
 		case (gaussianProcess::LOGGAUSSnD):
 			if(x.cols<2 || x.rows!=1){
 				std::cerr<<"GaussianProcess LOGGAUSS2D distribution: size(x)=(1,n)!(a row)"<<std::endl;
-				exit(1);
+				goto err;
 			}
 			if(mu.cols<2 || mu.rows!=1){
 				std::cerr<<"GaussianProcess LOGGAUSS2D distribution: size(mu)=(1,n)!(a row)"<<std::endl;
-				exit(1);
+				goto err;
 			}
 			// IF NO DECOMPOSITION WAS DONE, DO THAT
 			if(!this->chlsky.checkDecomposition()){
@@ -93,27 +93,30 @@ cv::Mat mu, cv::Mat cov, double a, double b, double s){
 	inv.release();
 	diff.release();
 	return result;
+	err:
+		diff.release();
+		inv.release();
+		exit(1);
 }
 //==============================================================================
 /** Trains the Gaussian process.
  */
-void gaussianProcess::train(cv::Mat_<double> X, cv::Mat_<double> y,\
-double (gaussianProcess::*fFunction)(cv::Mat, cv::Mat, double),double sigmasq,\
-double length){
+void gaussianProcess::train(cv::Mat X,cv::Mat y,double (gaussianProcess::*fFunction)\
+(cv::Mat, cv::Mat, double),double sigmasq, double length){
 	if(y.rows != X.rows){
 		std::cerr<<"In Gaussian Process - train: X and y need to be defined for the"<<\
 			" same number of points"<<std::endl;
-		exit(1);
+		return;
 	}
-
+	X.convertTo(X, cv::DataType<double>::type);
+	y.convertTo(y, cv::DataType<double>::type);
 	this->chlsky.init();
 	this->kFunction = fFunction;
 	this->N         = X.rows; // NUMBER OF TRAINING DATA POINTS!
-	this->data      = X; // KEEP REFERENCE TO THE TRAINING DATA?
+	this->data      = X.clone();
 
 	// BUILD THE KERNEL MARIX K: K(i,j) = k(x[i],x[j])
-	cv::Mat_<double> K = cv::Mat::zeros(cv::Size(this->N,this->N),\
-						 cv::DataType<double>::type);
+	cv::Mat K = cv::Mat::zeros(cv::Size(this->N,this->N), cv::DataType<double>::type);
 	for(unsigned indy=0; indy<this->N; indy++){
 		for(unsigned indx=0; indx<this->N; indx++){
 			K.at<double>(indy,indx) = (this->*kFunction)(X.row(indy),\
@@ -154,6 +157,7 @@ double length){
 	this->chlsky.solveL(kstar,v);
 	predi.variance.push_back((this->*kFunction)(x,x,length) - v.dot(v));
 	kstar.release();
+	v.release();
 }
 //==============================================================================
 /** Samples the process that generates the inputs.

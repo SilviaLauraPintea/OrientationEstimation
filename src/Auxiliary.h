@@ -19,9 +19,6 @@
 using namespace std;
 using namespace boost;
 
-/** Reads images from a dir and stores them into a vector of strings.
- */
-vector<string> readAllImages(const char* dirName);
 /** Converts a pointer to an IplImage to an OpenCV Mat.
  */
 cv::Mat ipl2mat(IplImage* ipl_image);
@@ -31,5 +28,9 @@ IplImage* mat2ipl(cv::Mat image);
 /** Convert the values from a cv::Mat of doubles to be between 0 and 1.
  */
 void normalizeMat(cv::Mat &matrix);
+
+/* Changes the values of the matrix to be between [-1,1]
+ */
+void range1Mat(cv::Mat &matrix);
 
 #endif /* AUXILIARY_H_ */

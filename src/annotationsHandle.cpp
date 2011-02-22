@@ -215,7 +215,7 @@ int annotationsHandle::runAnn(int argc, char **argv){
 		"<calib.xml>       => the file contains the calibration data of the camera\n"<< \
 		"<prior.txt>       => the file containing the location prior\n"<< \
 		"<annotations.txt> => the file in which the annotation data needs to be stored\n"<<endl;
-		exit(-1);
+		exit(1);
 	} else {
 		cout<<"Help info:\n"<< \
 		"> press 'q' to quite before all the images are annotated;\n"<< \
@@ -407,6 +407,55 @@ std::vector<annotationsHandle::FULL_ANNOTATIONS> &loadedAnno){
 	}
 }
 //==============================================================================
+/** Writes a given FULL_ANNOTATIONS structure into a given file.
+ */
+void annotationsHandle::writeAnnoToFile(\
+std::vector<annotationsHandle::FULL_ANNOTATIONS> fullAnno, std::string fileName){
+	// OPEN THE FILE TO WRITE ANNOTATIONS
+	ofstream annoOut;
+	annoOut.open(fileName.c_str(), ios::out | ios::app);
+	if(!annoOut){
+		errx(1,"Cannot open file %s", fileName.c_str());
+	}
+	annoOut.seekp(0, ios::end);
+
+	for(std::size_t k=0; k<fullAnno.size();++k){
+		// WRITE THE IMAGE NAME
+		annoOut<<fullAnno[k].imgFile<<" ";
+
+		// FOR EACH ANNOTATION IN THE ANNOTATIONS ARRAY
+		for(std::size_t i=0; i<fullAnno[k].annos.size();++i){
+
+			// WRITE THE LOCATION OF THE DETECTED PERSON
+			annoOut<<"("<<fullAnno[k].annos[i].location.x<<","<<\
+				fullAnno[k].annos[i].location.y<<")|";
+			for(std::size_t j=0;j<fullAnno[k].annos[i].poses.size();j++){
+				switch((POSE)j){
+					case SITTING:
+						annoOut<<"(SITTING:"<<fullAnno[k].annos[i].poses[j]<<")|";
+						break;
+					case STANDING:
+						annoOut<<"(STANDING:"<<fullAnno[k].annos[i].poses[j]<<")|";
+						break;
+					case BENDING:
+						annoOut<<"(BENDING:"<<fullAnno[k].annos[i].poses[j]<<")|";
+						break;
+					case ORIENTATION:
+						annoOut<<"(ORIENTATION:"<<fullAnno[k].annos[i].poses[j]<<") ";
+						break;
+					default:
+						cout<<"Unknown pose ;)";
+						break;
+				}
+			}
+		}
+		annoOut<<endl;
+		cout<<"Annotations for image: "<<fullAnno[k].imgFile<<\
+			" were successfully saved!"<<endl;
+	}
+	annoOut.close();
+}
+//==============================================================================
 /** Checks to see if a location can be assigned to a specific ID given the
  * new distance.
  */
@@ -511,7 +560,10 @@ std::vector<annotationsHandle::ASSIGNED> &idAssignedTo){
 void annotationsHandle::annoDifferences(std::vector<annotationsHandle::FULL_ANNOTATIONS>\
 &train, std::vector<annotationsHandle::FULL_ANNOTATIONS> &test, double &avgDist,\
 double &Ndiff, double ssdOrientDiff, double poseDiff){
-	if(train.size() != test.size()) {exit(1);}
+	if(train.size() != test.size()) {
+		std::cerr<<"Training annotations and test annotations have different sizes";
+		exit(1);
+	}
 	for(unsigned i=0;i<train.size();i++){
 		if(train[i].imgFile != test[i].imgFile) {
 			errx(1,"Images on positions %i do not correspond",i);
@@ -544,6 +596,7 @@ double &Ndiff, double ssdOrientDiff, double poseDiff){
 		for(unsigned int l=0;l<train[i].annos.size();l++){
 			for(unsigned int k=0;k<test[i].annos.size();k++){
 				if(train[i].annos[l].id == test[i].annos[k].id){
+					// FOR POSES COMPUTE THE DIFFERENCES
 					for(unsigned int m=0;m<train[i].annos[l].poses.size()-1;m++){
 						if((POSE)m != BENDING){
 							poseDiff += abs((double)train[i].annos[l].poses[m] - \
@@ -553,12 +606,12 @@ double &Ndiff, double ssdOrientDiff, double poseDiff){
 									(double)test[i].annos[k].poses[m])/2.0;
 						}
 					}
+
 					// SSD between the predicted values and the correct ones
 					double angleTrain = ((double)train[i].annos[l].poses[3]*M_PI/180.0);
 					double angleTest  = ((double)test[i].annos[k].poses[3]*M_PI/180.0);
 					ssdOrientDiff += pow(cos(angleTrain)-cos(angleTest),2) +\
 									pow(sin(angleTrain)-sin(angleTest),2);
-					break;
 				}
 			}
 		}

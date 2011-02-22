@@ -99,7 +99,7 @@ class classifyImages {
 
 		/** Build dictionary for vector quantization.
 		 */
-		void buildDictionary(cv::Mat &entry, cv::Mat image);
+		void buildDictionary(char* fileToStore, char* dataFile);
 
 		/** Creates the training data (according to the options), the labels and
 		 * trains the a \c GaussianProcess on the data.
@@ -109,12 +109,17 @@ class classifyImages {
 		/** Creates the test data and applies \c GaussianProcess prediction on the test
 		 * data.
 		 */
-		void predictGP();
+		void predictGP(cv::Mat &predictions);
 
 		/** Initialize the options for the Gaussian Process regression.
 		 */
 		void init(double theNoise, double theLength, gaussianProcess::kernelFunction\
-		theKFunction, featureDetector::FEATURE theFeature);
+			theKFunction, featureDetector::FEATURE theFeature);
+
+		/** Evaluate one prediction versus its target.
+		 */
+		void evaluate(cv::Mat predictions, double &error,\
+			double &accuracy, char choice='O');
 };
 
 #endif /* CLASSIFYIMAGES_H_ */

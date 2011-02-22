@@ -48,7 +48,7 @@ class featureDetector:public Tracker{
 
 		/** All available feature types.
 		 */
-		enum FEATURE {IPOINTS, ELLIPSE, CORNER, EDGES, GABOR, SURF, SIFT};
+		enum FEATURE {IPOINTS, EDGES, SURF, SIFT, GABOR};
 
 		/** Structure for storing keypoints and descriptors.
 		 */
@@ -82,10 +82,17 @@ class featureDetector:public Tracker{
 				delete this->producer;
 				this->producer = NULL;
 			}
+			// CLEAR DATA AND TARGETS
 			if(!this->targets.empty()){
+				for(std::size_t i=0; i<this->targets.size(); i++){
+					this->targets[i].release();
+				}
 				this->targets.clear();
 			}
 			if(!this->data.empty()){
+				for(std::size_t i=0; i<this->data.size(); i++){
+					this->data[i].release();
+				}
 				this->data.clear();
 			}
 
@@ -142,13 +149,6 @@ class featureDetector:public Tracker{
 		 */
 		bool sameSubplane(cv::Point test,cv::Point point, double m, double b);
 
-		/** Gets strong corner points in an image.
-		 */
-		/** Gets strong corner points in an image.
-		 */
-		void getCornerPoints(cv::Mat &feature, cv::Mat image, std::vector<unsigned> \
-			borders, cv::Mat thresholded);
-
 		/** Gets the edges in an image.
 		 */
 		void getEdges(cv::Mat &feature, cv::Mat image, unsigned reshape=1,\
@@ -157,6 +157,17 @@ class featureDetector:public Tracker{
 		/** SURF descriptors (Speeded Up Robust Features).
 		 */
 		void getSURF(cv::Mat &feature, cv::Mat image, int minX, int minY,\
+			std::vector<CvPoint> templ);
+
+		/** Compute the features from the SIFT descriptors by doing vector
+		 * quantization.
+		 */
+		void getSIFT(cv::Mat &feature, cv::Mat image, int minX, int minY,\
+			std::vector<CvPoint> templ);
+
+		/** SIFT descriptors (Scale Invariant Feature Transform).
+		 */
+		void extractSIFT(cv::Mat &feature, cv::Mat image, int minX, int minY,\
 			std::vector<CvPoint> templ);
 
 		/** Creates a "histogram" of interest points + number of blobs.
@@ -235,12 +246,12 @@ class featureDetector:public Tracker{
 		/** @var data
 		 * The training data obtained from the feature descriptors.
 		 */
-		std::vector<cv::Mat_<double> > data;
+		std::vector<cv::Mat> data;
 
 		/** @var data
 		 * The targets/labels of the data.
 		 */
-		std::vector<cv::Mat_<double> > targets;
+		std::vector<cv::Mat> targets;
 
 		/** @var annotations
 		 * Loaded annotations for the read images.

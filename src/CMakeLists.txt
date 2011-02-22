@@ -19,9 +19,8 @@ SET(MT_SRC /data/Documents/masterProject/Social_Groups_Detection/src CACHE PATH 
 
 SET(EXECUTABLE_OUTPUT_PATH /data/Documents/masterProject/Social_Groups_Detection/bin CACHE PATH "Location of the compiled files")
 
-#SET(OPENCV1 /opt/OpenCV/include/opencv CACHE PATH "Location of the OpenCV headers")
-SET(OPENCV2 /opt/OpenCV/include/opencv2 CACHE PATH "Location of the OpenCV headers (version 2.2)")
-SET(OPENCV2LIB /usr/local/lib CACHE PATH "Lib")
+SET(OPENCV2 /usr/local/opencv/include CACHE PATH "Location of the OpenCV headers (version 2.2)")
+SET(OPENCV2LIB /usr/local/opencv/lib CACHE PATH "Lib")
 
 SET(VXL_BIN /opt/vxlbin CACHE PATH "Location of the VXL compiled library")
 SET(CMN_SRC /data/Documents/masterProject/Social_Groups_Detection/src/cmn/src CACHE PATH "Location of the CMN library source code")

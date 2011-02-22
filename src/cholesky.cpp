@@ -39,7 +39,7 @@ int cholesky::decomposeCov(cv::Mat a){
             if(indx==indy){
             	if(sum <= 0.0){
             		std::cerr<<"Decomposition failed, not positive defined";
-            		exit(1);
+            		return -1;
             	}
             	this->covar.at<double>(indy,indx) = std::sqrt(sum);
             }else{

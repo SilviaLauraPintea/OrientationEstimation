@@ -163,6 +163,11 @@ class annotationsHandle {
 		/** Shows how the selected orientation looks on the image.
 		 */
 		static void drawOrientation(cv::Point center, unsigned int orient);
+
+		/** Writes a given FULL_ANNOTATIONS structure into a given file.
+		 */
+		void writeAnnoToFile(std::vector<annotationsHandle::FULL_ANNOTATIONS>\
+			fullAnno, std::string fileName);
 		//======================================================================
 	protected:
 		/** @var image
