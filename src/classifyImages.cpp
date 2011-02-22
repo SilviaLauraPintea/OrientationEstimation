@@ -196,7 +196,7 @@ void classifyImages::buildDictionary(char* fileToStore, char* dataFile){
 	this->features->run();
 	// DO K-means
 
-	// STORE IT
+	// STORE IT ONCE AND THEN JUST LOAD IT
 }
 //==============================================================================
 int main(int argc, char **argv){
