@@ -46,6 +46,8 @@ ADD_LIBRARY(helpers
 ADD_LIBRARY(calib
   ${EIGEN_SRC}/sample/cameraModel.cpp
   ${EIGEN_SRC}/sample/xmlUtil.cpp
+  ${EIGEN_SRC}/calib/CamCalib.cc
+  ${EIGEN_SRC}/calib/sample/cameraModel.cpp
   )
 
 #ADD_EXECUTABLE(Tracker ${EIGEN_SRC}/Tracker.cc )

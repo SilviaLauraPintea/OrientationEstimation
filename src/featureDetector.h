@@ -48,7 +48,7 @@ class featureDetector:public Tracker{
 
 		/** All available feature types.
 		 */
-		enum FEATURE {IPOINTS, EDGES, SURF, SIFT, GABOR};
+		enum FEATURE {IPOINTS, EDGES, GET_SIFT, SURF, SIFT, GABOR};
 
 		/** Structure for storing keypoints and descriptors.
 		 */
@@ -63,10 +63,13 @@ class featureDetector:public Tracker{
 		};
 		//======================================================================
 		featureDetector(int argc,char** argv):Tracker(argc, argv, 10, true, true){
-			this->plotTracks  = true;
-			this->featureType = EDGES;
-			this->lastIndex   = 0;
-			this->producer    = NULL;
+			this->plotTracks   = true;
+			this->featureType  = EDGES;
+			this->lastIndex    = 0;
+			this->producer     = NULL;
+			this->dictFileName = " ";
+			this->noMeans      = 500;
+			this->meanSize     = 128;
 		}
 
 		featureDetector(int argc,char** argv,bool plot):Tracker(argc, argv, 10, \
@@ -75,6 +78,9 @@ class featureDetector:public Tracker{
 			this->plotTracks  = plot;
 			this->featureType = EDGES;
 			this->lastIndex   = 0;
+			this->dictFileName = " ";
+			this->noMeans      = 500;
+			this->meanSize     = 128;
 		}
 
 		virtual ~featureDetector(){
@@ -99,6 +105,10 @@ class featureDetector:public Tracker{
 			// CLEAR THE ANNOTATIONS
 			if(!this->targetAnno.empty()){
 				this->targetAnno.clear();
+			}
+
+			if(!this->gabor.empty()){
+				this->gabor.release();
 			}
 		}
 
@@ -189,8 +199,7 @@ class featureDetector:public Tracker{
 		/** Convolves an image with a Gabor filter with the given parameters and
 		 * returns the response image.
 		 */
-		void getGabor(cv::Mat &response, cv::Mat image, float *params = NULL);
-
+		void getGabor(cv::Mat &feature,cv::Mat image,cv::Mat thresholded);
 
 		/** Set what kind of features to extract.
 		 */
@@ -231,6 +240,11 @@ class featureDetector:public Tracker{
 		 */
 		static bool compareDescriptors(const featureDetector::keyDescr k1,\
 			const featureDetector::keyDescr k2);
+
+		/** Rotate matrix wrt to the camera location.
+		 */
+		cv::Mat rotateWrtCamera(cv::Point feetLocation, cv::Point cameraLocation,\
+			cv::Mat toRotate);
 		//======================================================================
 	public:
 		/** @var plotTracks
@@ -262,5 +276,30 @@ class featureDetector:public Tracker{
 		 * The previous size of the data matrix before adding new detections.
 		 */
 		unsigned lastIndex;
+
+		/** @var dictionarySIFT
+		 * The SIFT dictionary used for vector quantization.
+		 */
+		cv::Mat dictionarySIFT;
+
+		/** @var dictionarySIFT
+		 * The SIFT dictionary used for vector quantization.
+		 */
+		char* dictFileName;
+
+		/** @var noMeans
+		 * The number of means used for kmeans.
+		 */
+		unsigned noMeans;
+
+		/** @var meanSize
+		 * The meanSize (128 for regular SIFT features) .
+		 */
+		unsigned meanSize;
+
+		/** @var Gabor
+		 * The gabor wavelet to be used.
+		 */
+		cv::Mat gabor;
 };
 #endif /* FESTUREDETECTOR_H_ */

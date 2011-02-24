@@ -2,7 +2,6 @@
  * Author: Silvia-Laura Pintea
  */
 #include "classifyImages.h"
-
 //==============================================================================
 classifyImages::classifyImages(int argc, char **argv){
 	// DEAFAULT INITIALIZATION
@@ -163,45 +162,115 @@ void classifyImages::predictGP(cv::Mat &predictions){
  */
 void classifyImages::evaluate(cv::Mat predictions, double &error, double &accuracy,\
 char choice){
+	double sinCosAccuracy = 0.0, sinCosError    = 0.0;
 	accuracy = 0.0;
 	error    = 0.0;
-	for(int x=0; x<this->testTargets.cols; x++){
+	for(int y=0; y<this->testTargets.rows; y++){
 		if(choice == 'O'){
-			double targetAngle = std::atan2(this->testTargets.at<double>(x,0),\
-								this->testTargets.at<double>(x,1));
-			double prediAngle = std::atan2(predictions.at<double>(x,0),\
-								predictions.at<double>(x,1));
+			double targetAngle = std::atan2(this->testTargets.at<double>(y,0),\
+								this->testTargets.at<double>(y,1));
+			double prediAngle = std::atan2(predictions.at<double>(y,0),\
+								predictions.at<double>(y,1));
 
 			std::cout<<"target: "<<targetAngle*180.0/M_PI<<\
 				" VS "<<prediAngle*180.0/M_PI<<std::endl;
 
-			error += std::pow(std::cos(targetAngle)-std::cos(prediAngle),2)+\
+			sinCosError += std::pow(std::cos(targetAngle)-std::cos(prediAngle),2)+\
 					std::pow(std::sin(targetAngle)-std::sin(prediAngle),2);
+
+			if(std::abs(targetAngle-prediAngle)>M_PI){
+				error += std::pow((2*M_PI-std::abs(targetAngle-prediAngle))/M_PI,2);
+			}else{
+				error += std::pow(std::abs(targetAngle-prediAngle)/M_PI,2);
+			}
 		}else{
-			error += std::abs(this->testTargets.at<double>(x,0)-\
-						predictions.at<double>(x,0));
+			sinCosError += std::abs(this->testTargets.at<double>(y,0)-\
+						predictions.at<double>(y,0));
 		}
 	}
-	error   /= this->testTargets.cols;
-	accuracy = 1-error;
-	std::cout<<"Error: "<<error<<" Accuracy: "<<accuracy<<std::endl;
+	sinCosError   /= this->testTargets.rows;
+	sinCosAccuracy = 1-sinCosError;
+	error         /= this->testTargets.rows;
+	error          = std::sqrt(error);
+	accuracy       = 1-error;
+
+	std::cout<<"Sin-Cos Error: "<<sinCosError<<" Sin-Cos Accuracy: "<<\
+		sinCosAccuracy<<std::endl;
+	std::cout<<"RMS Error: "<<error<<" RMS Accuracy: "<<accuracy<<std::endl;
 }
 //==============================================================================
 /** Build dictionary for vector quantization.
  */
 void classifyImages::buildDictionary(char* fileToStore, char* dataFile){
-	// EXTRACT FEATURES
-	this->features->setFeatureType(featureDetector::SIFT);
+	// EXTRACT THE SIFT FEATURES AND CONCATENATE THEM
+	this->features->setFeatureType(featureDetector::GET_SIFT);
 	this->features->init(dataFile, "");
 	this->features->run();
-	// DO K-means
 
-	// STORE IT ONCE AND THEN JUST LOAD IT
+	int rows = 0;
+	for(std::size_t i=0; i<this->features->data.size(); i++){
+		rows += this->features->data[i].rows;
+	}
+
+	cv::Mat dictData = cv::Mat::zeros(cv::Size(this->features->data[0].cols,\
+						rows), cv::DataType<double>::type);
+
+	// CONVERT FROM VECTOR OF CV::MAT TO MAT
+	int contor = 0;
+	for(std::size_t i=0; i<this->features->data.size(); i++){
+		cv::Mat dummy = dictData.rowRange(contor,contor+this->features->data[i].rows);
+		this->features->data[i].copyTo(dummy);
+		contor += this->features->data[i].rows;
+	}
+	dictData.convertTo(dictData, cv::DataType<double>::type);
+
+	// DO K-means IN ORDER TO RETRIEVE BACK THE CLUSTER MEANS
+	cv::Mat labels; // STORES THE CLUSTER TO WHICH EACH SAMPLE WAS ASSIGNED
+	cv::Mat* centers;
+	cv::kmeans(dictData,500,labels,cv::TermCriteria(cv::TermCriteria::MAX_ITER|\
+		cv::TermCriteria::EPS,100,1),5,cv::KMEANS_RANDOM_CENTERS,centers);
+
+	// NORMALIZE THE CENTERS AND STORE THEM
+	std::cout<<centers->cols<<" "<<centers->rows<<std::endl;
+	for(int i=0; i<centers->rows; i++){
+		//----------REMOVE--------------------------
+		for(int j=0; j<centers->cols; j++){
+			std::cout<<" "<<centers->at<double>(i,j);
+		}
+		std::cout<<std::endl;
+		//----------REMOVE--------------------------
+
+		cv::Mat rowsI = centers->row(i);
+		rowsI         = rowsI/cv::norm(rowsI);
+
+		//----------REMOVE--------------------------
+		std::cout<<"Normalized: "<<std::endl;
+		for(int j=0; j<centers->cols; j++){
+			std::cout<<" "<<centers->at<double>(i,j);
+		}
+		std::cout<<std::endl;
+		//----------REMOVE--------------------------
+	}
+
+	ofstream dictOut;
+	dictOut.open(fileToStore, ios::out | ios::app);
+	if(!dictOut){
+		errx(1,"Cannot open file %s", fileToStore);
+	}
+	dictOut.seekp(0, ios::end);
+
+	for(int x=0; x<centers->cols; x++){
+		for(int y=0; y<centers->rows; y++){
+			dictOut<<centers->at<double>(y,x)<<" ";
+		}
+		dictOut<<endl;
+	}
+	dictOut.close();
 }
 //==============================================================================
 int main(int argc, char **argv){
-	classifyImages classi(argc, argv);
-	classi.init(1e-3,100.0,&gaussianProcess::sqexp,featureDetector::EDGES);
+  	classifyImages classi(argc, argv);
+	classi.init(1e-3,100.0,&gaussianProcess::sqexp,featureDetector::SURF);
 	classi.trainGP();
 	cv::Mat predictions;
 	classi.predictGP(predictions);

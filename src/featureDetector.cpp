@@ -132,7 +132,6 @@ void featureDetector::getSURF(cv::Mat &feature, cv::Mat image, int minX,\
 int minY, std::vector<CvPoint> templ){
 	// EXTRACT THE SURF KEYPOINTS AND THE DESCRIPTORS
 	std::vector<float> descriptors;
-	cv::Mat mask;
 	std::vector<cv::KeyPoint> keypoints;
 	cv::SURF aSURF = cv::SURF(10,3,4,false);
 
@@ -142,45 +141,44 @@ int minY, std::vector<CvPoint> templ){
 		minTmplY = std::max(0,templ[0].y-minY),\
 		maxTmplY = std::max(0,templ[0].y-minY);
 	for(std::size_t i=0; i<templ.size();i++){
-		templ[i].y = std::max(0, templ[i].y - minY);
-		templ[i].x = std::max(0, templ[i].x - minX);
-		if(minTmplY>templ[i].y) minTmplY  = templ[i].y;
-		if(maxTmplY<=templ[i].y) maxTmplY = templ[i].y;
-		if(minTmplX>templ[i].x) minTmplX  = templ[i].x;
-		if(maxTmplX<=templ[i].x) maxTmplX = templ[i].x;
+		if(minTmplY>templ[i].y-minY) minTmplY  = templ[i].y-minY;
+		if(maxTmplY<=templ[i].y-minY) maxTmplY = templ[i].y-minY;
+		if(minTmplX>templ[i].x-minX) minTmplX  = templ[i].x-minX;
+		if(maxTmplX<=templ[i].x-minX) maxTmplX = templ[i].x-minX;
 	}
+
 	cv::Mat gray;
 	cv::cvtColor(image, gray, CV_BGR2GRAY);
-	aSURF(gray, mask, keypoints, descriptors, false);
+	aSURF(gray, cv::Mat(), keypoints, descriptors, false);
 
 	// KEEP THE DESCRIPTORS WITHIN THE BORDERS ONLY
 	std::vector<featureDetector::keyDescr> kD;
-	for(std::size_t i=0; i<descriptors.size();i++){
-		if(this->isInTemplate(keypoints[i].pt.x,keypoints[i].pt.y,templ)){
+	for(std::size_t i=0; i<keypoints.size();i++){
+		if(this->isInTemplate(keypoints[i].pt.x+minX,keypoints[i].pt.y+minY,templ)){
 			featureDetector::keyDescr tmp;
 			for(int j=0; j<aSURF.descriptorSize();j++){
 				tmp.descr.push_back(descriptors[i*aSURF.descriptorSize()+j]);
 			}
 			tmp.keys = keypoints[i];
 			kD.push_back(tmp);
+			tmp.descr.clear();
 		}
 	}
 
 	// SORT THE REMAINING DESCRIPTORS AND KEEP ONLY THE FIRST ?
 	std::sort(kD.begin(),kD.end(),(&featureDetector::compareDescriptors));
-	std::vector<float> keptDescr;
+
+	// COPY TO FEATURE THE FIRST 10 DESCRIPTORS
 	feature = cv::Mat::zeros(cv::Size(10*aSURF.descriptorSize(),1),\
 				cv::DataType<double>::type);
 	for(unsigned i=0; i<std::min(10,static_cast<int>(kD.size())); i++){
-		cv::Mat stupid1 = cv::Mat(kD[i].descr).t();
-		cv::Mat stupid2 = feature.colRange(i*aSURF.descriptorSize(),\
-							i*aSURF.descriptorSize()+aSURF.descriptorSize());
-		stupid1.convertTo(stupid2,cv::DataType<double>::type);
-		stupid1.release();
+		for(std::size_t k=0; k<kD[i].descr.size(); k++){
+			feature.at<double>(0,i*aSURF.descriptorSize()+k) = \
+				static_cast<double>(kD[i].descr[k]);
+		}
 	}
 
 	std::cout<<"key-size:"<<kD.size()<<" feat-size:"<<feature.cols<<std::endl;
-
 	if(this->plotTracks){
 		for(std::size_t i=0; i<kD.size(); i++){
 			cv::circle(image, cv::Point(kD[i].keys.pt.x, kD[i].keys.pt.y),\
@@ -189,7 +187,6 @@ int minY, std::vector<CvPoint> templ){
 		cv::imshow("SURFS", image);
 		cv::waitKey(0);
 	}
-	mask.release();
 	gray.release();
 }
 //==============================================================================
@@ -212,9 +209,7 @@ std::vector<CvPoint> templ, int minX, int minY){
 	// EXTRACT MAXIMALLY STABLE BLOBS
 	std::vector<std::vector<cv::Point> > msers;
 	cv::MSER aMSER;
-	cv::Mat mask;
-	aMSER(image, msers, mask);
-	mask.release();
+	aMSER(image, msers, cv::Mat());
 
 	// COUNTE THE CONTOURS INSIDE THE TEMPLATE
 	uchar msersTmpl = 0;
@@ -233,7 +228,7 @@ std::vector<CvPoint> templ, int minX, int minY){
 	}
 
 	unsigned no             = 10;
-	feature                 = cv::Mat(1,no*no+1,cv::DataType<double>::type);
+	feature                 = cv::Mat::zeros(1,no*no+1,cv::DataType<double>::type);
 	feature.at<double>(0,0) = static_cast<double>(msersTmpl);
 
 	// HISTOGRAM OF NICE FEATURES
@@ -246,26 +241,28 @@ std::vector<CvPoint> templ, int minX, int minY){
 	gafd.detect(image, keys);
 
 	//COUNT THE INTEREST POINTS IN EACH CELL
-	unsigned contor = 0;
-	cv::Mat histo   = cv::Mat::zeros(1,no*no,cv::DataType<double>::type);
-	for(double x=minTmplX; x<maxTmplX; x+=(maxTmplX-minTmplX)/no){
-		for(double y=minTmplY; y<maxTmplY; y+=(maxTmplY-minTmplY)/no){
+	unsigned contor  = 0;
+	cv::Mat histoMat = cv::Mat::zeros(1,no*no,cv::DataType<double>::type);
+	double rateX     = (maxTmplX-minTmplX)/static_cast<double>(no);
+	double rateY     = (maxTmplY-minTmplY)/static_cast<double>(no);
+	for(double x=minTmplX; x<maxTmplX-0.01; x+=rateX){
+		for(double y=minTmplY; y<maxTmplY-0.01; y+=rateY){
 			if(indices.empty()){
 				for(std::size_t i=0; i<keys.size(); i++){
 					if(this->isInTemplate(keys[i].pt.x+minX,keys[i].pt.y+minY,templ)){
 						indices.push_back(i);
-						if(x<=keys[i].pt.x && keys[i].pt.x<x+(maxTmplX-minTmplX)/no\
-						&& y<=keys[i].pt.y && keys[i].pt.y<y+(maxTmplY-minTmplY)/no){
-							histo.at<double>(0,contor) += 1.0;
+						if(x<=keys[i].pt.x && keys[i].pt.x<x+rateX &&\
+						y<=keys[i].pt.y && keys[i].pt.y<y+rateY){
+							histoMat.at<double>(0,contor) += 1.0;
 						}
 					}
 				}
 			}else{
 				for(std::size_t j=0; j<indices.size(); j++){
 					unsigned i = indices[j];
-					if(x<=keys[i].pt.x && keys[i].pt.x<x+(maxTmplX-minTmplX)/no\
-					&& y<=keys[i].pt.y && keys[i].pt.y<y+(maxTmplY-minTmplY)/no){
-						histo.at<double>(0,contor) += 1.0;
+					if(x<=keys[i].pt.x && keys[i].pt.x<x+rateX &&\
+					y<=keys[i].pt.y && keys[i].pt.y<y+rateY){
+						histoMat.at<double>(0,contor) += 1.0;
 					}
 				}
 			}
@@ -273,8 +270,8 @@ std::vector<CvPoint> templ, int minX, int minY){
 		}
 	}
 	cv::Mat stupid = feature.colRange(1,no*no+1);
-	histo.copyTo(stupid);
-	histo.release();
+	histoMat.copyTo(stupid);
+	histoMat.release();
 
 	//-----------------REMOVE--------------------------
 	for(int i=0; i<feature.cols; i++){
@@ -411,7 +408,9 @@ std::vector<CvPoint> templ){
 		return false;
 	}
 
-	if(iter->line==pixelY && iter->start<=pixelX && iter->end>=pixelX){
+	if(std::abs(static_cast<int>(iter->line)-static_cast<int>(pixelY))<3 &&\
+	static_cast<int>(iter->start)-3 <= static_cast<int>(pixelX) &&\
+	static_cast<int>(iter->end)+3 >= static_cast<int>(pixelX)<3){
 		return true;
 	}else{
 		return false;
@@ -550,54 +549,75 @@ void featureDetector::allForegroundPixels(std::vector<featureDetector::people>\
 /** Convolves an image with a Gabor filter with the given parameters and
  * returns the response image.
  */
-void featureDetector::getGabor(cv::Mat &response, cv::Mat image, float *params){
+void featureDetector::getGabor(cv::Mat &feature,cv::Mat image,cv::Mat thresholded){
 	// params[0] -- sigma: (3, 68)
 	// params[1] -- gamma: (0.2, 1)
 	// params[2] -- dimension: (1, 10)
 	// params[3] -- theta: (0, 180) or (-90, 90)
 	// params[4] -- lambda: (2, 256)
 	// params[5] -- psi: (0, 180)
-
-	if(!params){
-		params = new float[6];
-		params[0] = 3.0; params[1] = 0.4;
+	// SET THE PARAMTETERS OF THE GABOR FILTER
+	if(this->gabor.empty()){
+		double *params = new double[6];
+		params[0] = 10.0; params[1] = 0.9;
 		params[2] = 2.0; params[3] = M_PI/4.0;
-		params[4] = 4.0; params[5] = 20;
-	}
+		params[4] = 10.0; params[5] = 20;
 
-	float sigmaX = params[0];
-	float sigmaY = params[0]/params[1];
-	float xMax   = std::max(std::abs(params[2]*sigmaX*std::cos(params[3])), \
-							std::abs(params[2]*sigmaY*std::sin(params[3])));
-	xMax         = std::ceil(std::max((float)1.0, xMax));
-	float yMax   = std::max(std::abs(params[2]*sigmaX*std::cos(params[3])), \
-							std::abs(params[2]*sigmaY*std::sin(params[3])));
-	yMax         = std::ceil(std::max((float)1.0, yMax));
-	float xMin   = -xMax;
-	float yMin   = -yMax;
-
-	cv::Mat gabor = cv::Mat::zeros((int)(xMax-xMin),(int)(yMax-yMin),\
-					cv::DataType<float>::type);
-	for(int x=(int)xMin; x<xMax; x++){
-		for(int y=(int)yMin; y<yMax; y++){
-			float xPrime = x*std::cos(params[3])+y*std::sin(params[3]);
-			float yPrime = -x*std::sin(params[3])+y*std::cos(params[3]);
-			gabor.at<float>((int)(x+xMax),(int)(y+yMax)) = \
-				std::exp(-0.5*((xPrime*xPrime)/(sigmaX*sigmaX)+\
-				(yPrime*yPrime)/(sigmaY*sigmaY)))*\
-				std::cos(2.0 * M_PI/params[4]*xPrime*params[5]);
+		// CREATE THE GABOR FILTER OR WAVELET
+		float sigmaX = params[0];
+		float sigmaY = params[0]/params[1];
+		float xMax   = std::max(std::abs(params[2]*sigmaX*std::cos(params[3])), \
+								std::abs(params[2]*sigmaY*std::sin(params[3])));
+		xMax         = std::ceil(std::max((float)1.0, xMax));
+		float yMax   = std::max(std::abs(params[2]*sigmaX*std::cos(params[3])), \
+								std::abs(params[2]*sigmaY*std::sin(params[3])));
+		yMax         = std::ceil(std::max((float)1.0, yMax));
+		float xMin   = -xMax;
+		float yMin   = -yMax;
+		this->gabor  = cv::Mat::zeros((int)(xMax-xMin),(int)(yMax-yMin),\
+						cv::DataType<float>::type);
+		for(int x=(int)xMin; x<xMax; x++){
+			for(int y=(int)yMin; y<yMax; y++){
+				float xPrime = x*std::cos(params[3])+y*std::sin(params[3]);
+				float yPrime = -x*std::sin(params[3])+y*std::cos(params[3]);
+				this->gabor.at<float>((int)(x+xMax),(int)(y+yMax)) = \
+					std::exp(-0.5*((xPrime*xPrime)/(sigmaX*sigmaX)+\
+					(yPrime*yPrime)/(sigmaY*sigmaY)))*\
+					std::cos(2.0 * M_PI/params[4]*xPrime*params[5]);
+			}
 		}
+		delete [] params;
 	}
-	cv::imshow("Gabor",gabor);
-	cv::waitKey(0);
-	cvDestroyWindow("Gabor");
 
-	cv::filter2D(image,response,-1,gabor,cv::Point(-1,-1),0,cv::BORDER_REPLICATE);
-	cv::imshow("GaborResponse",response);
-	cv::waitKey(0);
-	cvDestroyWindow("GaborResponse");
+	// CONVERT THE IMAGE TO GRAYSCALE TO APPLY THE FILTER
+	cv::Mat gray;
+	cv::cvtColor(image, gray, CV_BGR2GRAY);
+	cv::medianBlur(gray, gray, 3);
+	gray.convertTo(gray, cv::DataType<double>::type);
 
-	gabor.release();
+	// FILTER THE IMAGE WITH THE GABOR FILTER
+	cv::Mat response;
+	cv::filter2D(gray, response, -1, this->gabor, cv::Point(-1,-1), 0,\
+		cv::BORDER_REPLICATE);
+
+	// CONSIDER ONLY THE RESPONSE WITHIN THE THRESHOLDED AREA
+	feature = cv::Mat::zeros(response.size(),cv::DataType<double>::type);
+	if(!thresholded.empty()){
+		response.copyTo(feature,thresholded);
+	}else{
+		response.copyTo(feature);
+	}
+
+    // RESHAPE IF NEEDED
+	feature = (feature.clone()).reshape(0,1);
+
+	if(this->plotTracks){
+		cv::imshow("GaborFilter", this->gabor);
+		cv::imshow("GaborResponse", response);
+		cv::waitKey(0);
+	}
+	response.release();
+	gray.release();
 }
 //==============================================================================
 /** Function that gets the ROI corresponding to a head/feet of a person in
@@ -676,6 +696,7 @@ void featureDetector::extractDataRow(std::vector<unsigned> existing, IplImage *b
 		cv::Mat thresholded;
 		cv::inRange(allPeople[i].pixels,cv::Scalar(1,1,1),cv::Scalar(255,225,225),\
 			thresholded);
+		cv::dilate(thresholded,thresholded,cv::Mat());
 
 		//-----------REMOVE------------------------
 		/*
@@ -700,15 +721,17 @@ void featureDetector::extractDataRow(std::vector<unsigned> existing, IplImage *b
 				this->getSURF(feature, imgRoi, allPeople[i].borders[0],\
 					allPeople[i].borders[2], templ);
 				break;
+			case featureDetector::GABOR:
+				this->getGabor(feature, imgRoi, thresholded);
+				break;
+			case featureDetector::GET_SIFT:
+				this->extractSIFT(feature, imgRoi, allPeople[i].borders[0],\
+					allPeople[i].borders[2], templ);
+				break;
 			case featureDetector::SIFT:
 				this->getSIFT(feature, imgRoi, allPeople[i].borders[0],\
 					allPeople[i].borders[2], templ);
-
-			/*
-			case featureDetector::GABOR:
-				this->getGabor(response, imgRoi);
 				break;
-			 */
 		}
 		feature.convertTo(feature, cv::DataType<double>::type);
 		this->data.push_back(feature.clone());
@@ -756,14 +779,9 @@ int minY, std::vector<CvPoint> templ){
 			goodKP.push_back(keypoints[i]);
 		}
 	}
+	aSIFT(gray, mask, goodKP, feature, true);
 
-	cv::Mat descriptors;
-	aSIFT(gray, mask, goodKP, descriptors, true);
-
-	std::cout<<"SIFT size: "<<descriptors.cols<<" "<<descriptors.rows<<std::endl;
-
-	feature = descriptors.clone().reshape(0,1);
-
+	std::cout<<"SIFT size: "<<feature.cols<<" "<<feature.rows<<std::endl;
 	if(this->plotTracks){
 		for(std::size_t i=0; i<goodKP.size(); i++){
 			cv::circle(image, cv::Point(goodKP[i].pt.x, goodKP[i].pt.y),\
@@ -780,11 +798,87 @@ int minY, std::vector<CvPoint> templ){
  */
 void featureDetector::getSIFT(cv::Mat &feature, cv::Mat image, int minX,\
 int minY, std::vector<CvPoint> templ){
-	this->extractSIFT(feature, image, minX, minY, templ);
+	cv::Mat preFeature;
+	this->extractSIFT(preFeature, image, minX, minY, templ);
+	preFeature.convertTo(preFeature, cv::DataType<double>::type);
+
+	// NORMALIZE THE FEATURES ALSO
+	for(int i=0; i<preFeature.rows; i++){
+		cv::Mat rowsI = preFeature.row(i);
+		rowsI         = rowsI/cv::norm(rowsI);
+	}
 
 	// IF DICTIONARY EXISTS THEN LOAD IT, ELSE CREATE IT AND STORE IT.
+	if(!this->dictionarySIFT.empty()){
+		this->dictionarySIFT = cv::Mat::zeros(cv::Size(this->meanSize,this->noMeans),
+								cv::DataType<double>::type);
+		ifstream dictFile(this->dictFileName);
+		int y=0;
+		if(dictFile.is_open()){
+			while(dictFile.good()){
+				char *line = new char[1024];
+				dictFile.getline(line,sizeof(char*)*1024);
+				std::vector<std::string> lineVect = splitLine(line,' ');
+				for(std::size_t x=0; x<lineVect.size(); x++){
+					char *pValue;
+					this->dictionarySIFT.at<double>(y,static_cast<int>(x)) = \
+							strtol(lineVect[x].c_str(), &pValue, 10);
+				}
+				y++;
+			}
+		}
+	}
 
 	// QUANTIZE THE DESCRIPTORS AND COMPUTE THE HISTOGRAM
+	cv::Mat distances = cv::Mat::zeros(cv::Size(preFeature.rows,\
+						this->dictionarySIFT.rows),cv::DataType<double>::type);
+	cv::Mat minDists =  cv::Mat::zeros(cv::Size(preFeature.rows, 1),\
+						cv::DataType<double>::type);
+	minDists -= 1;
+
+	//----------REMOVE--------------------------
+	std::cout<<"is only -1?"<<std::endl;
+	for(int x=0; x<minDists.cols; x++){
+		for(int y=0; y<minDists.rows; y++){
+			std::cout<<minDists.at<double>(y,x)<<" ";
+		}
+		std::cout<<std::endl;
+	}
+	//----------REMOVE--------------------------
+
+	cv::Mat minLabel = cv::Mat::zeros(cv::Size(preFeature.rows, 1),\
+						cv::DataType<double>::type);
+	for(int j=0; j<preFeature.rows; j++){
+		for(int i=0; i<this->dictionarySIFT.rows; i++){
+			cv::Mat diff;
+			cv::absdiff(this->dictionarySIFT.row(i),preFeature.row(j),diff);
+			distances.at<double>(i,j) = diff.dot(diff);
+			if(minDists.at<double>(0,i)==-1 ||\
+			minDists.at<double>(0,i)>distances.at<double>(i,j)){
+				minDists.at<double>(0,i) = distances.at<double>(i,j);
+				minLabel.at<double>(0,i) = j;
+			}
+		}
+	}
+
+	feature = cv::Mat::zeros(cv::Size(this->dictionarySIFT.rows, 1),\
+				cv::DataType<double>::type);
+	for(int i=0; i<minLabel.cols; i++){
+		int which = minLabel.at<double>(0,i);
+		feature.at<double>(0,which) += 1.0;
+	}
+
+	// NORMALIZE THE HOSTOGRAM
+	cv::Scalar scalar = cv::sum(feature);
+	feature /= static_cast<double>(scalar[0]);
+
+	//----------REMOVE--------------------------
+	std::cout<<"is it normalized (add up to 1)?"<<std::endl;
+	for(int x=0; x<feature.cols; x++){
+		std::cout<<feature.at<double>(0,x)<<" ";
+	}
+	std::cout<<std::endl;
+	//----------REMOVE--------------------------
 }
 //==============================================================================
 /** Checks to see if an annotation can be assigned to a detection.
@@ -808,6 +902,25 @@ unsigned k,double distance, std::vector<int> &assignment){
 		}
 	}
 	return true;
+}
+
+//==============================================================================
+/** Rotate matrix wrt to the camera location.
+ */
+cv::Mat featureDetector::rotateWrtCamera(cv::Point feetLocation,\
+cv::Point cameraLocation, cv::Mat toRotate){
+	double cameraAngle = std::atan2((feetLocation.y-cameraLocation.y),\
+						(feetLocation.x-cameraLocation.x));
+	cv::Mat rotationMat = cv::getRotationMatrix2D(cv::Point2f(feetLocation.x,\
+		feetLocation.y), cameraAngle,1.0);
+	cv::Mat rotated = cv::Mat::zeros(toRotate.size(),cv::DataType<double>::type);
+	cv::warpAffine(toRotate, rotated, rotationMat, toRotate.size());
+
+	//-------------REMOVE-----------------------------------------------
+	cv::imshow("rotated",rotated);
+	cv::waitKey(0);
+	//-------------REMOVE-----------------------------------------------
+	return rotated;
 }
 //==============================================================================
 /** Fixes the angle to be relative to the camera position with respect to the
