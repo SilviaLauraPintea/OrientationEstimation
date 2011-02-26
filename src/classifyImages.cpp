@@ -26,13 +26,13 @@ classifyImages::classifyImages(int argc, char **argv){
 				this->trainFolder = std::string(argv[i]);
 			}else if(i==5){
 				this->annotationsTrain = std::string(argv[i]);
-				argv[i]="";
+				argv[i]=const_cast<char*>("");
 			}else if(i==6){
 				this->testFolder = std::string(argv[i]);
-				argv[i]="";
+				argv[i]=const_cast<char*>("");
 			}else if(i==7){
 				this->annotationsTest = std::string(argv[i]);
-				argv[i]="";
+				argv[i]=const_cast<char*>("");
 			}
 		}
 		argc -= 3;
@@ -203,15 +203,13 @@ char choice){
  */
 void classifyImages::buildDictionary(char* fileToStore, char* dataFile){
 	// EXTRACT THE SIFT FEATURES AND CONCATENATE THEM
-	this->features->setFeatureType(featureDetector::GET_SIFT);
+	this->features->setFeatureType(featureDetector::SIFT_DICT);
 	this->features->init(dataFile, "");
 	this->features->run();
-
 	int rows = 0;
 	for(std::size_t i=0; i<this->features->data.size(); i++){
 		rows += this->features->data[i].rows;
 	}
-
 	cv::Mat dictData = cv::Mat::zeros(cv::Size(this->features->data[0].cols,\
 						rows), cv::DataType<double>::type);
 
@@ -222,58 +220,43 @@ void classifyImages::buildDictionary(char* fileToStore, char* dataFile){
 		this->features->data[i].copyTo(dummy);
 		contor += this->features->data[i].rows;
 	}
-	dictData.convertTo(dictData, cv::DataType<double>::type);
 
 	// DO K-means IN ORDER TO RETRIEVE BACK THE CLUSTER MEANS
-	cv::Mat labels; // STORES THE CLUSTER TO WHICH EACH SAMPLE WAS ASSIGNED
-	cv::Mat* centers;
-	cv::kmeans(dictData,500,labels,cv::TermCriteria(cv::TermCriteria::MAX_ITER|\
-		cv::TermCriteria::EPS,100,1),5,cv::KMEANS_RANDOM_CENTERS,centers);
+	cv::Mat labels = cv::Mat::zeros(cv::Size(1,dictData.rows),\
+					cv::DataType<double>::type); //LABEL EACH SAMPLE ASSIGNMENT
+	cv::Mat* centers = new cv::Mat(cv::Size(dictData.cols,this->features->noMeans),\
+						cv::DataType<double>::type);
+	dictData.convertTo(dictData, cv::DataType<float>::type);
+	cv::kmeans(dictData,this->features->noMeans,labels,\
+		cv::TermCriteria(cv::TermCriteria::MAX_ITER|cv::TermCriteria::EPS,2,1),\
+		5,cv::KMEANS_RANDOM_CENTERS,centers);
+	dictData.release();
+	labels.release();
 
 	// NORMALIZE THE CENTERS AND STORE THEM
-	std::cout<<centers->cols<<" "<<centers->rows<<std::endl;
-	for(int i=0; i<centers->rows; i++){
-		//----------REMOVE--------------------------
-		for(int j=0; j<centers->cols; j++){
-			std::cout<<" "<<centers->at<double>(i,j);
-		}
-		std::cout<<std::endl;
-		//----------REMOVE--------------------------
-
-		cv::Mat rowsI = centers->row(i);
+	for(int y=0; y<centers->rows; y++){
+		cv::Mat rowsI = centers->row(y);
 		rowsI         = rowsI/cv::norm(rowsI);
-
-		//----------REMOVE--------------------------
-		std::cout<<"Normalized: "<<std::endl;
-		for(int j=0; j<centers->cols; j++){
-			std::cout<<" "<<centers->at<double>(i,j);
-		}
-		std::cout<<std::endl;
-		//----------REMOVE--------------------------
 	}
 
-	ofstream dictOut;
-	dictOut.open(fileToStore, ios::out | ios::app);
-	if(!dictOut){
-		errx(1,"Cannot open file %s", fileToStore);
-	}
-	dictOut.seekp(0, ios::end);
-
-	for(int x=0; x<centers->cols; x++){
-		for(int y=0; y<centers->rows; y++){
-			dictOut<<centers->at<double>(y,x)<<" ";
-		}
-		dictOut<<endl;
-	}
-	dictOut.close();
+	// WRITE TO FILE THE MEANS
+	cv::Mat matrix(*centers);
+	mat2File(matrix, fileToStore);
+	centers->release();
+	matrix.release();
+	delete centers;
 }
 //==============================================================================
 int main(int argc, char **argv){
   	classifyImages classi(argc, argv);
+	classi.buildDictionary(const_cast<char*>("dictSIFT.txt"));
+
+/*
 	classi.init(1e-3,100.0,&gaussianProcess::sqexp,featureDetector::SURF);
 	classi.trainGP();
 	cv::Mat predictions;
 	classi.predictGP(predictions);
+*/
 }
 
 

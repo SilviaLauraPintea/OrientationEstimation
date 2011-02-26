@@ -30,24 +30,21 @@ INCLUDE_DIRECTORIES(${OPENCV2} ${VXL_BIN} ${VXL_BIN} ${VXL_BIN}/contrib/tbl ${VX
 LINK_DIRECTORIES(${VXL_BIN}/lib ${CMN_BIN} ${OPENCV2LIB})
 
 ADD_LIBRARY(helpers
+  ${EIGEN_SRC}/calib/sample/cameraModel.cpp
+  ${EIGEN_SRC}/calib/CamCalib.cc
+
+  ${EIGEN_SRC}/defines.cc
   ${EIGEN_SRC}/Helpers.cc
   ${EIGEN_SRC}/Background.cc
   ${EIGEN_SRC}/ImgProducer.cc
   ${EIGEN_SRC}/Annotate.cc
   ${EIGEN_SRC}/Tracker.cc
-
+  
   ${MT_SRC}/Auxiliary.cpp
   ${MT_SRC}/annotationsHandle.cpp
   ${MT_SRC}/featureDetector.cpp  
   ${MT_SRC}/cholesky.cpp  
   ${MT_SRC}/gaussianProcess.cpp    
-  )
-
-ADD_LIBRARY(calib
-  ${EIGEN_SRC}/sample/cameraModel.cpp
-  ${EIGEN_SRC}/sample/xmlUtil.cpp
-  ${EIGEN_SRC}/calib/CamCalib.cc
-  ${EIGEN_SRC}/calib/sample/cameraModel.cpp
   )
 
 #ADD_EXECUTABLE(Tracker ${EIGEN_SRC}/Tracker.cc )

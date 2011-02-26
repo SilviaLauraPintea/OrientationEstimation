@@ -20,6 +20,7 @@
 #include <boost/thread/xtime.hpp>
 #include "eigenbackground/src/Annotate.hh"
 #include "eigenbackground/src/Helpers.hh"
+#include "eigenbackground/src/defines.hh"
 #include "Auxiliary.h"
 using namespace std;
 

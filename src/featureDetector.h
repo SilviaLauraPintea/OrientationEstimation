@@ -18,6 +18,7 @@
 #include <opencv2/opencv.hpp>
 #include "eigenbackground/src/Tracker.hh"
 #include "eigenbackground/src/Helpers.hh"
+#include "eigenbackground/src/defines.hh"
 #include "annotationsHandle.h"
 
 /** Class used for detecting useful features in the images that can be later
@@ -48,7 +49,7 @@ class featureDetector:public Tracker{
 
 		/** All available feature types.
 		 */
-		enum FEATURE {IPOINTS, EDGES, GET_SIFT, SURF, SIFT, GABOR};
+		enum FEATURE {IPOINTS, EDGES, SIFT_DICT, SURF, SIFT, GABOR};
 
 		/** Structure for storing keypoints and descriptors.
 		 */
@@ -67,8 +68,8 @@ class featureDetector:public Tracker{
 			this->featureType  = EDGES;
 			this->lastIndex    = 0;
 			this->producer     = NULL;
-			this->dictFileName = " ";
-			this->noMeans      = 500;
+			this->dictFileName = const_cast<char*>(" ");
+			this->noMeans      = 10;
 			this->meanSize     = 128;
 		}
 
@@ -78,8 +79,8 @@ class featureDetector:public Tracker{
 			this->plotTracks  = plot;
 			this->featureType = EDGES;
 			this->lastIndex   = 0;
-			this->dictFileName = " ";
-			this->noMeans      = 500;
+			this->dictFileName = const_cast<char*>(" ");
+			this->noMeans      = 10;
 			this->meanSize     = 128;
 		}
 

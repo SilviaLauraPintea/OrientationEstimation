@@ -11,6 +11,7 @@
 #include <opencv2/opencv.hpp>
 #include "eigenbackground/src/Tracker.hh"
 #include "eigenbackground/src/Helpers.hh"
+#include "eigenbackground/src/defines.hh"
 #include "featureDetector.h"
 #include "gaussianProcess.h"
 
@@ -99,7 +100,8 @@ class classifyImages {
 
 		/** Build dictionary for vector quantization.
 		 */
-		void buildDictionary(char* fileToStore, char* dataFile);
+		void buildDictionary(char* fileToStore, char* dataFile=const_cast<char*>\
+			("test_stuff/sift/"));
 
 		/** Creates the training data (according to the options), the labels and
 		 * trains the a \c GaussianProcess on the data.

@@ -16,6 +16,8 @@
 #include <boost/date_time/posix_time/ptime.hpp>
 #include <boost/date_time/posix_time/time_parsers.hpp>
 #include <boost/date_time/posix_time/time_formatters.hpp>
+#include "eigenbackground/src/Helpers.hh"
+#include "eigenbackground/src/defines.hh"
 using namespace std;
 using namespace boost;
 
@@ -29,8 +31,15 @@ IplImage* mat2ipl(cv::Mat image);
  */
 void normalizeMat(cv::Mat &matrix);
 
-/* Changes the values of the matrix to be between [-1,1]
+/* Changes the values of the matrix to be between [-1,1].
  */
 void range1Mat(cv::Mat &matrix);
 
+/* Write a matrix to a file (first row is the dimension of the matrix).
+ */
+void mat2File(cv::Mat matrix, char* fileName);
+
+/* Read a matrix from a file (first row is the dimension of the matrix).
+ */
+void file2Mat(cv::Mat matrix, char* fileName);
 #endif /* AUXILIARY_H_ */

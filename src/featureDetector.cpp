@@ -724,7 +724,7 @@ void featureDetector::extractDataRow(std::vector<unsigned> existing, IplImage *b
 			case featureDetector::GABOR:
 				this->getGabor(feature, imgRoi, thresholded);
 				break;
-			case featureDetector::GET_SIFT:
+			case featureDetector::SIFT_DICT:
 				this->extractSIFT(feature, imgRoi, allPeople[i].borders[0],\
 					allPeople[i].borders[2], templ);
 				break;
@@ -741,7 +741,9 @@ void featureDetector::extractDataRow(std::vector<unsigned> existing, IplImage *b
 		imgRoi.release();
 	}
 	// FIX THE LABELS TO CORRESPOND TO THE PEOPLE DETECTED IN THE IMAGE
-	this->fixLabels(allLocations, this->current->sourceName, this->current->index);
+	if(!this->targetAnno.empty()){
+		this->fixLabels(allLocations,this->current->sourceName,this->current->index);
+	}
 }
 //==============================================================================
 /** SIFT descriptors (Scale Invariant Feature Transform).
@@ -750,8 +752,8 @@ void featureDetector::extractSIFT(cv::Mat &feature, cv::Mat image, int minX,\
 int minY, std::vector<CvPoint> templ){
 	// EXTRACT THE SURF KEYPOINTS AND THE DESCRIPTORS
 	std::vector<cv::KeyPoint> keypoints;
-	cv::SIFT::DetectorParams detectP  = cv::SIFT::DetectorParams(0.1,10.0);
-	cv::SIFT::DescriptorParams descrP = cv::SIFT::DescriptorParams(3.0,true,true);
+	cv::SIFT::DetectorParams detectP  = cv::SIFT::DetectorParams(0.0001,10.0);
+	cv::SIFT::DescriptorParams descrP = cv::SIFT::DescriptorParams();
 	cv::SIFT::CommonParams commonP    = cv::SIFT::CommonParams();
 	cv::SIFT aSIFT(commonP, detectP, descrP);
 
@@ -761,25 +763,23 @@ int minY, std::vector<CvPoint> templ){
 		minTmplY = std::max(0,templ[0].y-minY),\
 		maxTmplY = std::max(0,templ[0].y-minY);
 	for(std::size_t i=0; i<templ.size();i++){
-		templ[i].y = std::max(0, templ[i].y - minY);
-		templ[i].x = std::max(0, templ[i].x - minX);
-		if(minTmplY>templ[i].y) minTmplY  = templ[i].y;
-		if(maxTmplY<=templ[i].y) maxTmplY = templ[i].y;
-		if(minTmplX>templ[i].x) minTmplX  = templ[i].x;
-		if(maxTmplX<=templ[i].x) maxTmplX = templ[i].x;
+		if(minTmplY>templ[i].y-minY) minTmplY  = templ[i].y - minY;
+		if(maxTmplY<=templ[i].y-minY) maxTmplY = templ[i].y - minY;
+		if(minTmplX>templ[i].x-minX) minTmplX  = templ[i].x - minX;
+		if(maxTmplX<=templ[i].x-minX) maxTmplX = templ[i].x - minX;
 	}
-	cv::Mat gray, mask;
+	cv::Mat gray;
 	cv::cvtColor(image, gray, CV_BGR2GRAY);
-	aSIFT(gray, mask, keypoints);
+	aSIFT(gray, cv::Mat(), keypoints);
 
-	cv::vector<cv::KeyPoint> goodKP;
 	// KEEP THE DESCRIPTORS WITHIN THE BORDERS ONLY
+	cv::vector<cv::KeyPoint> goodKP;
 	for(std::size_t i=0; i<keypoints.size();i++){
-		if(this->isInTemplate(keypoints[i].pt.x,keypoints[i].pt.y,templ)){
+		if(this->isInTemplate(keypoints[i].pt.x+minX,keypoints[i].pt.y+minY,templ)){
 			goodKP.push_back(keypoints[i]);
 		}
 	}
-	aSIFT(gray, mask, goodKP, feature, true);
+	aSIFT(gray, cv::Mat(), goodKP, feature, true);
 
 	std::cout<<"SIFT size: "<<feature.cols<<" "<<feature.rows<<std::endl;
 	if(this->plotTracks){
@@ -790,7 +790,6 @@ int minY, std::vector<CvPoint> templ){
 		cv::imshow("SIFT", image);
 		cv::waitKey(0);
 	}
-	mask.release();
 	gray.release();
 }
 //==============================================================================
@@ -810,23 +809,7 @@ int minY, std::vector<CvPoint> templ){
 
 	// IF DICTIONARY EXISTS THEN LOAD IT, ELSE CREATE IT AND STORE IT.
 	if(!this->dictionarySIFT.empty()){
-		this->dictionarySIFT = cv::Mat::zeros(cv::Size(this->meanSize,this->noMeans),
-								cv::DataType<double>::type);
-		ifstream dictFile(this->dictFileName);
-		int y=0;
-		if(dictFile.is_open()){
-			while(dictFile.good()){
-				char *line = new char[1024];
-				dictFile.getline(line,sizeof(char*)*1024);
-				std::vector<std::string> lineVect = splitLine(line,' ');
-				for(std::size_t x=0; x<lineVect.size(); x++){
-					char *pValue;
-					this->dictionarySIFT.at<double>(y,static_cast<int>(x)) = \
-							strtol(lineVect[x].c_str(), &pValue, 10);
-				}
-				y++;
-			}
-		}
+		file2Mat(this->dictionarySIFT, this->dictFileName);
 	}
 
 	// QUANTIZE THE DESCRIPTORS AND COMPUTE THE HISTOGRAM
@@ -853,6 +836,7 @@ int minY, std::vector<CvPoint> templ){
 			cv::Mat diff;
 			cv::absdiff(this->dictionarySIFT.row(i),preFeature.row(j),diff);
 			distances.at<double>(i,j) = diff.dot(diff);
+			diff.release();
 			if(minDists.at<double>(0,i)==-1 ||\
 			minDists.at<double>(0,i)>distances.at<double>(i,j)){
 				minDists.at<double>(0,i) = distances.at<double>(i,j);
@@ -879,6 +863,11 @@ int minY, std::vector<CvPoint> templ){
 	}
 	std::cout<<std::endl;
 	//----------REMOVE--------------------------
+
+	preFeature.release();
+	distances.release();
+	minDists.release();
+	minLabel.release();
 }
 //==============================================================================
 /** Checks to see if an annotation can be assigned to a detection.
@@ -903,7 +892,6 @@ unsigned k,double distance, std::vector<int> &assignment){
 	}
 	return true;
 }
-
 //==============================================================================
 /** Rotate matrix wrt to the camera location.
  */
