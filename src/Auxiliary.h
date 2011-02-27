@@ -37,9 +37,9 @@ void range1Mat(cv::Mat &matrix);
 
 /* Write a matrix to a file (first row is the dimension of the matrix).
  */
-void mat2File(cv::Mat matrix, char* fileName);
+void mat2File(cv::Mat matrix, char* fileName, bool append = false);
 
 /* Read a matrix from a file (first row is the dimension of the matrix).
  */
-void file2Mat(cv::Mat matrix, char* fileName);
+void file2Mat(cv::Mat &matrix, char* fileName);
 #endif /* AUXILIARY_H_ */

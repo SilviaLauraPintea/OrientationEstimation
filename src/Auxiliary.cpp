@@ -46,20 +46,24 @@ void range1Mat(cv::Mat &matrix){
 //==============================================================================
 /* Write a matrix to a file (first row is the dimension of the matrix).
  */
-void mat2File(cv::Mat matrix, char* fileName){
+void mat2File(cv::Mat matrix, char* fileName, bool append){
 	ofstream dictOut;
 	try{
-		dictOut.open(fileName, ios::out | ios::app);
+		if(append){
+			dictOut.open(fileName, ios::out | ios::app);
+			dictOut.seekp(0, ios::end);
+		}else{
+			dictOut.open(fileName, ios::out);
+		}
 	}catch(std::exception &e){
 		cerr<<"Cannot open file: %s"<<e.what()<<endl;
 		exit(1);
 	}
-	dictOut.seekp(0, ios::end);
 
 	matrix.convertTo(matrix, cv::DataType<double>::type);
 	dictOut<<matrix.cols<<" "<<matrix.rows<<std::endl;
-	for(int x=0; x<matrix.cols; x++){
-		for(int y=0; y<matrix.rows; y++){
+	for(int y=0; y<matrix.rows; y++){
+		for(int x=0; x<matrix.cols; x++){
 			dictOut<<matrix.at<double>(y,x)<<" ";
 		}
 		dictOut<<std::endl;
@@ -69,25 +73,31 @@ void mat2File(cv::Mat matrix, char* fileName){
 //==============================================================================
 /* Read a matrix from a file (first row is the dimension of the matrix).
  */
-void file2Mat(cv::Mat matrix, char* fileName){
+void file2Mat(cv::Mat &matrix, char* fileName){
 	ifstream dictFile(fileName);
 	int y=0;
 	if(dictFile.is_open()){
 		// FIRST LINE IS THE SIZE OF THE MATRIX
-		char *line = new char[1024];
-		dictFile.getline(line,sizeof(char*)*1024);
-		std::vector<std::string> lineVect = splitLine(line,' ');
-		if(lineVect.size() == 2){
+		std::string fline;
+		std::getline(dictFile, fline);
+		std::vector<std::string> flineVect = splitLine(const_cast<char*>\
+											(fline.c_str()),' ');
+		if(flineVect.size() == 2){
 			char *pRows, *pCols;
-			int cols = strtol(lineVect[0].c_str(), &pCols, 10);
-			int rows = strtol(lineVect[1].c_str(), &pRows, 10);
+			int cols = strtol(flineVect[0].c_str(), &pCols, 10);
+			int rows = strtol(flineVect[1].c_str(), &pRows, 10);
 			matrix   = cv::Mat::zeros(cv::Size(cols,rows),\
 						cv::DataType<double>::type);
 		}else return;
+		fline.clear();
+		flineVect.clear();
+
+		// THE REST OF THE LINES ARE READ ONE BY ONE
 		while(dictFile.good()){
-			char *line = new char[1024];
-			dictFile.getline(line,sizeof(char*)*1024);
-			std::vector<std::string> lineVect = splitLine(line,' ');
+			std::string line;
+			std::getline(dictFile, line);
+			std::vector<std::string> lineVect = splitLine(const_cast<char*>\
+												(line.c_str()),' ');
 			if(lineVect.size()>=1){
 				for(std::size_t x=0; x<lineVect.size(); x++){
 					char *pValue;
@@ -96,6 +106,8 @@ void file2Mat(cv::Mat matrix, char* fileName){
 				}
 				y++;
 			}
+			line.clear();
+			lineVect.clear();
 		}
 		dictFile.close();
 	}

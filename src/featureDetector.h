@@ -64,24 +64,26 @@ class featureDetector:public Tracker{
 		};
 		//======================================================================
 		featureDetector(int argc,char** argv):Tracker(argc, argv, 10, true, true){
-			this->plotTracks   = true;
-			this->featureType  = EDGES;
-			this->lastIndex    = 0;
-			this->producer     = NULL;
-			this->dictFileName = const_cast<char*>(" ");
-			this->noMeans      = 10;
-			this->meanSize     = 128;
+			this->plotTracks     = true;
+			this->featureType    = EDGES;
+			this->lastIndex      = 0;
+			this->producer       = NULL;
+			this->dictFileName   = const_cast<char*>(" ");
+			this->noMeans        = 10;
+			this->meanSize       = 128;
+			this->colorspaceCode = CV_BGR2Lab;
 		}
 
 		featureDetector(int argc,char** argv,bool plot):Tracker(argc, argv, 10, \
 		true, true){
-			this->producer    = NULL;
-			this->plotTracks  = plot;
-			this->featureType = EDGES;
-			this->lastIndex   = 0;
-			this->dictFileName = const_cast<char*>(" ");
-			this->noMeans      = 10;
-			this->meanSize     = 128;
+			this->producer       = NULL;
+			this->plotTracks     = plot;
+			this->featureType    = EDGES;
+			this->lastIndex      = 0;
+			this->dictFileName   = const_cast<char*>(" ");
+			this->noMeans        = 10;
+			this->meanSize       = 128;
+			this->colorspaceCode = CV_BGR2Lab;
 		}
 
 		virtual ~featureDetector(){
@@ -246,6 +248,10 @@ class featureDetector:public Tracker{
 		 */
 		cv::Mat rotateWrtCamera(cv::Point feetLocation, cv::Point cameraLocation,\
 			cv::Mat toRotate);
+
+		/** Set the name of the file where the SIFT dictionary is stored.
+		 */
+		void setSIFTDictionary(char* fileSIFT);
 		//======================================================================
 	public:
 		/** @var plotTracks
@@ -302,5 +308,11 @@ class featureDetector:public Tracker{
 		 * The gabor wavelet to be used.
 		 */
 		cv::Mat gabor;
+
+
+		/** @var colorspaceCode
+		 * The colorspace code to be used before extracting the features.
+		 */
+		int colorspaceCode;
 };
 #endif /* FESTUREDETECTOR_H_ */

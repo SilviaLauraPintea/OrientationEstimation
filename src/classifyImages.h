@@ -100,8 +100,8 @@ class classifyImages {
 
 		/** Build dictionary for vector quantization.
 		 */
-		void buildDictionary(char* fileToStore, char* dataFile=const_cast<char*>\
-			("test_stuff/sift/"));
+		void buildDictionary(char* fileToStore = const_cast<char*>("dictSIFT.txt"),\
+			char* dataFile=const_cast<char*>("test_stuff/sift/"));
 
 		/** Creates the training data (according to the options), the labels and
 		 * trains the a \c GaussianProcess on the data.
@@ -116,7 +116,8 @@ class classifyImages {
 		/** Initialize the options for the Gaussian Process regression.
 		 */
 		void init(double theNoise, double theLength, gaussianProcess::kernelFunction\
-			theKFunction, featureDetector::FEATURE theFeature);
+			theKFunction, featureDetector::FEATURE theFeature, char* fileSIFT =\
+			const_cast<char*>(""), int colorSp = CV_BGR2Lab);
 
 		/** Evaluate one prediction versus its target.
 		 */

@@ -73,11 +73,14 @@ classifyImages::~classifyImages(){
 /** Initialize the options for the Gaussian Process regression.
  */
 void classifyImages::init(double theNoise, double theLength,\
-gaussianProcess::kernelFunction theKFunction, featureDetector::FEATURE theFeature){
+gaussianProcess::kernelFunction theKFunction, featureDetector::FEATURE theFeature,\
+char* fileSIFT, int colorSp){
 	this->noise     = theNoise;
 	this->length    = theLength;
 	this->kFunction = theKFunction;
 	this->feature   = theFeature;
+	this->features->setSIFTDictionary(fileSIFT);
+	this->features->colorspaceCode = colorSp;
 }
 //==============================================================================
 /** Creates the training data (according to the options), the labels and
@@ -203,6 +206,9 @@ char choice){
  */
 void classifyImages::buildDictionary(char* fileToStore, char* dataFile){
 	// EXTRACT THE SIFT FEATURES AND CONCATENATE THEM
+	if(std::string(this->features->dictFileName).size()<2){
+		this->features->setSIFTDictionary(fileToStore);
+	}
 	this->features->setFeatureType(featureDetector::SIFT_DICT);
 	this->features->init(dataFile, "");
 	this->features->run();
@@ -241,7 +247,7 @@ void classifyImages::buildDictionary(char* fileToStore, char* dataFile){
 
 	// WRITE TO FILE THE MEANS
 	cv::Mat matrix(*centers);
-	mat2File(matrix, fileToStore);
+	mat2File(matrix, this->features->dictFileName);
 	centers->release();
 	matrix.release();
 	delete centers;
@@ -249,14 +255,14 @@ void classifyImages::buildDictionary(char* fileToStore, char* dataFile){
 //==============================================================================
 int main(int argc, char **argv){
   	classifyImages classi(argc, argv);
-	classi.buildDictionary(const_cast<char*>("dictSIFT.txt"));
-
 /*
-	classi.init(1e-3,100.0,&gaussianProcess::sqexp,featureDetector::SURF);
+	classi.buildDictionary();
+*/
+	classi.init(1e-3,100.0,&gaussianProcess::sqexp,featureDetector::SIFT,\
+		const_cast<char*>("dictSIFT.txt"),CV_BGR2Lab);
 	classi.trainGP();
 	cv::Mat predictions;
 	classi.predictGP(predictions);
-*/
 }
 
 

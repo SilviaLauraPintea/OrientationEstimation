@@ -534,13 +534,13 @@ void featureDetector::allForegroundPixels(std::vector<featureDetector::people>\
 		colorRoi.release();
 
 		//-------------REMOVE--------------------
-		/*
+
 		plotTemplate2(this->current->img,center,persHeight,camHeight,\
 				cv::Scalar(255,0,0));
 		cv::imshow("template",this->current->img);
 		cv::imshow("PPL",allPeople[k].pixels);
 		cv::waitKey(0);
-		*/
+
 		//---------------------------------------------
 	}
 	thrsh.release();
@@ -664,12 +664,18 @@ void featureDetector::setFeatureType(featureDetector::FEATURE type){
 	this->featureType = type;
 }
 //==============================================================================
+/** Set the name of the file where the SIFT dictionary is stored.
+ */
+void featureDetector::setSIFTDictionary(char* fileSIFT){
+	this->dictFileName = const_cast<char*>(fileSIFT);
+}
+//==============================================================================
 /** Creates on data row in the final data matrix by getting the feature
  * descriptors.
  */
 void featureDetector::extractDataRow(std::vector<unsigned> existing, IplImage *bg){
 	cv::Mat image(this->current->img);
-	cv::cvtColor(image, image, CV_BGR2Lab);
+	cv::cvtColor(image, image, this->colorspaceCode);
 
 	// REDUCE THE IMAGE TO ONLY THE INTERESTING AREA
 	std::vector<featureDetector::people> allPeople(existing.size());
@@ -781,7 +787,6 @@ int minY, std::vector<CvPoint> templ){
 	}
 	aSIFT(gray, cv::Mat(), goodKP, feature, true);
 
-	std::cout<<"SIFT size: "<<feature.cols<<" "<<feature.rows<<std::endl;
 	if(this->plotTracks){
 		for(std::size_t i=0; i<goodKP.size(); i++){
 			cv::circle(image, cv::Point(goodKP[i].pt.x, goodKP[i].pt.y),\
@@ -797,6 +802,7 @@ int minY, std::vector<CvPoint> templ){
  */
 void featureDetector::getSIFT(cv::Mat &feature, cv::Mat image, int minX,\
 int minY, std::vector<CvPoint> templ){
+	// EXTRACT SIFT FEATURES
 	cv::Mat preFeature;
 	this->extractSIFT(preFeature, image, minX, minY, templ);
 	preFeature.convertTo(preFeature, cv::DataType<double>::type);
@@ -808,43 +814,36 @@ int minY, std::vector<CvPoint> templ){
 	}
 
 	// IF DICTIONARY EXISTS THEN LOAD IT, ELSE CREATE IT AND STORE IT.
-	if(!this->dictionarySIFT.empty()){
+	if(this->dictionarySIFT.empty()){
 		file2Mat(this->dictionarySIFT, this->dictFileName);
 	}
 
-	// QUANTIZE THE DESCRIPTORS AND COMPUTE THE HISTOGRAM
+	std::cout<<"SIFT size:"<<this->dictionarySIFT.cols<<" "<<\
+		this->dictionarySIFT.rows<<std::endl;
+
+	// COMPUTE THE DISTANCES FROM EACH NEW FEATURE TO THE DICTIONARY ONES
 	cv::Mat distances = cv::Mat::zeros(cv::Size(preFeature.rows,\
 						this->dictionarySIFT.rows),cv::DataType<double>::type);
-	cv::Mat minDists =  cv::Mat::zeros(cv::Size(preFeature.rows, 1),\
+	cv::Mat minDists  = cv::Mat::zeros(cv::Size(preFeature.rows, 1),\
+						cv::DataType<double>::type);
+	cv::Mat minLabel  = cv::Mat::zeros(cv::Size(preFeature.rows, 1),\
 						cv::DataType<double>::type);
 	minDists -= 1;
-
-	//----------REMOVE--------------------------
-	std::cout<<"is only -1?"<<std::endl;
-	for(int x=0; x<minDists.cols; x++){
-		for(int y=0; y<minDists.rows; y++){
-			std::cout<<minDists.at<double>(y,x)<<" ";
-		}
-		std::cout<<std::endl;
-	}
-	//----------REMOVE--------------------------
-
-	cv::Mat minLabel = cv::Mat::zeros(cv::Size(preFeature.rows, 1),\
-						cv::DataType<double>::type);
 	for(int j=0; j<preFeature.rows; j++){
 		for(int i=0; i<this->dictionarySIFT.rows; i++){
 			cv::Mat diff;
 			cv::absdiff(this->dictionarySIFT.row(i),preFeature.row(j),diff);
 			distances.at<double>(i,j) = diff.dot(diff);
 			diff.release();
-			if(minDists.at<double>(0,i)==-1 ||\
-			minDists.at<double>(0,i)>distances.at<double>(i,j)){
-				minDists.at<double>(0,i) = distances.at<double>(i,j);
-				minLabel.at<double>(0,i) = j;
+			if(minDists.at<double>(0,j)==-1 ||\
+			minDists.at<double>(0,j)>distances.at<double>(i,j)){
+				minDists.at<double>(0,j) = distances.at<double>(i,j);
+				minLabel.at<double>(0,j) = i;
 			}
 		}
 	}
 
+	// CREATE A HISTOGRAM(COUNT TO WHICH DICT FEATURE WAS ASSIGNED EACH NEW ONE)
 	feature = cv::Mat::zeros(cv::Size(this->dictionarySIFT.rows, 1),\
 				cv::DataType<double>::type);
 	for(int i=0; i<minLabel.cols; i++){
@@ -855,14 +854,6 @@ int minY, std::vector<CvPoint> templ){
 	// NORMALIZE THE HOSTOGRAM
 	cv::Scalar scalar = cv::sum(feature);
 	feature /= static_cast<double>(scalar[0]);
-
-	//----------REMOVE--------------------------
-	std::cout<<"is it normalized (add up to 1)?"<<std::endl;
-	for(int x=0; x<feature.cols; x++){
-		std::cout<<feature.at<double>(0,x)<<" ";
-	}
-	std::cout<<std::endl;
-	//----------REMOVE--------------------------
 
 	preFeature.release();
 	distances.release();
