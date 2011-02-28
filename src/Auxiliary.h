@@ -24,9 +24,11 @@ using namespace boost;
 /** Converts a pointer to an IplImage to an OpenCV Mat.
  */
 cv::Mat ipl2mat(IplImage* ipl_image);
+
 /** Converts an OpenCV Mat to a pointer to an IplImage.
  */
 IplImage* mat2ipl(cv::Mat image);
+
 /** Convert the values from a cv::Mat of doubles to be between 0 and 1.
  */
 void normalizeMat(cv::Mat &matrix);
@@ -35,11 +37,19 @@ void normalizeMat(cv::Mat &matrix);
  */
 void range1Mat(cv::Mat &matrix);
 
-/* Write a matrix to a file (first row is the dimension of the matrix).
+/* Write a 2D-matrix to a text file (first row is the dimension of the matrix).
  */
-void mat2File(cv::Mat matrix, char* fileName, bool append = false);
+void mat2TxtFile(cv::Mat matrix, char* fileName, bool append = false);
 
-/* Read a matrix from a file (first row is the dimension of the matrix).
+/* Reads a 2D-matrix from a text file (first row is the dimension of the matrix).
  */
-void file2Mat(cv::Mat &matrix, char* fileName);
+void txtFile2Mat(cv::Mat &matrix, char* fileName);
+
+/* Write a 2D-matrix to a binary file (first the dimension of the matrix).
+ */
+void mat2BinFile(cv::Mat matrix, char* fileName, bool append = false);
+
+/* Reads a 2D-matrix from a binary file (first the dimension of the matrix).
+ */
+void binFile2mat(cv::Mat &matrix, char* fileName);
 #endif /* AUXILIARY_H_ */

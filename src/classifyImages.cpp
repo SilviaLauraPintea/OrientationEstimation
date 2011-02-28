@@ -247,7 +247,7 @@ void classifyImages::buildDictionary(char* fileToStore, char* dataFile){
 
 	// WRITE TO FILE THE MEANS
 	cv::Mat matrix(*centers);
-	mat2File(matrix, this->features->dictFileName);
+	mat2BinFile(matrix, this->features->dictFileName);
 	centers->release();
 	matrix.release();
 	delete centers;
@@ -258,8 +258,9 @@ int main(int argc, char **argv){
 /*
 	classi.buildDictionary();
 */
+
 	classi.init(1e-3,100.0,&gaussianProcess::sqexp,featureDetector::SIFT,\
-		const_cast<char*>("dictSIFT.txt"),CV_BGR2Lab);
+		const_cast<char*>("dictSIFT.bin"),CV_BGR2Lab);
 	classi.trainGP();
 	cv::Mat predictions;
 	classi.predictGP(predictions);

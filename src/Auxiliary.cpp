@@ -44,9 +44,9 @@ void range1Mat(cv::Mat &matrix){
 	matrix *= 2.0;
 }
 //==============================================================================
-/* Write a matrix to a file (first row is the dimension of the matrix).
+/* Write a 2D-matrix to a text file (first row is the dimension of the matrix).
  */
-void mat2File(cv::Mat matrix, char* fileName, bool append){
+void mat2TxtFile(cv::Mat matrix, char* fileName, bool append){
 	ofstream dictOut;
 	try{
 		if(append){
@@ -71,9 +71,9 @@ void mat2File(cv::Mat matrix, char* fileName, bool append){
 	dictOut.close();
 }
 //==============================================================================
-/* Read a matrix from a file (first row is the dimension of the matrix).
+/* Reads a 2D-matrix from a text file (first row is the dimension of the matrix).
  */
-void file2Mat(cv::Mat &matrix, char* fileName){
+void txtFile2Mat(cv::Mat &matrix, char* fileName){
 	ifstream dictFile(fileName);
 	int y=0;
 	if(dictFile.is_open()){
@@ -114,6 +114,59 @@ void file2Mat(cv::Mat &matrix, char* fileName){
 	matrix.convertTo(matrix, cv::DataType<double>::type);
 }
 //==============================================================================
+/* Write a 2D-matrix to a binary file (first the dimension of the matrix).
+ */
+void mat2BinFile(cv::Mat matrix, char* fileName, bool append){
+	ofstream mxFile;
+	try{
+		if(append){
+			mxFile.open(fileName, ios::out|ios::app|ios::binary);
+			mxFile.seekp(0, ios::end);
+		}else{
+			mxFile.open(fileName, ios::out|ios::binary);
+		}
+	}catch(std::exception &e){
+		cerr<<"Cannot open file: %s"<<e.what()<<endl;
+		exit(1);
+	}
 
+	matrix.convertTo(matrix, cv::DataType<double>::type);
 
+	// FIRST WRITE THE DIMENSIONS OF THE MATRIX
+	mxFile.write(reinterpret_cast<char*>(&matrix.cols), sizeof(int));
+	mxFile.write(reinterpret_cast<char*>(&matrix.rows), sizeof(int));
 
+	// WRITE THE MATRIX TO THE FILE
+	for(int x=0; x<matrix.cols; x++){
+		for(int y=0; y<matrix.rows; y++){
+			mxFile.write(reinterpret_cast<char*>(&matrix.at<double>(y,x)),\
+				sizeof(double));
+		}
+	}
+	mxFile.close();
+}
+//==============================================================================
+/* Reads a 2D-matrix from a binary file (first the dimension of the matrix).
+ */
+void binFile2mat(cv::Mat &matrix, char* fileName){
+	ifstream mxFile(fileName, ios::in | ios::binary);
+
+	if(mxFile.is_open()){
+		// FIRST READ THE MATRIX SIZE AND ALLOCATE IT
+		int cols, rows;
+		mxFile.read(reinterpret_cast<char*>(&cols), sizeof(int));
+		mxFile.read(reinterpret_cast<char*>(&rows), sizeof(int));
+		matrix = cv::Mat::zeros(cv::Size(cols,rows),cv::DataType<double>::type);
+
+		// READ THE CONTENT OF THE MATRIX
+		for(int x=0; x<matrix.cols; x++){
+			for(int y=0; y<matrix.rows; y++){
+				mxFile.read(reinterpret_cast<char*>(&matrix.at<double>(y,x)),\
+					sizeof(double));
+			}
+		}
+		mxFile.close();
+	}
+	matrix.convertTo(matrix, cv::DataType<double>::type);
+}
+//==============================================================================

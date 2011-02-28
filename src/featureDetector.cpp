@@ -534,13 +534,13 @@ void featureDetector::allForegroundPixels(std::vector<featureDetector::people>\
 		colorRoi.release();
 
 		//-------------REMOVE--------------------
-
+		/*
 		plotTemplate2(this->current->img,center,persHeight,camHeight,\
 				cv::Scalar(255,0,0));
 		cv::imshow("template",this->current->img);
 		cv::imshow("PPL",allPeople[k].pixels);
 		cv::waitKey(0);
-
+		*/
 		//---------------------------------------------
 	}
 	thrsh.release();
@@ -815,7 +815,7 @@ int minY, std::vector<CvPoint> templ){
 
 	// IF DICTIONARY EXISTS THEN LOAD IT, ELSE CREATE IT AND STORE IT.
 	if(this->dictionarySIFT.empty()){
-		file2Mat(this->dictionarySIFT, this->dictFileName);
+		binFile2mat(this->dictionarySIFT, this->dictFileName);
 	}
 
 	std::cout<<"SIFT size:"<<this->dictionarySIFT.cols<<" "<<\
