@@ -112,7 +112,7 @@ class annotationsHandle {
 		 * \li argv[2] -- the file contains the calibration data of the camera
 		 * \li argv[3] -- the file in which the annotation data needs to be stored
 		 */
-		static int runAnn(int argc, char **argv);
+		static int runAnn(int argc, char **argv, unsigned step = 100);
 
 		/** The "on change" handler for the track-bars.
 		 */

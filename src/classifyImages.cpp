@@ -259,11 +259,11 @@ int main(int argc, char **argv){
 	classi.buildDictionary();
 */
 
-	classi.init(1e-3,100.0,&gaussianProcess::sqexp,featureDetector::SIFT,\
-		const_cast<char*>("dictSIFT.bin"),CV_BGR2Lab);
+	classi.init(1e-3,100.0,&gaussianProcess::sqexp,featureDetector::IPOINTS);
 	classi.trainGP();
 	cv::Mat predictions;
 	classi.predictGP(predictions);
+
 }
 
 

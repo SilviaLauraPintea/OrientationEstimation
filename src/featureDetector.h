@@ -68,10 +68,11 @@ class featureDetector:public Tracker{
 			this->featureType    = EDGES;
 			this->lastIndex      = 0;
 			this->producer       = NULL;
-			this->dictFileName   = const_cast<char*>(" ");
+			this->dictFileName   = const_cast<char*>("dictSIFT.bin");
 			this->noMeans        = 10;
 			this->meanSize       = 128;
 			this->colorspaceCode = CV_BGR2Lab;
+			this->wrtCamera      = 1;
 		}
 
 		featureDetector(int argc,char** argv,bool plot):Tracker(argc, argv, 10, \
@@ -80,10 +81,11 @@ class featureDetector:public Tracker{
 			this->plotTracks     = plot;
 			this->featureType    = EDGES;
 			this->lastIndex      = 0;
-			this->dictFileName   = const_cast<char*>(" ");
+			this->dictFileName   = const_cast<char*>("dictSIFT.bin");
 			this->noMeans        = 10;
 			this->meanSize       = 128;
 			this->colorspaceCode = CV_BGR2Lab;
+			this->wrtCamera      = 1;
 		}
 
 		virtual ~featureDetector(){
@@ -164,29 +166,29 @@ class featureDetector:public Tracker{
 
 		/** Gets the edges in an image.
 		 */
-		void getEdges(cv::Mat &feature, cv::Mat image, unsigned reshape=1,\
-			cv::Mat thresholded=cv::Mat());
+		void getEdges(cv::Point center, cv::Mat &feature, cv::Mat image,\
+			unsigned reshape=1, cv::Mat thresholded=cv::Mat());
 
 		/** SURF descriptors (Speeded Up Robust Features).
 		 */
 		void getSURF(cv::Mat &feature, cv::Mat image, int minX, int minY,\
-			std::vector<CvPoint> templ);
+			std::vector<CvPoint> templ, cv::Point center);
 
 		/** Compute the features from the SIFT descriptors by doing vector
 		 * quantization.
 		 */
 		void getSIFT(cv::Mat &feature, cv::Mat image, int minX, int minY,\
-			std::vector<CvPoint> templ);
+			std::vector<CvPoint> templ, cv::Point center);
 
 		/** SIFT descriptors (Scale Invariant Feature Transform).
 		 */
 		void extractSIFT(cv::Mat &feature, cv::Mat image, int minX, int minY,\
-			std::vector<CvPoint> templ);
+			std::vector<CvPoint> templ, cv::Point center);
 
 		/** Creates a "histogram" of interest points + number of blobs.
 		 */
 		void interestPointsGrid(cv::Mat &feature, cv::Mat image,\
-			std::vector<CvPoint> templ, int minX, int minY);
+			std::vector<CvPoint> templ, int minX, int minY, cv::Point center);
 
 		/** Just displaying an image a bit larger to visualize it better.
 		 */
@@ -202,7 +204,8 @@ class featureDetector:public Tracker{
 		/** Convolves an image with a Gabor filter with the given parameters and
 		 * returns the response image.
 		 */
-		void getGabor(cv::Mat &feature,cv::Mat image,cv::Mat thresholded);
+		void getGabor(cv::Mat &feature,cv::Mat image,cv::Mat thresholded,\
+			cv::Point center);
 
 		/** Set what kind of features to extract.
 		 */
@@ -247,11 +250,17 @@ class featureDetector:public Tracker{
 		/** Rotate matrix wrt to the camera location.
 		 */
 		cv::Mat rotateWrtCamera(cv::Point feetLocation, cv::Point cameraLocation,\
-			cv::Mat toRotate);
+			cv::Mat toRotate, cv::Point &borders);
 
 		/** Set the name of the file where the SIFT dictionary is stored.
 		 */
 		void setSIFTDictionary(char* fileSIFT);
+
+		/** Rotate the points corresponding to the template wrt to the camera location.
+		 */
+		std::vector<CvPoint> rotateTemplWrtCamera(cv::Point feetLocation,\
+			cv::Point cameraLocation, std::vector<CvPoint> templ,\
+			cv::Point rotBorders, cv::Point2f rotCenter);
 		//======================================================================
 	public:
 		/** @var plotTracks
@@ -309,10 +318,15 @@ class featureDetector:public Tracker{
 		 */
 		cv::Mat gabor;
 
-
 		/** @var colorspaceCode
 		 * The colorspace code to be used before extracting the features.
 		 */
 		int colorspaceCode;
+
+		/** @var wrtCamera
+		 * Indicates if the image is rotated wrt to the camer before extracting
+		 * the features or not.
+		 */
+		unsigned wrtCamera;
 };
 #endif /* FESTUREDETECTOR_H_ */

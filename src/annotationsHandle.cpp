@@ -207,7 +207,7 @@ void annotationsHandle::plotHull(IplImage *img, std::vector<CvPoint> &hull){
  * \li argv[2] -- the file contains the calibration data of the camera
  * \li argv[3] -- the file in which the annotation data needs to be stored
  */
-int annotationsHandle::runAnn(int argc, char **argv){
+int annotationsHandle::runAnn(int argc, char **argv, unsigned step){
 	choice = 'c';
 	if(argc != 5){
 		cerr<<"usage: ./annotatepos <img_list.txt> <calib.xml> <annotation.txt>\n"<< \
@@ -323,8 +323,11 @@ int annotationsHandle::runAnn(int argc, char **argv){
 			annotations.clear();
 			cvReleaseImage(&image);
 
-			// skip to the next image
-			index++;
+			// skip to the next step^th image
+			while(index+step>imgs.size() && step>0){
+				step = step/10;
+			}
+			index += step;
 			if(index==imgs.size()){
 				break;
 			}
@@ -679,7 +682,7 @@ std::vector<annotationsHandle::ANNOTATION> annotationsHandle::annotations;
 //==============================================================================
 /*
 int main(int argc, char **argv){
-	annotationsHandle::runAnn(argc,argv);
+	annotationsHandle::runAnn(argc,argv,100);
 	//annotationsHandle::runEvaluation(argc,argv);
 }
 */
