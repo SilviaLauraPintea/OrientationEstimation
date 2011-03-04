@@ -259,7 +259,7 @@ int main(int argc, char **argv){
 	classi.buildDictionary();
 */
 
-	classi.init(1e-3,100.0,&gaussianProcess::sqexp,featureDetector::IPOINTS);
+	classi.init(1e-3,100.0,&gaussianProcess::sqexp,featureDetector::SIFT);
 	classi.trainGP();
 	cv::Mat predictions;
 	classi.predictGP(predictions);

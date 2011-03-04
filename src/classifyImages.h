@@ -117,7 +117,7 @@ class classifyImages {
 		 */
 		void init(double theNoise, double theLength, gaussianProcess::kernelFunction\
 			theKFunction, featureDetector::FEATURE theFeature, char* fileSIFT =\
-			const_cast<char*>(""), int colorSp = CV_BGR2Lab);
+			const_cast<char*>("dictSIFT.bin"), int colorSp = CV_BGR2Lab);
 
 		/** Evaluate one prediction versus its target.
 		 */
