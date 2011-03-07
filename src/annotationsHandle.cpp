@@ -107,28 +107,24 @@ void annotationsHandle::showMenu(cv::Point center){
 	IplImage *tmpImg = cvCreateImage(cv::Size(300,1),8,1);
 	cv::imshow("Poses", tmpImg);
 
+	POSE sit = SITTING, stand = STANDING, bend = BENDING, orient = ORIENTATION;
 	for(POSE p=SITTING; p<=ORIENTATION;p++){
-		unsigned int *pt;
-		unsigned int ui_p = (unsigned int)p;
-		pt                = &ui_p;
-		void *param       = pt;
 		switch(p){
 			case SITTING:
 				cv::createTrackbar("Sitting","Poses", &pose0, 1, \
-					trackbar_callback, param);
+					trackbar_callback, &sit);
 				break;
 			case STANDING:
 				cv::createTrackbar("Standing","Poses", &pose1, 1, \
-					trackbar_callback, param);
-				cv::setTrackbarPos("Standing", "Poses", 1);
+					trackbar_callback, &stand);
 				break;
 			case BENDING:
 				cv::createTrackbar("Bending","Poses", &pose2, 1, \
-					trackbar_callback, param);
+					trackbar_callback, &bend);
 				break;
 			case ORIENTATION:
 				cv::createTrackbar("Orientation", "Poses", &pose3, 360, \
-					trackbar_callback, param);
+					trackbar_callback, &orient);
 				break;
 			default:
 				//do nothing
@@ -146,48 +142,49 @@ void annotationsHandle::showMenu(cv::Point center){
 /** A function that starts a new thread which handles the track-bar event.
  */
 void annotationsHandle::trackBarHandleFct(int position,void *param){
-	//trackbarMutex.lock();
 	unsigned int *ii                       = (unsigned int *)(param);
 	annotationsHandle::ANNOTATION lastAnno = annotations.back();
 	annotations.pop_back();
-	if(lastAnno.poses.size()==0){
+	if(lastAnno.poses.empty()){
 		lastAnno.poses.assign(4,0);
 	}
 
-	//draw the orientation to see it
+	// DRAW THE ORIENTATION TO SEE IT
 	if((POSE)(*ii)==ORIENTATION){
 		drawOrientation(lastAnno.location, position);
 	}
 
+	// FOR ALL CASES STORE THE POSITION
 	try{
-		if((POSE)(*ii) == ORIENTATION){
-			if(position % 10 != 0){
-				position = (int)(position / 10) * 10;
-			}
-		}
 		lastAnno.poses.at(*ii) = position;
 	}catch (std::exception &e){
 		cout<<"Exception "<<e.what()<<endl;
 		exit(1);
 	}
 	annotations.push_back(lastAnno);
-	//trackbarMutex.unlock();
 
-	if((POSE)(*ii) == SITTING){
-		cv::setTrackbarPos("Standing", "Poses", (1-position));
-	} else if((POSE)(*ii) == STANDING){
-		cv::setTrackbarPos("Sitting", "Poses", (1-position));
+	// FIX TRACKBARS
+	if((POSE)(*ii) == ORIENTATION){
+		if(position % 10 != 0){
+			position = (int)(position / 10) * 10;
+			cv::setTrackbarPos("Orientation", "Poses", position);
+		}
+	}else if((POSE)(*ii) == SITTING){
+		int oppPos = cv::getTrackbarPos("Standing","Poses");
+		if(oppPos == position){
+			cv::setTrackbarPos("Standing", "Poses", (1-oppPos));
+		}
+	}else if((POSE)(*ii) == STANDING){
+		int oppPos = cv::getTrackbarPos("Sitting","Poses");
+		if(oppPos == position){
+			cv::setTrackbarPos("Sitting", "Poses", (1-oppPos));
+		}
 	}
 }
 //==============================================================================
 /** The "on change" handler for the track-bars.
  */
 void annotationsHandle::trackbar_callback(int position,void *param){
-	/*boost::thread *trackbarHandle;
-	trackbarHandle = new boost::thread(&annotationsHandle::trackBarHandleFct,\
-		position, param);
-	trackbarHandle->join();
-	delete trackbarHandle;*/
 	trackBarHandleFct(position, param);
 }
 //==============================================================================
@@ -207,7 +204,8 @@ void annotationsHandle::plotHull(IplImage *img, std::vector<CvPoint> &hull){
  * \li argv[2] -- the file contains the calibration data of the camera
  * \li argv[3] -- the file in which the annotation data needs to be stored
  */
-int annotationsHandle::runAnn(int argc, char **argv, unsigned step){
+int annotationsHandle::runAnn(int argc, char **argv, unsigned step, std::string \
+usedImages){
 	choice = 'c';
 	if(argc != 5){
 		cerr<<"usage: ./annotatepos <img_list.txt> <calib.xml> <annotation.txt>\n"<< \
@@ -223,10 +221,10 @@ int annotationsHandle::runAnn(int argc, char **argv, unsigned step){
 		"> press 's' to save the annotations for the current image and go to the next one;\n"<<endl;
 	}
 	unsigned index                = 0;
+	cerr<<"Loading the images...."<< argv[1] << endl;
 	std::vector<std::string> imgs = readImages(argv[1]);
+	cerr<<"Loading the calibration...."<< argv[2] << endl;
 	loadCalibration(argv[2]);
-
-	// load the priors
 	std::vector<CvPoint> priorHull;
 	cerr<<"Loading the location prior...."<< argv[3] << endl;
 	loadPriorHull(argv[3], priorHull);
@@ -292,7 +290,7 @@ int annotationsHandle::runAnn(int argc, char **argv, unsigned step){
 			//move image to a different directory to keep track of annotated images
 			string currLocation = imgs[index].substr(0,imgs[index].rfind("/"));
 			string newLocation  = currLocation.substr(0,currLocation.rfind("/")) + \
-				"/annotated_images/";
+				"/annotated_images"+usedImages+"/";
 			if(!boost::filesystem::is_directory(newLocation)){
 				boost::filesystem::create_directory(newLocation);
 			}
@@ -304,10 +302,15 @@ int annotationsHandle::runAnn(int argc, char **argv, unsigned step){
 			}
 
 			// load the next image or break if it is the last one
-			index++;
+			// skip to the next step^th image
+			while(index+step>imgs.size() && step>0){
+				step = step/10;
+			}
+			index += step;
 			if(index==imgs.size()){
 				break;
 			}
+
 			image = cvLoadImage(imgs[index].c_str());
 			plotHull(image, priorHull);
 			cv::imshow("image", image);
@@ -680,9 +683,9 @@ boost::mutex annotationsHandle::trackbarMutex;
 IplImage *annotationsHandle::image;
 std::vector<annotationsHandle::ANNOTATION> annotationsHandle::annotations;
 //==============================================================================
-/*
+
 int main(int argc, char **argv){
-	annotationsHandle::runAnn(argc,argv,100);
+	annotationsHandle::runAnn(argc,argv,100,"_orientTrain");
 	//annotationsHandle::runEvaluation(argc,argv);
 }
-*/
+

@@ -9,6 +9,8 @@
 #include <fstream>
 #include <string>
 #include <stdio.h>
+#include <opencv/cv.h>
+#include <opencv/highgui.h>
 #include <opencv2/opencv.hpp>
 #include <boost/thread.hpp>
 #include <boost/version.hpp>
@@ -112,7 +114,8 @@ class annotationsHandle {
 		 * \li argv[2] -- the file contains the calibration data of the camera
 		 * \li argv[3] -- the file in which the annotation data needs to be stored
 		 */
-		static int runAnn(int argc, char **argv, unsigned step = 100);
+		static int runAnn(int argc, char **argv, unsigned step = 100,\
+			std::string usedImages = "");
 
 		/** The "on change" handler for the track-bars.
 		 */
