@@ -106,12 +106,12 @@ class classifyImages {
 		/** Creates the training data (according to the options), the labels and
 		 * trains the a \c GaussianProcess on the data.
 		 */
-		void trainGP();
+		void trainGP(annotationsHandle::POSE what);
 
 		/** Creates the test data and applies \c GaussianProcess prediction on the test
 		 * data.
 		 */
-		void predictGP(cv::Mat &predictions);
+		void predictGP(cv::Mat &predictions, annotationsHandle::POSE what);
 
 		/** Initialize the options for the Gaussian Process regression.
 		 */

@@ -262,7 +262,7 @@ std::vector<CvPoint> templ, int minX, int minY, cv::Point center){
 	uchar msersTmpl = 0;
 	for(std::size_t x=0; x<msers.size(); x++){
 		for(std::size_t y=0; y<msers[x].size(); y++){
-			if(this->isInTemplate(msers[x][y].x+minX,msers[x][y].y+minY,rotTempl)){
+			if(!this->isInTemplate(msers[x][y].x+minX,msers[x][y].y+minY,rotTempl)){
 				msersTmpl++;
 			}
 		}
@@ -535,7 +535,6 @@ void featureDetector::allForegroundPixels(std::vector<featureDetector::people>\
 		for(unsigned x=0; x<maxX-minX; x++){
 			for(unsigned y=0; y<maxY-minY; y++){
 				if((int)(thrsh.at<uchar>((int)(y+minY),(int)(x+minX)))>0){
-
 					// IF THE PIXEL IS NOT INSIDE OF THE TEMPLATE
 					if(!this->isInTemplate((x+minX),(y+minY),templ)){
 						double minDist = thrsh.rows*thrsh.cols;
@@ -1002,6 +1001,37 @@ cv::Point2f rotCenter){
 	rotated.release();
 	return newTempl;
 }
+
+//==============================================================================
+//!!!!!!!!!!!!!!!!! NEEDS HELP
+/*
+cv::Mat featureDetector::vertProject(cv::Mat img){
+	cv::Mat homogr(cv::Size(3,3),cv::DataType<double>::type);
+	homogr.at<double>(0,0) = 431; homogr.at<double>(1,0) = 148;
+	homogr.at<double>(0,1) = 431; homogr.at<double>(1,1) = 148;
+	homogr.at<double>(0,2) = 320; homogr.at<double>(1,1) = 240;
+
+	cv::Mat invHomo = homogr.inv();
+	invHomo.convertTo(invHomo,cv::DataType<double>::type);
+	cv::Mat pointu(cv::Size(1,3),cv::DataType<double>::type);
+	for(int xi=0; xi<foregr.cols; xi++){
+		for(int yi=0; yi<foregr.rows; yi++){
+			pointu.at<double>(0,0) = double(xi);
+			pointu.at<double>(1,0) = double(yi);
+			pointu.at<double>(2,0) = double(1);
+			cv::Mat result = invHomo * pointu;
+			std::cout<<abs((int)result.at<double>(1,0))<<" "<<
+					abs((int)result.at<double>(0,0))<<std::endl;
+
+			bkprojected.at<cv::Vec3d>(abs((int)result.at<double>(1,0)),\
+			abs((int)result.at<double>(0,0))) = foregr.at<cv::Vec3d>(xi,yi);
+		}
+	}
+	cv::imshow("bkproj",bkprojected);
+	cv::imshow("foregr",colorRoi);
+	cv::waitKey(0);
+}
+*/
 //==============================================================================
 /** Rotate matrix wrt to the camera location.
  */
@@ -1107,17 +1137,28 @@ unsigned index){
 
 	// STORE THE CPRRESPONDING LABELS
 	this->targets.resize(this->lastIndex+extra,\
-		cv::Mat::zeros(1,2,cv::DataType<double>::type));
+		cv::Mat::zeros(1,4,cv::DataType<double>::type));
 	for(std::size_t i=0; i<assignments.size(); i++){
 		if(assignments[i] != -1){
-			cv::Mat tmp = cv::Mat::zeros(1,2,cv::DataType<double>::type);
+			cv::Mat tmp = cv::Mat::zeros(1,4,cv::DataType<double>::type);
+			// READ THE TARGET ANGLE FOR LONGITUDE
 			double angle = static_cast<double>\
-				(targetAnno[index].annos[i].poses[annotationsHandle::ORIENTATION]);
+				(targetAnno[index].annos[i].poses[annotationsHandle::LONGITUDE]);
 			angle = angle*M_PI/180.0;
 			angle = this->fixAngle(targetAnno[index].annos[i].location,\
 					cv::Point(camPosX,camPosY),angle);
 			tmp.at<double>(0,0) = std::sin(angle);
 			tmp.at<double>(0,1) = std::cos(angle);
+
+			// READ THE TARGET ANGLE FOR LATITUDE
+			angle = static_cast<double>\
+				(targetAnno[index].annos[i].poses[annotationsHandle::LATITUDE]);
+			angle = angle*M_PI/180.0;
+			angle = this->fixAngle(targetAnno[index].annos[i].location,\
+					cv::Point(camPosX,camPosY),angle);
+			tmp.at<double>(0,2) = std::sin(angle);
+			tmp.at<double>(0,3) = std::cos(angle);
+
 			this->targets[this->lastIndex+assignments[i]] = tmp.clone();
 			tmp.release();
 		}

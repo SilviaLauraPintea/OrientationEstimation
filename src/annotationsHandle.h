@@ -32,7 +32,7 @@ class annotationsHandle {
 	public:
 		/** All considered poses.
 		 */
-		enum POSE {SITTING, STANDING, BENDING, ORIENTATION};
+		enum POSE {SITTING, STANDING, BENDING, LONGITUDE, LATITUDE};
 
 		/** A structure that stores a single annotation for a specific person.
  		 */
@@ -81,8 +81,10 @@ class annotationsHandle {
 		};
 		//======================================================================
 		annotationsHandle(){
-			image  = NULL;
-			choice = ' ';
+			image     = NULL;
+			choice    = ' ';
+			withPoses = false;
+			poseSize  = 5;
 		};
 
 		virtual ~annotationsHandle(){
@@ -136,7 +138,8 @@ class annotationsHandle {
 		 */
 		static void annoDifferences(std::vector<annotationsHandle::FULL_ANNOTATIONS>\
 			&train, std::vector<annotationsHandle::FULL_ANNOTATIONS> &test,\
-			double &avgDist, double &Ndiff, double avgOrientDiff, double poseDiff);
+			double &avgDist, double &Ndiff, double ssdLongDiff, double ssdLatDiff,\
+			double poseDiff);
 
 		/** Correlate annotations' from locations in \c annoOld to locations in
 		 * \c annoNew through IDs.
@@ -191,6 +194,16 @@ class annotationsHandle {
 		 * A mutex for controlling the access to the annotations.
 		 */
 		static boost::mutex trackbarMutex;
+		/** @var poseSize
+		 * The number of elements in the POSE enum.
+		 */
+		static unsigned poseSize;
+
+		/** @var withPoses
+		 * With poses or just orientation.
+		 */
+		static bool withPoses;
+
 };
 
 #endif /* ANNOTATIONSHANDLE_H_ */

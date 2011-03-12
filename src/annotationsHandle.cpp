@@ -39,7 +39,7 @@ void annotationsHandle::mouseHandlerAnn(int event, int x, int y, int flags, void
 				annotationsHandle::ANNOTATION temp;
 				temp.location = pt;
 				temp.id       = annotations.size();
-				temp.poses.assign(4, 0);
+				temp.poses.assign(poseSize, 0);
 				annotations.push_back(temp);
 				for(unsigned i=0;i!=annotations.size(); ++i){
 					Annotate::plotArea(image, (float)annotations[i].location.x, \
@@ -103,28 +103,40 @@ void annotationsHandle::showMenu(cv::Point center){
 	int pose1 = 0;
 	int pose2 = 0;
 	int pose3 = 0;
+	int pose4 = 0;
 	cv::namedWindow("Poses",CV_WINDOW_AUTOSIZE);
 	IplImage *tmpImg = cvCreateImage(cv::Size(300,1),8,1);
 	cv::imshow("Poses", tmpImg);
 
-	POSE sit = SITTING, stand = STANDING, bend = BENDING, orient = ORIENTATION;
-	for(POSE p=SITTING; p<=ORIENTATION;p++){
+	POSE sit = SITTING, stand = STANDING, bend = BENDING, longi = LONGITUDE,
+		lat = LATITUDE;
+	for(POSE p=SITTING; p<=LATITUDE;p++){
 		switch(p){
 			case SITTING:
-				cv::createTrackbar("Sitting","Poses", &pose0, 1, \
-					trackbar_callback, &sit);
+				if(withPoses){
+					cv::createTrackbar("Sitting","Poses", &pose0, 1, \
+						trackbar_callback, &sit);
+				}
 				break;
 			case STANDING:
-				cv::createTrackbar("Standing","Poses", &pose1, 1, \
-					trackbar_callback, &stand);
+				if(withPoses){
+					cv::createTrackbar("Standing","Poses", &pose1, 1, \
+						trackbar_callback, &stand);
+				}
 				break;
 			case BENDING:
-				cv::createTrackbar("Bending","Poses", &pose2, 1, \
-					trackbar_callback, &bend);
+				if(withPoses){
+					cv::createTrackbar("Bending","Poses", &pose2, 1, \
+						trackbar_callback, &bend);
+				}
 				break;
-			case ORIENTATION:
-				cv::createTrackbar("Orientation", "Poses", &pose3, 360, \
-					trackbar_callback, &orient);
+			case LONGITUDE:
+				cv::createTrackbar("Longitude", "Poses", &pose3, 360, \
+					trackbar_callback, &longi);
+				break;
+			case LATITUDE:
+				cv::createTrackbar("Latitude", "Poses", &pose4, 180, \
+					trackbar_callback, &lat);
 				break;
 			default:
 				//do nothing
@@ -146,11 +158,11 @@ void annotationsHandle::trackBarHandleFct(int position,void *param){
 	annotationsHandle::ANNOTATION lastAnno = annotations.back();
 	annotations.pop_back();
 	if(lastAnno.poses.empty()){
-		lastAnno.poses.assign(4,0);
+		lastAnno.poses.assign(poseSize,0);
 	}
 
 	// DRAW THE ORIENTATION TO SEE IT
-	if((POSE)(*ii)==ORIENTATION){
+	if((POSE)(*ii)==LATITUDE || (POSE)(*ii)==LONGITUDE){
 		drawOrientation(lastAnno.location, position);
 	}
 
@@ -164,10 +176,14 @@ void annotationsHandle::trackBarHandleFct(int position,void *param){
 	annotations.push_back(lastAnno);
 
 	// FIX TRACKBARS
-	if((POSE)(*ii) == ORIENTATION){
+	if((POSE)(*ii) == LATITUDE || (POSE)(*ii) == LONGITUDE){
 		if(position % 10 != 0){
 			position = (int)(position / 10) * 10;
-			cv::setTrackbarPos("Orientation", "Poses", position);
+			if((POSE)(*ii) == LATITUDE){
+				cv::setTrackbarPos("Latitude", "Poses", position);
+			}else{
+				cv::setTrackbarPos("Longitude", "Poses", position);
+			}
 		}
 	}else if((POSE)(*ii) == SITTING){
 		int oppPos = cv::getTrackbarPos("Standing","Poses");
@@ -257,23 +273,7 @@ usedImages){
 				annoOut <<"("<<annotations[i].location.x<<","\
 					<<annotations[i].location.y<<")|";
 				for(unsigned j=0;j<annotations[i].poses.size();j++){
-					switch((POSE)j){
-						case SITTING:
-							annoOut<<"(SITTING:"<<annotations[i].poses[j]<<")|";
-							break;
-						case STANDING:
-							annoOut<<"(STANDING:"<<annotations[i].poses[j]<<")|";
-							break;
-						case BENDING:
-							annoOut<<"(BENDING:"<<annotations[i].poses[j]<<")|";
-							break;
-						case ORIENTATION:
-							annoOut<<"(ORIENTATION:"<<annotations[i].poses[j]<<") ";
-							break;
-						default:
-							cout<<"Unknown pose ;)";
-							break;
-					}
+					annoOut<<"("<<(POSE)j<<":"<<annotations[i].poses[j]<<")|";
 				}
 			}
 			annoOut<<endl;
@@ -389,7 +389,7 @@ std::vector<annotationsHandle::FULL_ANNOTATIONS> &loadedAnno){
 							}
 						}else{
 							if(tmpAnno.poses.empty()){
-								tmpAnno.poses = std::vector<unsigned int>(4,0);
+								tmpAnno.poses = std::vector<unsigned int>(poseSize,0);
 							}
 							std::vector<std::string> poseVect = \
 								splitLine(const_cast<char*>(subVect[j].c_str()),':');
@@ -436,23 +436,7 @@ std::vector<annotationsHandle::FULL_ANNOTATIONS> fullAnno, std::string fileName)
 			annoOut<<"("<<fullAnno[k].annos[i].location.x<<","<<\
 				fullAnno[k].annos[i].location.y<<")|";
 			for(std::size_t j=0;j<fullAnno[k].annos[i].poses.size();j++){
-				switch((POSE)j){
-					case SITTING:
-						annoOut<<"(SITTING:"<<fullAnno[k].annos[i].poses[j]<<")|";
-						break;
-					case STANDING:
-						annoOut<<"(STANDING:"<<fullAnno[k].annos[i].poses[j]<<")|";
-						break;
-					case BENDING:
-						annoOut<<"(BENDING:"<<fullAnno[k].annos[i].poses[j]<<")|";
-						break;
-					case ORIENTATION:
-						annoOut<<"(ORIENTATION:"<<fullAnno[k].annos[i].poses[j]<<") ";
-						break;
-					default:
-						cout<<"Unknown pose ;)";
-						break;
-				}
+				annoOut<<"("<<(POSE)(j)<<":"<<fullAnno[k].annos[i].poses[j]<<")|";
 			}
 		}
 		annoOut<<endl;
@@ -565,7 +549,7 @@ std::vector<annotationsHandle::ASSIGNED> &idAssignedTo){
  */
 void annotationsHandle::annoDifferences(std::vector<annotationsHandle::FULL_ANNOTATIONS>\
 &train, std::vector<annotationsHandle::FULL_ANNOTATIONS> &test, double &avgDist,\
-double &Ndiff, double ssdOrientDiff, double poseDiff){
+double &Ndiff, double ssdLongDiff, double ssdLatDiff, double poseDiff){
 	if(train.size() != test.size()) {
 		std::cerr<<"Training annotations and test annotations have different sizes";
 		exit(1);
@@ -603,20 +587,22 @@ double &Ndiff, double ssdOrientDiff, double poseDiff){
 			for(unsigned int k=0;k<test[i].annos.size();k++){
 				if(train[i].annos[l].id == test[i].annos[k].id){
 					// FOR POSES COMPUTE THE DIFFERENCES
-					for(unsigned int m=0;m<train[i].annos[l].poses.size()-1;m++){
-						if((POSE)m != BENDING){
+					if(withPoses){
+						for(unsigned int m=0;m<train[i].annos[l].poses.size()-1;m++){
 							poseDiff += abs((double)train[i].annos[l].poses[m] - \
-									(double)test[i].annos[k].poses[m])/2.0;
-						}else{
-							poseDiff += abs((double)train[i].annos[l].poses[m] - \
-									(double)test[i].annos[k].poses[m])/2.0;
+								(double)test[i].annos[k].poses[m])/2.0;
 						}
 					}
 
 					// SSD between the predicted values and the correct ones
-					double angleTrain = ((double)train[i].annos[l].poses[3]*M_PI/180.0);
-					double angleTest  = ((double)test[i].annos[k].poses[3]*M_PI/180.0);
-					ssdOrientDiff += pow(cos(angleTrain)-cos(angleTest),2) +\
+					int longPos = (int)LONGITUDE, latPos = (int)LATITUDE;
+					double angleTrain = ((double)train[i].annos[l].poses[longPos]*M_PI/180.0);
+					double angleTest  = ((double)test[i].annos[k].poses[longPos]*M_PI/180.0);
+					ssdLongDiff += pow(cos(angleTrain)-cos(angleTest),2) +\
+									pow(sin(angleTrain)-sin(angleTest),2);
+					angleTrain = ((double)train[i].annos[l].poses[latPos]*M_PI/180.0);
+					angleTest  = ((double)test[i].annos[k].poses[latPos]*M_PI/180.0);
+					ssdLatDiff += pow(cos(angleTrain)-cos(angleTest),2) +\
 									pow(sin(angleTrain)-sin(angleTest),2);
 				}
 			}
@@ -626,9 +612,11 @@ double &Ndiff, double ssdOrientDiff, double poseDiff){
 	cout<<"avgDist: "<<avgDist<<endl;
 	cout<<"Ndiff: "<<Ndiff<<endl;
 	cout<<"PoseDiff: "<<poseDiff<<endl;
-	cout<<"ssdOrientDiff: "<<ssdOrientDiff<<endl;
+	cout<<"ssdLongDiff: "<<ssdLongDiff<<endl;
+	cout<<"ssdLatDiff: "<<ssdLatDiff<<endl;
 
-	ssdOrientDiff /= train.size();
+	ssdLongDiff /= train.size();
+	ssdLatDiff /= train.size();
 	avgDist /= train.size();
 }
 //==============================================================================
@@ -643,10 +631,10 @@ void annotationsHandle::displayFullAnns(std::vector<annotationsHandle::FULL_ANNO
 				"_____________________________________________"<<endl;
 			cout<<"Location: ["<<fullAnns[i].annos[j].location.x<<","\
 				<<fullAnns[i].annos[j].location.y<<"]"<<endl;
-			cout<<"Pose: (Sitting: "<<fullAnns[i].annos[j].poses[0]<<\
-				"),(Standing: "<<fullAnns[i].annos[j].poses[1]<<\
-				"),(Bending: "<<fullAnns[i].annos[j].poses[2]<<\
-				"),(Orientation: "<<fullAnns[i].annos[j].poses[3]<<")"<<endl;
+			for(unsigned l=0; l<poseSize; l++){
+				cout<<"("<<(POSE)l<<": "<<fullAnns[i].annos[j].poses[l]<<")";
+			}
+			std::cout<<std::endl;
 		}
 		cout<<endl;
 	}
@@ -673,19 +661,21 @@ int annotationsHandle::runEvaluation(int argc, char **argv){
 
 	displayFullAnns(allAnnoTrain);
 
-	double avgDist = 0, Ndiff = 0, ssdOrientDiff = 0, poseDiff = 0;
-	annoDifferences(allAnnoTrain, allAnnoTest, avgDist, Ndiff, ssdOrientDiff, \
-		poseDiff);
+	double avgDist = 0, Ndiff = 0, ssdLatDiff = 0, ssdLongDiff = 0, poseDiff = 0;
+	annoDifferences(allAnnoTrain, allAnnoTest, avgDist, Ndiff, ssdLongDiff, \
+		ssdLatDiff, poseDiff);
 }
 
 char annotationsHandle::choice;
+bool annotationsHandle::withPoses;
+unsigned annotationsHandle::poseSize;
 boost::mutex annotationsHandle::trackbarMutex;
 IplImage *annotationsHandle::image;
 std::vector<annotationsHandle::ANNOTATION> annotationsHandle::annotations;
 //==============================================================================
-
+/*
 int main(int argc, char **argv){
-	annotationsHandle::runAnn(argc,argv,100,"_orientTrain");
+	annotationsHandle::runAnn(argc,argv,20,"_orientTrain");
 	//annotationsHandle::runEvaluation(argc,argv);
 }
-
+*/

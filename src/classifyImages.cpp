@@ -86,7 +86,7 @@ char* fileSIFT, int colorSp){
 /** Creates the training data (according to the options), the labels and
  * trains the a \c GaussianProcess on the data.
  */
-void classifyImages::trainGP(){
+void classifyImages::trainGP(annotationsHandle::POSE what){
 	this->features->setFeatureType(this->feature);
 	this->features->init(this->trainFolder, this->annotationsTrain);
 	this->features->run();
@@ -110,17 +110,25 @@ void classifyImages::trainGP(){
 	this->trainTargets.convertTo(this->trainTargets, cv::DataType<double>::type);
 	range1Mat(this->trainData);
 
-	// TRAIN THE SIN AND COS SEPARETELY
-	this->gpSin.train(this->trainData,this->trainTargets.col(0),\
-		this->kFunction, this->noise, this->length);
-	this->gpCos.train(this->trainData,this->trainTargets.col(1),\
-		this->kFunction, this->noise, this->length);
+	// TRAIN THE SIN AND COS SEPARETELY FOR LONGITUDE || LATITUDe
+	if(what == annotationsHandle::LONGITUDE){
+		this->gpSin.train(this->trainData,this->trainTargets.col(0),\
+			this->kFunction, this->noise, this->length);
+		this->gpCos.train(this->trainData,this->trainTargets.col(1),\
+			this->kFunction, this->noise, this->length);
+	}else if(what == annotationsHandle::LATITUDE){
+		// TRAIN THE SIN AND COS SEPARETELY FOR LATITUDE
+		this->gpSin.train(this->trainData,this->trainTargets.col(2),\
+			this->kFunction, this->noise, this->length);
+		this->gpCos.train(this->trainData,this->trainTargets.col(3),\
+			this->kFunction, this->noise, this->length);
+	}
 }
 //==============================================================================
 /** Creates the test data and applies \c GaussianProcess prediction on the test
  * data.
  */
-void classifyImages::predictGP(cv::Mat &predictions){
+void classifyImages::predictGP(cv::Mat &predictions, annotationsHandle::POSE what){
 	this->features->setFeatureType(this->feature);
 	this->features->init(this->testFolder, this->annotationsTest);
 	this->features->run();
@@ -134,7 +142,14 @@ void classifyImages::predictGP(cv::Mat &predictions){
 		cv::Mat dummy1 = this->testData.row(i);
 		this->features->data[i].copyTo(dummy1);
 
-		cv::Mat dummy2 = this->testTargets.row(i);
+		cv::Mat dummy2;
+		if(what == annotationsHandle::LONGITUDE){
+			dummy2 = this->testTargets.row(i).colRange(0,2);
+		}else if(what == annotationsHandle::LATITUDE){
+			dummy2 = this->testTargets.row(i).colRange(2,4);
+		}else{
+			dummy2 = this->testTargets.row(i);
+		}
 		this->features->targets[i].copyTo(dummy2);
 	}
 	this->testData.convertTo(this->testData, cv::DataType<double>::type);
@@ -156,7 +171,6 @@ void classifyImages::predictGP(cv::Mat &predictions){
 		prediCos.mean.clear();
 		prediCos.variance.clear();
 	}
-
 	double error, accuracy;
 	this->evaluate(predictions, error, accuracy);
 }
@@ -258,12 +272,16 @@ int main(int argc, char **argv){
 /*
 	classi.buildDictionary();
 */
-
-	classi.init(1e-3,100.0,&gaussianProcess::sqexp,featureDetector::SIFT);
-	classi.trainGP();
+  	//LONGITUDE TRAINING AND PREDICTING
+	classi.init(1e-3,100.0,&gaussianProcess::sqexp,featureDetector::IPOINTS);
+	classi.trainGP(annotationsHandle::LONGITUDE);
 	cv::Mat predictions;
-	classi.predictGP(predictions);
+	classi.predictGP(predictions,annotationsHandle::LONGITUDE);
 
+  	//LATITUDE TRAINING AND PREDICTING
+	classi.init(1e-3,100.0,&gaussianProcess::sqexp,featureDetector::IPOINTS);
+	classi.trainGP(annotationsHandle::LATITUDE);
+	classi.predictGP(predictions,annotationsHandle::LATITUDE);
 }
 
 
