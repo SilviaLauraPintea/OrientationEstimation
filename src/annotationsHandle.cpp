@@ -215,13 +215,15 @@ void annotationsHandle::plotHull(IplImage *img, std::vector<CvPoint> &hull){
 //==============================================================================
 /** Starts the annotation of the images. The parameters that need to be indicated
  * are:
- *
- * \li argv[1] -- name of directory containing the images
- * \li argv[2] -- the file contains the calibration data of the camera
- * \li argv[3] -- the file in which the annotation data needs to be stored
+ * \li step       -- every "step"^th image is opened for annotation
+ * \li usedImages -- the folder where the annotated images are moved
+ * \li imgIndex   -- the image index from which to start
+ * \li argv[1]    -- name of directory containing the images
+ * \li argv[2]    -- the file contains the calibration data of the camera
+ * \li argv[3]    -- the file in which the annotation data needs to be stored
  */
 int annotationsHandle::runAnn(int argc, char **argv, unsigned step, std::string \
-usedImages){
+usedImages, int imgIndex){
 	choice = 'c';
 	if(argc != 5){
 		cerr<<"usage: ./annotatepos <img_list.txt> <calib.xml> <annotation.txt>\n"<< \
@@ -238,7 +240,7 @@ usedImages){
 	}
 	unsigned index                = 0;
 	cerr<<"Loading the images...."<< argv[1] << endl;
-	std::vector<std::string> imgs = readImages(argv[1]);
+	std::vector<std::string> imgs = readImages(argv[1],imgIndex);
 	cerr<<"Loading the calibration...."<< argv[2] << endl;
 	loadCalibration(argv[2]);
 	std::vector<CvPoint> priorHull;
@@ -290,7 +292,7 @@ usedImages){
 			//move image to a different directory to keep track of annotated images
 			string currLocation = imgs[index].substr(0,imgs[index].rfind("/"));
 			string newLocation  = currLocation.substr(0,currLocation.rfind("/")) + \
-				"/annotated_images"+usedImages+"/";
+				"/annotated"+usedImages+"/";
 			if(!boost::filesystem::is_directory(newLocation)){
 				boost::filesystem::create_directory(newLocation);
 			}
@@ -307,7 +309,7 @@ usedImages){
 				step = step/10;
 			}
 			index += step;
-			if(index==imgs.size()){
+			if(index>=imgs.size()){
 				break;
 			}
 
@@ -331,7 +333,7 @@ usedImages){
 				step = step/10;
 			}
 			index += step;
-			if(index==imgs.size()){
+			if(index>=imgs.size()){
 				break;
 			}
 			image = cvLoadImage(imgs[index].c_str());
@@ -578,7 +580,7 @@ double &Ndiff, double ssdLongDiff, double ssdLatDiff, double poseDiff){
 		//2. update the difference in number of people detected
 		if(train[i].annos.size()!=test[i].annos.size()){
 			Ndiff += abs((double)train[i].annos.size() - \
-				(double)test[i].annos.size());
+						(double)test[i].annos.size());
 		}
 
 		//3. update the poses estimation differences
@@ -673,9 +675,9 @@ boost::mutex annotationsHandle::trackbarMutex;
 IplImage *annotationsHandle::image;
 std::vector<annotationsHandle::ANNOTATION> annotationsHandle::annotations;
 //==============================================================================
-/*
+
 int main(int argc, char **argv){
-	annotationsHandle::runAnn(argc,argv,20,"_orientTrain");
+	annotationsHandle::runAnn(argc,argv,500,"_kmeans",0);
 	//annotationsHandle::runEvaluation(argc,argv);
 }
-*/
+

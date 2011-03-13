@@ -109,15 +109,17 @@ class annotationsHandle {
 		 */
 		static void plotHull(IplImage *img, std::vector<CvPoint> &hull);
 
-		/** Starts the annotation of the images. The parameters that need to be
-		 * indicated are:
-		 *
-		 * \li argv[1] -- name of directory containing the images
-		 * \li argv[2] -- the file contains the calibration data of the camera
-		 * \li argv[3] -- the file in which the annotation data needs to be stored
+		/** Starts the annotation of the images. The parameters that need to be indicated
+		 * are:
+		 * \li step       -- every "step"^th image is opened for annotation
+		 * \li usedImages -- the folder where the annotated images are moved
+		 * \li imgIndex   -- the image index from which to start
+		 * \li argv[1]    -- name of directory containing the images
+		 * \li argv[2]    -- the file contains the calibration data of the camera
+		 * \li argv[3]    -- the file in which the annotation data needs to be stored
 		 */
-		static int runAnn(int argc, char **argv, unsigned step = 100,\
-			std::string usedImages = "");
+		static int runAnn(int argc, char **argv, unsigned step, std::string \
+				usedImages, int imgIndex=-1);
 
 		/** The "on change" handler for the track-bars.
 		 */
