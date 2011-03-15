@@ -53,41 +53,53 @@ void annotationsHandle::mouseHandlerAnn(int event, int x, int y, int flags, void
 //==============================================================================
 /** Shows how the selected orientation looks on the image.
  */
-void annotationsHandle::drawOrientation(cv::Point center, unsigned int orient){
+void annotationsHandle::drawOrientation(cv::Point center, unsigned int orient,\
+annotationsHandle::POSE pose){
 	unsigned int length = 60;
 	double angle = (M_PI * orient)/180;
-	cv::Point point1;
-	point1.x = center.x - length * cos(angle);
-	point1.y = center.y + length * sin(angle);
+	cv::Point point1, point2;
 
-	cv::Point point2;
-	point2.x = center.x - length * cos(angle + M_PI);
-	point2.y = center.y + length * sin(angle + M_PI);
+	if(pose == LATITUDE){
+		point1.x = center.x - 0.5*length * cos(angle + M_PI);
+		point1.y = center.y + 0.5*length * sin(angle + M_PI);
+		point2.x = center.x - length * cos(angle + M_PI);
+		point2.y = center.y + length * sin(angle + M_PI);
+	}else{
+		point1.x = center.x - length * cos(angle);
+		point1.y = center.y + length * sin(angle);
+		point2.x = center.x - length * cos(angle + M_PI);
+		point2.y = center.y + length * sin(angle + M_PI);
+	}
 
 	cv::Size imgSize(image->width,image->height);
 	cv::clipLine(imgSize,point1,point2);
 
 	IplImage *img = cvCloneImage(image);
 	cv::Mat tmpImage(img);
-	cv::line(tmpImage,point1,point2,cv::Scalar(100,225,0),2,8,0);
+	if(pose == LATITUDE){
+		cv::line(tmpImage,point1,point2,cv::Scalar(100,50,255),2,8,0);
+	}else{
+		cv::line(tmpImage,point1,point2,cv::Scalar(100,255,0),2,8,0);
+	}
 
-	cv::Point point3;
+	cv::Point point3, point4, point5;
 	point3.x = center.x - length * 4/5 * cos(angle + M_PI);
 	point3.y = center.y + length * 4/5 * sin(angle + M_PI);
-
-	cv::Point point4;
-	point4.x = point3.x - 5 * cos(M_PI/2.0 + angle);
-	point4.y = point3.y + 5 * sin(M_PI/2.0 + angle);
-
-	cv::Point point5;
-	point5.x = point3.x - 5 * cos(M_PI/2.0 + angle  + M_PI);
-	point5.y = point3.y + 5 * sin(M_PI/2.0 + angle  + M_PI);
+	point4.x = point3.x - 7 * cos(M_PI/2.0 + angle);
+	point4.y = point3.y + 7 * sin(M_PI/2.0 + angle);
+	point5.x = point3.x - 7 * cos(M_PI/2.0 + angle  + M_PI);
+	point5.y = point3.y + 7 * sin(M_PI/2.0 + angle  + M_PI);
 
 	cv::Point *pts = new cv::Point[4];
 	pts[0] = point4;
 	pts[1] = point2;
 	pts[2] = point5;
-	cv::fillConvexPoly(tmpImage,pts,3,cv::Scalar(255,50,0),8,0);
+	if(pose == LATITUDE){
+		cv::fillConvexPoly(tmpImage,pts,3,cv::Scalar(100,50,225),8,0);
+	}else{
+		cv::fillConvexPoly(tmpImage,pts,3,cv::Scalar(255,50,0),8,0);
+	}
+
 	delete [] pts;
 
 	cv::circle(tmpImage,center,1,cv::Scalar(255,50,0),1,8,0);
@@ -105,8 +117,7 @@ void annotationsHandle::showMenu(cv::Point center){
 	int pose3 = 0;
 	int pose4 = 0;
 	cv::namedWindow("Poses",CV_WINDOW_AUTOSIZE);
-	IplImage *tmpImg = cvCreateImage(cv::Size(300,1),8,1);
-	cv::imshow("Poses", tmpImg);
+	IplImage *tmpImg = cvCreateImage(cv::Size(400,1),8,1);
 
 	POSE sit = SITTING, stand = STANDING, bend = BENDING, longi = LONGITUDE,
 		lat = LATITUDE;
@@ -135,7 +146,7 @@ void annotationsHandle::showMenu(cv::Point center){
 					trackbar_callback, &longi);
 				break;
 			case LATITUDE:
-				cv::createTrackbar("Latitude", "Poses", &pose4, 180, \
+				cv::createTrackbar("Latitude", "Poses", &pose4, 360, \
 					trackbar_callback, &lat);
 				break;
 			default:
@@ -143,12 +154,13 @@ void annotationsHandle::showMenu(cv::Point center){
 				break;
 		}
 	}
+	cv::imshow("Poses", tmpImg);
+
 	cout<<"Press 'c' once the annotation for poses is done."<<endl;
 	while(choice != 'c' && choice != 'C'){
 		choice = (char)(cv::waitKey(0));
 	}
 	cvReleaseImage(&tmpImg);
-	cvDestroyWindow("Poses");
 }
 //==============================================================================
 /** A function that starts a new thread which handles the track-bar event.
@@ -163,7 +175,7 @@ void annotationsHandle::trackBarHandleFct(int position,void *param){
 
 	// DRAW THE ORIENTATION TO SEE IT
 	if((POSE)(*ii)==LATITUDE || (POSE)(*ii)==LONGITUDE){
-		drawOrientation(lastAnno.location, position);
+		drawOrientation(lastAnno.location, position, (POSE)(*ii));
 	}
 
 	// FOR ALL CASES STORE THE POSITION
@@ -224,6 +236,9 @@ void annotationsHandle::plotHull(IplImage *img, std::vector<CvPoint> &hull){
  */
 int annotationsHandle::runAnn(int argc, char **argv, unsigned step, std::string \
 usedImages, int imgIndex){
+	if(imgIndex!= -1){
+		imgIndex += step;
+	}
 	choice = 'c';
 	if(argc != 5){
 		cerr<<"usage: ./annotatepos <img_list.txt> <calib.xml> <annotation.txt>\n"<< \
@@ -668,16 +683,16 @@ int annotationsHandle::runEvaluation(int argc, char **argv){
 		ssdLatDiff, poseDiff);
 }
 
-char annotationsHandle::choice;
-bool annotationsHandle::withPoses;
-unsigned annotationsHandle::poseSize;
+char annotationsHandle::choice = ' ';
+bool annotationsHandle::withPoses = false;
+unsigned annotationsHandle::poseSize = 5;
 boost::mutex annotationsHandle::trackbarMutex;
 IplImage *annotationsHandle::image;
 std::vector<annotationsHandle::ANNOTATION> annotationsHandle::annotations;
 //==============================================================================
 
 int main(int argc, char **argv){
-	annotationsHandle::runAnn(argc,argv,500,"_kmeans",0);
+	annotationsHandle::runAnn(argc,argv,100,"_kmeans",1600);
 	//annotationsHandle::runEvaluation(argc,argv);
 }
 

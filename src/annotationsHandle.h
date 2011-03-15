@@ -118,8 +118,8 @@ class annotationsHandle {
 		 * \li argv[2]    -- the file contains the calibration data of the camera
 		 * \li argv[3]    -- the file in which the annotation data needs to be stored
 		 */
-		static int runAnn(int argc, char **argv, unsigned step, std::string \
-				usedImages, int imgIndex=-1);
+		static int runAnn(int argc, char **argv, unsigned step,  std::string \
+			usedImages, int imgIndex=-1);
 
 		/** The "on change" handler for the track-bars.
 		 */
@@ -171,7 +171,8 @@ class annotationsHandle {
 
 		/** Shows how the selected orientation looks on the image.
 		 */
-		static void drawOrientation(cv::Point center, unsigned int orient);
+		static void drawOrientation(cv::Point center, unsigned int orient,\
+			annotationsHandle::POSE pose);
 
 		/** Writes a given FULL_ANNOTATIONS structure into a given file.
 		 */
