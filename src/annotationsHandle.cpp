@@ -2,6 +2,21 @@
  * Author: Silvia-Laura Pintea
  */
 #include "annotationsHandle.h"
+
+//==============================================================================
+/** Initializes all the values of the class variables.
+ */
+void annotationsHandle::init(){
+	image     = NULL;
+	choice    = ' ';
+	withPoses = false;
+	poseSize  = 5;
+	poseNames.push_back("SITTING");
+	poseNames.push_back("STANDING");
+	poseNames.push_back("BENDING");
+	poseNames.push_back("LONGITUDE");
+	poseNames.push_back("LATITUDE");
+}
 //==============================================================================
 /** Define a post-fix increment operator for the enum \c POSE.
  */
@@ -41,14 +56,116 @@ void annotationsHandle::mouseHandlerAnn(int event, int x, int y, int flags, void
 				temp.id       = annotations.size();
 				temp.poses.assign(poseSize, 0);
 				annotations.push_back(temp);
+				showMenu(pt);
 				for(unsigned i=0;i!=annotations.size(); ++i){
 					Annotate::plotArea(image, (float)annotations[i].location.x, \
 						(float)annotations[i].location.y);
 				}
-				showMenu(pt);
 			}
 			break;
 	}
+}
+//==============================================================================
+/** Rotate matrix wrt to the camera location.
+ */
+cv::Mat annotationsHandle::rotateWrtCamera(cv::Point feetLocation,\
+cv::Point cameraLocation, cv::Mat toRotate, cv::Point &borders){
+	// GET THE ANGLE TO ROTATE WITH
+	double cameraAngle = std::atan2((feetLocation.y-cameraLocation.y),\
+						(feetLocation.x-cameraLocation.x));
+	cameraAngle = (cameraAngle+M_PI/2.0);
+	if(cameraAngle>2.0*M_PI){
+		cameraAngle -= 2.0*M_PI;
+	}
+	cameraAngle *= (180.0/M_PI);
+
+	// ADD A BLACK BORDER TO THE ORIGINAL IMAGE
+	double diag       = std::sqrt(toRotate.cols*toRotate.cols+toRotate.rows*\
+						toRotate.rows);
+	borders.x         = std::ceil((diag-toRotate.cols)/2.0);
+	borders.y         = std::ceil((diag-toRotate.rows)/2.0);
+	cv::Mat srcRotate = cv::Mat::zeros(cv::Size(toRotate.cols+2*borders.x,\
+						toRotate.rows+2*borders.y),toRotate.type());
+	cv::copyMakeBorder(toRotate,srcRotate,borders.y,borders.y,borders.x,\
+		borders.x,cv::BORDER_CONSTANT);
+
+	// GET THE ROTATION MATRIX
+	cv::Mat rotationMat = cv::getRotationMatrix2D(cv::Point2f(\
+		srcRotate.cols/2.0,srcRotate.rows/2.0),cameraAngle, 1.0);
+
+	// ROTATE THE IMAGE WITH THE ROTATION MATRIX
+	cv::Mat rotated = cv::Mat::zeros(srcRotate.size(),toRotate.type());
+	cv::warpAffine(srcRotate, rotated, rotationMat, srcRotate.size());
+
+	rotationMat.release();
+	srcRotate.release();
+	return rotated;
+}
+//==============================================================================
+/** Shows how the selected orientation looks on the image.
+ */
+void annotationsHandle::drawLatitude(cv::Point head, cv::Point feet,\
+unsigned int orient, annotationsHandle::POSE pose){
+	cv::namedWindow("Latitude");
+	unsigned int length = 80;
+	double angle = (M_PI * orient)/180;
+
+	// GET THE TEMPLATE AND DETERMINE ITS SIZE
+	vector<CvPoint> points;
+	genTemplate2(feet, persHeight, camHeight, points);
+	int maxX=0,maxY=0,minX=image->width,minY=image->height;
+	for(unsigned i=0;i<points.size();i++){
+		if(maxX<points[i].x){maxX = points[i].x;}
+		if(maxY<points[i].y){maxY = points[i].y;}
+		if(minX>points[i].x){minX = points[i].x;}
+		if(minY>points[i].y){minY = points[i].y;}
+	}
+
+	minX = std::max(minX-10,0);
+	minY = std::max(minY-10,0);
+	maxX = std::min(maxX+10,image->width);
+	maxY = std::min(maxY+10,image->height);
+	// ROTATE THE TEMPLATE TO HORIZONTAL SO WE CAN SEE IT
+	cv::Mat tmpImage((image),cv::Rect(cv::Point(minX,minY),\
+		cv::Size(maxX-minX,maxY-minY)));
+	cv::Point stupid;
+	cv::Mat tmpImg = rotateWrtCamera(head, feet, tmpImage, stupid);
+	cv::Mat large;
+	cv::resize(tmpImg,large,cv::Size(0,0),1.5,1.5, cv::INTER_CUBIC);
+	cv::namedWindow("Latitude");
+
+	// DRAW THE LINE ON WHICH THE ARROW SITS
+	cv::Point center(large.cols*1/4,large.rows/2), point1, point2;
+	point1.x = center.x - 0.3*length * cos(angle + M_PI/2.0);
+	point1.y = center.y + 0.3*length * sin(angle + M_PI/2.0);
+	point2.x = center.x - length * cos(angle + M_PI/2.0);
+	point2.y = center.y + length * sin(angle + M_PI/2.0);
+	cv::clipLine(large.size(),point1,point2);
+	cv::line(large,point1,point2,cv::Scalar(100,50,255),2,8,0);
+
+	// DRAW THE TOP OF THE ARROW
+	cv::Point point3, point4, point5;
+	point3.x = center.x - length * 4/5 * cos(angle + M_PI/2.0);
+	point3.y = center.y + length * 4/5 * sin(angle + M_PI/2.0);
+	point4.x = point3.x - 7 * cos(M_PI + angle);
+	point4.y = point3.y + 7 * sin(M_PI + angle);
+	point5.x = point3.x - 7 * cos(M_PI + angle  + M_PI);
+	point5.y = point3.y + 7 * sin(M_PI + angle  + M_PI);
+
+	// FILL THE POLLY CORRESPONDING TO THE ARROW
+	cv::Point *pts = new cv::Point[4];
+	pts[0] = point4;
+	pts[1] = point2;
+	pts[2] = point5;
+	cv::fillConvexPoly(large,pts,3,cv::Scalar(100,50,255),8,0);
+	delete [] pts;
+
+	// PUT A CIRCLE ON THE CENTER POINT
+	cv::circle(large,center,1,cv::Scalar(255,50,0),1,8,0);
+	cv::imshow("Latitude", large);
+	tmpImg.release();
+	large.release();
+	tmpImage.release();
 }
 //==============================================================================
 /** Shows how the selected orientation looks on the image.
@@ -58,29 +175,17 @@ annotationsHandle::POSE pose){
 	unsigned int length = 60;
 	double angle = (M_PI * orient)/180;
 	cv::Point point1, point2;
-
-	if(pose == LATITUDE){
-		point1.x = center.x - 0.5*length * cos(angle + M_PI);
-		point1.y = center.y + 0.5*length * sin(angle + M_PI);
-		point2.x = center.x - length * cos(angle + M_PI);
-		point2.y = center.y + length * sin(angle + M_PI);
-	}else{
-		point1.x = center.x - length * cos(angle);
-		point1.y = center.y + length * sin(angle);
-		point2.x = center.x - length * cos(angle + M_PI);
-		point2.y = center.y + length * sin(angle + M_PI);
-	}
+	point1.x = center.x - length * cos(angle);
+	point1.y = center.y + length * sin(angle);
+	point2.x = center.x - length * cos(angle + M_PI);
+	point2.y = center.y + length * sin(angle + M_PI);
 
 	cv::Size imgSize(image->width,image->height);
 	cv::clipLine(imgSize,point1,point2);
 
 	IplImage *img = cvCloneImage(image);
 	cv::Mat tmpImage(img);
-	if(pose == LATITUDE){
-		cv::line(tmpImage,point1,point2,cv::Scalar(100,50,255),2,8,0);
-	}else{
-		cv::line(tmpImage,point1,point2,cv::Scalar(100,255,0),2,8,0);
-	}
+	cv::line(tmpImage,point1,point2,cv::Scalar(100,255,0),2,8,0);
 
 	cv::Point point3, point4, point5;
 	point3.x = center.x - length * 4/5 * cos(angle + M_PI);
@@ -94,14 +199,9 @@ annotationsHandle::POSE pose){
 	pts[0] = point4;
 	pts[1] = point2;
 	pts[2] = point5;
-	if(pose == LATITUDE){
-		cv::fillConvexPoly(tmpImage,pts,3,cv::Scalar(100,50,225),8,0);
-	}else{
-		cv::fillConvexPoly(tmpImage,pts,3,cv::Scalar(255,50,0),8,0);
-	}
+	cv::fillConvexPoly(tmpImage,pts,3,cv::Scalar(255,50,0),8,0);
 
 	delete [] pts;
-
 	cv::circle(tmpImage,center,1,cv::Scalar(255,50,0),1,8,0);
 	cv::imshow("image", tmpImage);
 	tmpImage.release();
@@ -146,7 +246,7 @@ void annotationsHandle::showMenu(cv::Point center){
 					trackbar_callback, &longi);
 				break;
 			case LATITUDE:
-				cv::createTrackbar("Latitude", "Poses", &pose4, 360, \
+				cv::createTrackbar("Latitude", "Poses", &pose4, 180, \
 					trackbar_callback, &lat);
 				break;
 			default:
@@ -161,6 +261,8 @@ void annotationsHandle::showMenu(cv::Point center){
 		choice = (char)(cv::waitKey(0));
 	}
 	cvReleaseImage(&tmpImg);
+	cv::destroyWindow("Poses");
+	cv::destroyWindow("Latitude");
 }
 //==============================================================================
 /** A function that starts a new thread which handles the track-bar event.
@@ -174,8 +276,14 @@ void annotationsHandle::trackBarHandleFct(int position,void *param){
 	}
 
 	// DRAW THE ORIENTATION TO SEE IT
-	if((POSE)(*ii)==LATITUDE || (POSE)(*ii)==LONGITUDE){
-		drawOrientation(lastAnno.location, position, (POSE)(*ii));
+	vector<CvPoint> points;
+	genTemplate2(lastAnno.location, persHeight, camHeight, points);
+	cv::Point headCenter((points[12].x+points[14].x)/2,\
+		(points[12].y+points[14].y)/2);
+	if((POSE)(*ii)==LONGITUDE){
+		drawOrientation(headCenter, position, (POSE)(*ii));
+	}else if((POSE)(*ii)==LATITUDE){
+		drawLatitude(headCenter, lastAnno.location, position, (POSE)(*ii));
 	}
 
 	// FOR ALL CASES STORE THE POSITION
@@ -236,6 +344,7 @@ void annotationsHandle::plotHull(IplImage *img, std::vector<CvPoint> &hull){
  */
 int annotationsHandle::runAnn(int argc, char **argv, unsigned step, std::string \
 usedImages, int imgIndex){
+	init();
 	if(imgIndex!= -1){
 		imgIndex += step;
 	}
@@ -262,6 +371,8 @@ usedImages, int imgIndex){
 	cerr<<"Loading the location prior...."<< argv[3] << endl;
 	loadPriorHull(argv[3], priorHull);
 
+	std::cerr<<"LATITUDE: Only looking upwards or downwards matters!"<<std::endl;
+
 	// set the handler of the mouse events to the method: <<mouseHandler>>
 	image = cvLoadImage(imgs[index].c_str());
 	plotHull(image, priorHull);
@@ -285,12 +396,15 @@ usedImages, int imgIndex){
 		/* if the pressed key is 's' stores the annotated positions
 		 * for the current image */
 		if((char)key == 's'){
-			annoOut<<imgs[index].substr(imgs[index].rfind("/")+1)<<" ";
+			annoOut<<imgs[index].substr(imgs[index].rfind("/")+1);
 			for(unsigned i=0; i!=annotations.size();++i){
-				annoOut <<"("<<annotations[i].location.x<<","\
+				annoOut <<" ("<<annotations[i].location.x<<","\
 					<<annotations[i].location.y<<")|";
 				for(unsigned j=0;j<annotations[i].poses.size();j++){
-					annoOut<<"("<<(POSE)j<<":"<<annotations[i].poses[j]<<")|";
+					annoOut<<"("<<poseNames[j]<<":"<<annotations[i].poses[j]<<")";
+					if(j<annotations[i].poses.size()-1){
+						annoOut<<"|";
+					}
 				}
 			}
 			annoOut<<endl;
@@ -649,7 +763,7 @@ void annotationsHandle::displayFullAnns(std::vector<annotationsHandle::FULL_ANNO
 			cout<<"Location: ["<<fullAnns[i].annos[j].location.x<<","\
 				<<fullAnns[i].annos[j].location.y<<"]"<<endl;
 			for(unsigned l=0; l<poseSize; l++){
-				cout<<"("<<(POSE)l<<": "<<fullAnns[i].annos[j].poses[l]<<")";
+				cout<<"("<<poseNames[l]<<": "<<fullAnns[i].annos[j].poses[l]<<")";
 			}
 			std::cout<<std::endl;
 		}
@@ -664,6 +778,7 @@ void annotationsHandle::displayFullAnns(std::vector<annotationsHandle::FULL_ANNO
  * \li argv[2] -- test file with predicted annotations;
  */
 int annotationsHandle::runEvaluation(int argc, char **argv){
+	init();
 	if(argc != 3){
 		cerr<<"usage: cmmd <train_annotations.txt> <train_annotations.txt>\n"<< \
 		"<train_annotations.txt> => file containing correct annotations\n"<< \
@@ -684,6 +799,7 @@ int annotationsHandle::runEvaluation(int argc, char **argv){
 }
 
 char annotationsHandle::choice = ' ';
+std::vector<std::string> annotationsHandle::poseNames;
 bool annotationsHandle::withPoses = false;
 unsigned annotationsHandle::poseSize = 5;
 boost::mutex annotationsHandle::trackbarMutex;

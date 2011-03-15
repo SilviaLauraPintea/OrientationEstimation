@@ -971,7 +971,11 @@ cv::Point2f rotCenter){
 	// GET THE ANGLE WITH WHICH WE NEED TO ROTATE
 	double cameraAngle = std::atan2((feetLocation.y-cameraLocation.y),\
 						(feetLocation.x-cameraLocation.x));
-	cameraAngle *= -180.0/M_PI; // NEEDS TO BE IN DEGREES
+	cameraAngle = (cameraAngle+M_PI/2.0);
+	if(cameraAngle>2.0*M_PI){
+		cameraAngle -= 2.0*M_PI;
+	}
+	cameraAngle *= (180.0/M_PI);
 
 	// GET THE ROTATION MATRIX WITH RESPECT TO THE GIVEN CENTER
 
@@ -1001,7 +1005,6 @@ cv::Point2f rotCenter){
 	rotated.release();
 	return newTempl;
 }
-
 //==============================================================================
 //!!!!!!!!!!!!!!!!! NEEDS HELP
 /*
@@ -1040,7 +1043,12 @@ cv::Point cameraLocation, cv::Mat toRotate, cv::Point &borders){
 	// GET THE ANGLE TO ROTATE WITH
 	double cameraAngle = std::atan2((feetLocation.y-cameraLocation.y),\
 						(feetLocation.x-cameraLocation.x));
-	cameraAngle *= -180.0/M_PI; // NEEDS TO BE IN DEGREES
+	cameraAngle = (cameraAngle+M_PI/2.0);
+	if(cameraAngle>2.0*M_PI){
+		cameraAngle -= 2.0*M_PI;
+	}
+	cameraAngle *= (180.0/M_PI);
+
 
 	// ADD A BLACK BORDER TO THE ORIGINAL IMAGE
 	double diag       = std::sqrt(toRotate.cols*toRotate.cols+toRotate.rows*\

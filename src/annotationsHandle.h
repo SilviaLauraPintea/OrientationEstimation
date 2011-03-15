@@ -174,10 +174,22 @@ class annotationsHandle {
 		static void drawOrientation(cv::Point center, unsigned int orient,\
 			annotationsHandle::POSE pose);
 
+		/** Shows how the selected orientation looks on the image.
+		 */
+		static void drawLatitude(cv::Point head, cv::Point feet,\
+			unsigned int orient, annotationsHandle::POSE pose);
+
+		static cv::Mat rotateWrtCamera(cv::Point feetLocation,\
+			cv::Point cameraLocation, cv::Mat toRotate, cv::Point &borders);
+
 		/** Writes a given FULL_ANNOTATIONS structure into a given file.
 		 */
-		void writeAnnoToFile(std::vector<annotationsHandle::FULL_ANNOTATIONS>\
+		static void writeAnnoToFile(std::vector<annotationsHandle::FULL_ANNOTATIONS>\
 			fullAnno, std::string fileName);
+
+		/** Initializes all the values of the class variables.
+		 */
+		static void init();
 		//======================================================================
 	protected:
 		/** @var image
@@ -207,6 +219,10 @@ class annotationsHandle {
 		 */
 		static bool withPoses;
 
+		/** @var poseNames
+		 * The strings corresponding to the names of the poses
+		 */
+		static std::vector<std::string> poseNames;
 };
 
 #endif /* ANNOTATIONSHANDLE_H_ */
