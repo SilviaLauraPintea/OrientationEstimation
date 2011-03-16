@@ -55,6 +55,7 @@ void annotationsHandle::mouseHandlerAnn(int event, int x, int y, int flags, void
 				temp.location = pt;
 				temp.id       = annotations.size();
 				temp.poses.assign(poseSize, 0);
+				temp.poses[(int)LATITUDE] = 90;
 				annotations.push_back(temp);
 				showMenu(pt);
 				for(unsigned i=0;i!=annotations.size(); ++i){
@@ -215,7 +216,7 @@ void annotationsHandle::showMenu(cv::Point center){
 	int pose1 = 0;
 	int pose2 = 0;
 	int pose3 = 0;
-	int pose4 = 0;
+	int pose4 = 90;
 	cv::namedWindow("Poses",CV_WINDOW_AUTOSIZE);
 	IplImage *tmpImg = cvCreateImage(cv::Size(400,1),8,1);
 
@@ -273,6 +274,7 @@ void annotationsHandle::trackBarHandleFct(int position,void *param){
 	annotations.pop_back();
 	if(lastAnno.poses.empty()){
 		lastAnno.poses.assign(poseSize,0);
+		lastAnno.poses[(int)LATITUDE] = 90;
 	}
 
 	// DRAW THE ORIENTATION TO SEE IT
@@ -808,7 +810,7 @@ std::vector<annotationsHandle::ANNOTATION> annotationsHandle::annotations;
 //==============================================================================
 
 int main(int argc, char **argv){
-	annotationsHandle::runAnn(argc,argv,100,"_kmeans",1600);
+	annotationsHandle::runAnn(argc,argv,62,"_kmeans",1600);
 	//annotationsHandle::runEvaluation(argc,argv);
 }
 
