@@ -26,13 +26,13 @@ classifyImages::classifyImages(int argc, char **argv){
 				this->trainFolder = std::string(argv[i]);
 			}else if(i==5){
 				this->annotationsTrain = std::string(argv[i]);
-				argv[i]=const_cast<char*>("");
+				argv[i]=const_cast<char*>(" ");
 			}else if(i==6){
 				this->testFolder = std::string(argv[i]);
-				argv[i]=const_cast<char*>("");
+				argv[i]=const_cast<char*>(" ");
 			}else if(i==7){
 				this->annotationsTest = std::string(argv[i]);
-				argv[i]=const_cast<char*>("");
+				argv[i]=const_cast<char*>(" ");
 			}
 		}
 		argc -= 3;
@@ -134,8 +134,8 @@ void classifyImages::predictGP(cv::Mat &predictions, annotationsHandle::POSE wha
 	this->features->run();
 	this->testData = cv::Mat::zeros(cv::Size(this->features->data[0].cols,\
 					this->features->data.size()), cv::DataType<double>::type);
-	this->testTargets = cv::Mat::zeros(cv::Size(this->features->targets[0].cols,\
-					this->features->targets.size()),cv::DataType<double>::type);
+	this->testTargets = cv::Mat::zeros(cv::Size(2,this->features->data.size()),\
+					cv::DataType<double>::type);
 
 	// CONVERT FROM VECTOR OF CV::MAT TO MAT
 	for(std::size_t i=0; i<this->features->data.size(); i++){
@@ -143,14 +143,12 @@ void classifyImages::predictGP(cv::Mat &predictions, annotationsHandle::POSE wha
 		this->features->data[i].copyTo(dummy1);
 
 		cv::Mat dummy2;
+		dummy2 = this->testTargets.row(i);
 		if(what == annotationsHandle::LONGITUDE){
-			dummy2 = this->testTargets.row(i).colRange(0,2);
+			this->features->targets[i].colRange(0,2).copyTo(dummy2);
 		}else if(what == annotationsHandle::LATITUDE){
-			dummy2 = this->testTargets.row(i).colRange(2,4);
-		}else{
-			dummy2 = this->testTargets.row(i);
+			this->features->targets[i].colRange(2,4).copyTo(dummy2);
 		}
-		this->features->targets[i].copyTo(dummy2);
 	}
 	this->testData.convertTo(this->testData, cv::DataType<double>::type);
 	this->testTargets.convertTo(this->testTargets, cv::DataType<double>::type);
@@ -172,20 +170,20 @@ void classifyImages::predictGP(cv::Mat &predictions, annotationsHandle::POSE wha
 		prediCos.variance.clear();
 	}
 	double error, accuracy;
-	this->evaluate(predictions, error, accuracy);
+	this->evaluate(predictions, error, accuracy, what);
 }
 //==============================================================================
 /** Evaluate one prediction versus its target.
  */
 void classifyImages::evaluate(cv::Mat predictions, double &error, double &accuracy,\
-char choice){
+annotationsHandle::POSE what, char choice){
 	double sinCosAccuracy = 0.0, sinCosError    = 0.0;
 	accuracy = 0.0;
 	error    = 0.0;
 	for(int y=0; y<this->testTargets.rows; y++){
 		if(choice == 'O'){
 			double targetAngle = std::atan2(this->testTargets.at<double>(y,0),\
-								this->testTargets.at<double>(y,1));
+									this->testTargets.at<double>(y,1));
 			double prediAngle = std::atan2(predictions.at<double>(y,0),\
 								predictions.at<double>(y,1));
 
@@ -273,13 +271,13 @@ int main(int argc, char **argv){
 	classi.buildDictionary();
 */
   	//LONGITUDE TRAINING AND PREDICTING
-	classi.init(1e-3,100.0,&gaussianProcess::sqexp,featureDetector::IPOINTS);
+	classi.init(1e-3,100.0,&gaussianProcess::sqexp,featureDetector::EDGES);
 	classi.trainGP(annotationsHandle::LONGITUDE);
 	cv::Mat predictions;
 	classi.predictGP(predictions,annotationsHandle::LONGITUDE);
 
   	//LATITUDE TRAINING AND PREDICTING
-	classi.init(1e-3,100.0,&gaussianProcess::sqexp,featureDetector::IPOINTS);
+	classi.init(1e-3,100.0,&gaussianProcess::sqexp,featureDetector::EDGES);
 	classi.trainGP(annotationsHandle::LATITUDE);
 	classi.predictGP(predictions,annotationsHandle::LATITUDE);
 }

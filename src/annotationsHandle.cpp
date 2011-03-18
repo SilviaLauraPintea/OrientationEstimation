@@ -485,6 +485,7 @@ usedImages, int imgIndex){
  */
 void annotationsHandle::loadAnnotations(char* filename, \
 std::vector<annotationsHandle::FULL_ANNOTATIONS> &loadedAnno){
+	init();
 	ifstream annoFile(filename);
 
 	std::cout<<"Loading annotations of...."<<filename<<std::endl;
@@ -808,9 +809,9 @@ boost::mutex annotationsHandle::trackbarMutex;
 IplImage *annotationsHandle::image;
 std::vector<annotationsHandle::ANNOTATION> annotationsHandle::annotations;
 //==============================================================================
-
+/*
 int main(int argc, char **argv){
 	annotationsHandle::runAnn(argc,argv,62,"_kmeans",1600);
 	//annotationsHandle::runEvaluation(argc,argv);
 }
-
+*/

@@ -2,14 +2,30 @@
  * Author: Silvia-Laura Pintea
  */
 #include "featureDetector.h"
-
 //==============================================================================
+/** Checks to see if a pixel's x coordinate is on a scanline.
+ */
 struct onScanline{
 	public:
 		unsigned pixelY;
 		onScanline(const unsigned pixelY){this->pixelY=pixelY;}
 		bool operator()(const scanline_t line)const{
 			return (line.line == this->pixelY);
+		}
+};
+//==============================================================================
+/** Checks the image name (used to find the corresponding labels for each image).
+ */
+struct compareImg{
+	public:
+		std::string imgName;
+		compareImg(std::string image){
+			std::vector<std::string> parts = splitLine(\
+											const_cast<char*>(image.c_str()),'/');
+			this->imgName = parts[parts.size()-1];
+		}
+		bool operator()(annotationsHandle::FULL_ANNOTATIONS anno)const{
+			return (anno.imgFile == this->imgName);
 		}
 };
 //==============================================================================
@@ -102,6 +118,10 @@ unsigned reshape, cv::Mat thresholded){
 		image.copyTo(rotImage);
 		thresholded.copyTo(rotThresh);
 	}
+
+	cv::Mat up, low;
+	this->upperLowerROI(rotImage,up,low,0,0);
+
 
 	// GET THE EDGES
 	cv::Mat gray, edges;
@@ -685,8 +705,11 @@ cv::Point center){
 /** Function that gets the ROI corresponding to a head/feet of a person in
  * an image.
  */
-void featureDetector::upperLowerROI(featureDetector::people someone,
-double variance, cv::Mat &upperRoi, cv::Mat &lowerRoi){
+void featureDetector::upperLowerROI(cv::Mat image, cv::Mat &upperRoi,\
+cv::Mat &lowerRoi, unsigned minX, unsigned maxX){
+
+
+/*
 	double offsetX = someone.absoluteLoc.x - someone.relativeLoc.x;
 	double offsetY = someone.absoluteLoc.y - someone.relativeLoc.y;
 
@@ -718,6 +741,7 @@ double variance, cv::Mat &upperRoi, cv::Mat &lowerRoi){
 	cv::waitKey(0);
 	cvDestroyWindow("LowerPart");
 	cvDestroyWindow("UpperPart");
+	*/
 }
 //==============================================================================
 /** Set what kind of features to extract.
@@ -766,14 +790,28 @@ void featureDetector::extractDataRow(std::vector<unsigned> existing, IplImage *b
 			thresholded);
 		cv::dilate(thresholded,thresholded,cv::Mat());
 
-		//-----------REMOVE------------------------
-		/*
-		cv::imshow("imgRoi", imgRoi);
-		cv::imshow("pixels", allPeople[i].pixels);
-		cv::imshow("thresh", thresholded);
+		//	ROTATE ROI, ROTATE TEMPLATE & ROATE PERSON PIXELS
+		cv::Point rotBorders;
+		std::vector<CvPoint> rotTempl;
+		imgRoi = this->rotateWrtCamera(center,cv::Point(camPosX,camPosY),\
+				imgRoi,rotBorders);
+		rotTempl = this->rotateTemplWrtCamera(center,cv::Point(camPosX,camPosY),\
+					templ, rotBorders, cv::Point2f(imgRoi.cols/2.0,imgRoi.rows/2.0));\
+			//		imgRoi.cols/2.0+allPeople[i].borders[2],\
+			//		imgRoi.rows/2.0+allPeople[i].borders[0]));
+
+		allPeople[i].pixels = this->rotateWrtCamera(center,cv::Point(camPosX,camPosY),\
+								allPeople[i].pixels,rotBorders);
+
+		cv::Mat testim(this->current->img);
+		testim = this->rotateWrtCamera(center,cv::Point(camPosX,camPosY),\
+						testim,rotBorders);
+		IplImage *ttt = new IplImage(testim);
+		plotTemplate2(ttt,center,persHeight,camHeight,cv::Scalar(0,0,200),rotTempl);
+		cv::imshow("rPixels",allPeople[i].pixels);
+		cv::imshow("rImageROI",imgRoi);
+		cvShowImage("rTempl",ttt);
 		cv::waitKey(0);
-		*/
-		//-----------------------------------------
 
 		// EXTRACT FEATURES
 		cv::Mat feature;
@@ -810,7 +848,7 @@ void featureDetector::extractDataRow(std::vector<unsigned> existing, IplImage *b
 	}
 	// FIX THE LABELS TO CORRESPOND TO THE PEOPLE DETECTED IN THE IMAGE
 	if(!this->targetAnno.empty()){
-		this->fixLabels(allLocations,this->current->sourceName,this->current->index);
+		this->fixLabels(allLocations);
 	}
 }
 //==============================================================================
@@ -1092,21 +1130,25 @@ double angle){
 /** For each row added in the data matrix (each person detected for which we
  * have extracted some features) find the corresponding label.
  */
-void featureDetector::fixLabels(std::vector<cv::Point> feetPos, string imageName,\
-unsigned index){
+void featureDetector::fixLabels(std::vector<cv::Point> feetPos){
+	// FIND	THE INDEX FOR THE CURRENT IMAGE
+	std::vector<annotationsHandle::FULL_ANNOTATIONS>::iterator index = \
+		std::find_if (this->targetAnno.begin(), this->targetAnno.end(),\
+		compareImg(this->current->sourceName));
+
 	// LOOP OVER ALL ANNOTATIONS FOR THE CURRENT IMAGE AND FIND THE CLOSEST ONES
-	std::vector<int> assignments(this->targetAnno[index].annos.size(),-1);
-	std::vector<double> minDistances(this->targetAnno[index].annos.size(),\
+	std::vector<int> assignments((*index).annos.size(),-1);
+	std::vector<double> minDistances((*index).annos.size(),\
 		(double)INFINITY);
 	unsigned canAssign = 1;
 	while(canAssign){
 		canAssign = 0;
-		for(std::size_t l=0; l<this->targetAnno[index].annos.size(); l++){
+		for(std::size_t l=0; l<(*index).annos.size(); l++){
 			// EACH ANNOTATION NEEDS TO BE ASSIGNED TO THE CLOSEST DETECTION
 			double distance    = (double)INFINITY;
 			unsigned annoIndex = -1;
 			for(std::size_t k=0; k<feetPos.size(); k++){
-				double dstnc = dist(this->targetAnno[index].annos[l].location,\
+				double dstnc = dist((*index).annos[l].location,\
 								feetPos[k]);
 				if(distance>dstnc && this->canBeAssigned(l,minDistances,k,dstnc,\
 				assignments)){
@@ -1151,18 +1193,23 @@ unsigned index){
 			cv::Mat tmp = cv::Mat::zeros(1,4,cv::DataType<double>::type);
 			// READ THE TARGET ANGLE FOR LONGITUDE
 			double angle = static_cast<double>\
-				(targetAnno[index].annos[i].poses[annotationsHandle::LONGITUDE]);
+				((*index).annos[i].poses[annotationsHandle::LONGITUDE]);
+
+			std::cout<<"Longitude: "<<angle<<std::endl;
+
 			angle = angle*M_PI/180.0;
-			angle = this->fixAngle(targetAnno[index].annos[i].location,\
+			angle = this->fixAngle((*index).annos[i].location,\
 					cv::Point(camPosX,camPosY),angle);
 			tmp.at<double>(0,0) = std::sin(angle);
 			tmp.at<double>(0,1) = std::cos(angle);
 
 			// READ THE TARGET ANGLE FOR LATITUDE
 			angle = static_cast<double>\
-				(targetAnno[index].annos[i].poses[annotationsHandle::LATITUDE]);
+				((*index).annos[i].poses[annotationsHandle::LATITUDE]);
+			std::cout<<"Latitude: "<<angle<<std::endl;
+
 			angle = angle*M_PI/180.0;
-			angle = this->fixAngle(targetAnno[index].annos[i].location,\
+			angle = this->fixAngle((*index).annos[i].location,\
 					cv::Point(camPosX,camPosY),angle);
 			tmp.at<double>(0,2) = std::sin(angle);
 			tmp.at<double>(0,3) = std::cos(angle);
@@ -1175,16 +1222,15 @@ unsigned index){
 	for(std::size_t i=0; i<unlabelled.size(); i++){
 		this->targets.erase(this->targets.begin()+(this->lastIndex+unlabelled[i]));
 	}
-
 	//-------------------------------------------------
 	/*
-	std::cout<<"current image/index: "<<imageName<<" "<<index<<" "<<std::endl;
-	std::cout<<"The current image name is: "<<this->targetAnno[index].imgFile<<\
-		" =?= "<<imageName<<" (corresponding?)"<<std::endl;
+	std::cout<<"current image/index: "<<this->current->sourceName<<" "<<std::endl;
+	std::cout<<"The current image name is: "<<(*index).imgFile<<\
+		" =?= "<<this->current->sourceName<<" (corresponding?)"<<std::endl;
 	std::cout<<"Annotations: "<<std::endl;
-	for(std::size_t i=0; i<this->targetAnno[index].annos.size(); i++){
-		std::cout<<i<<":("<<targetAnno[index].annos[i].location.x<<","<<\
-			targetAnno[index].annos[i].location.y<<") ";
+	for(std::size_t i=0; i<(*index).annos.size(); i++){
+		std::cout<<i<<":("<<(*index).annos[i].location.x<<","<<\
+			(*index).annos[i].location.y<<") ";
 	}
 	std::cout<<std::endl;
 	std::cout<<"Detections: "<<std::endl;
@@ -1197,10 +1243,6 @@ unsigned index){
 		std::cout<<"annot["<<i<<"]=>"<<assignments[i]<<" ";
 	}
 	std::cout<<std::endl;
-	for(std::size_t i=0; i<this->targets.size(); i++){
-		std::cout<<"("<<this->targets[i].at<double>(0,0)<<","<<\
-			this->targets[i].at<double>(0,1)<<")";
-	}
 	*/
 	//-------------------------------------------------
 }
@@ -1265,7 +1307,7 @@ const FLOAT logBGProb,const vnl_vector<FLOAT> &logSumPixelBGProb){
 		for(unsigned i=0; i!=existing.size(); ++i){
 			cv::Point pt = this->cvPoint(existing[i]);
 			plotTemplate2(bg, pt, persHeight, camHeight, CV_RGB(255,255,255));
-			plotScanLines(src, mask, CV_RGB(0,255,0), 0.3);
+			//plotScanLines(src, mask, CV_RGB(0,255,0), 0.3);
 		}
 		cvShowImage("bg", bg);
 		cvShowImage("image",src);

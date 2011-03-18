@@ -42,7 +42,7 @@ class annotationsHandle {
 			std::vector<unsigned int> poses;
 			ANNOTATION(){
 				this->id    = 0;
-				this->poses = std::vector<unsigned int>(4,0);
+				this->poses = std::vector<unsigned int>(5,0);
 			}
 			~ANNOTATION(){
 				if(!this->poses.empty()){

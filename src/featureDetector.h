@@ -120,8 +120,8 @@ class featureDetector:public Tracker{
 		/** Function that gets the ROI corresponding to a head/feet of a person in
 		 * an image.
 		 */
-		void upperLowerROI(featureDetector::people someone, double variance,\
-		cv::Mat &upperRoi, cv::Mat &lowerRoi);
+		void upperLowerROI(cv::Mat image, cv::Mat &upperRoi, cv::Mat &lowerRoi,
+			 unsigned minX, unsigned maxX);
 
 		/** Overwrites the \c doFindPeople function from the \c Tracker class
 		 * to make it work with the feature extraction.
@@ -219,8 +219,7 @@ class featureDetector:public Tracker{
 		/** For each row added in the data matrix (each person detected for which we
 		 * have extracted some features) find the corresponding label.
 		 */
-		void fixLabels(std::vector<cv::Point> feetPos, string imageName,\
-		unsigned index);
+		void fixLabels(std::vector<cv::Point> feetPos);
 
 		/** Returns the size of a window around a template centered in a given point.
 		 */

@@ -122,7 +122,7 @@ class classifyImages {
 		/** Evaluate one prediction versus its target.
 		 */
 		void evaluate(cv::Mat predictions, double &error,\
-			double &accuracy, char choice='O');
+			double &accuracy,  annotationsHandle::POSE what, char choice='O');
 };
 
 #endif /* CLASSIFYIMAGES_H_ */
