@@ -36,7 +36,7 @@ classifyImages::classifyImages(int argc, char **argv){
 			}
 		}
 		argc -= 3;
-		this->features = new featureDetector(argc,argv,false);
+		this->features = new featureDetector(argc,argv);
 	}else if(argc==5){
 		for(unsigned i=0; i<argc; i++){
 			if(i==4){
@@ -46,7 +46,7 @@ classifyImages::classifyImages(int argc, char **argv){
 			this->testFolder       = "";
 			this->annotationsTest  = "";
 		}
-		this->features = new featureDetector(argc,argv,false);
+		this->features = new featureDetector(argc,argv);
 	}
 }
 //==============================================================================
@@ -268,18 +268,22 @@ void classifyImages::buildDictionary(char* fileToStore, char* dataFile){
 int main(int argc, char **argv){
   	classifyImages classi(argc, argv);
 /*
-	classi.buildDictionary();
+	classi.buildDictionary(const_cast<char*>("dictSIFT.bin"),\
+		const_cast<char*>("test/sift/"));
 */
   	//LONGITUDE TRAINING AND PREDICTING
-	classi.init(1e-3,100.0,&gaussianProcess::sqexp,featureDetector::EDGES);
+	classi.init(1e-3,100.0,&gaussianProcess::sqexp,featureDetector::SIFT);
 	classi.trainGP(annotationsHandle::LONGITUDE);
 	cv::Mat predictions;
 	classi.predictGP(predictions,annotationsHandle::LONGITUDE);
 
+	/*
   	//LATITUDE TRAINING AND PREDICTING
 	classi.init(1e-3,100.0,&gaussianProcess::sqexp,featureDetector::EDGES);
 	classi.trainGP(annotationsHandle::LATITUDE);
 	classi.predictGP(predictions,annotationsHandle::LATITUDE);
+	*/
 }
+
 
 

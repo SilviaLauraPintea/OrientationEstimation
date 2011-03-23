@@ -72,20 +72,7 @@ class featureDetector:public Tracker{
 			this->noMeans        = 10;
 			this->meanSize       = 128;
 			this->colorspaceCode = CV_BGR2Lab;
-			this->wrtCamera      = 1;
-		}
-
-		featureDetector(int argc,char** argv,bool plot):Tracker(argc, argv, 10, \
-		true, true){
-			this->producer       = NULL;
-			this->plotTracks     = plot;
-			this->featureType    = EDGES;
-			this->lastIndex      = 0;
-			this->dictFileName   = const_cast<char*>("dictSIFT.bin");
-			this->noMeans        = 10;
-			this->meanSize       = 128;
-			this->colorspaceCode = CV_BGR2Lab;
-			this->wrtCamera      = 1;
+			this->featurePart    = 't';
 		}
 
 		virtual ~featureDetector(){
@@ -111,17 +98,7 @@ class featureDetector:public Tracker{
 			if(!this->targetAnno.empty()){
 				this->targetAnno.clear();
 			}
-
-			if(!this->gabor.empty()){
-				this->gabor.release();
-			}
 		}
-
-		/** Function that gets the ROI corresponding to a head/feet of a person in
-		 * an image.
-		 */
-		void upperLowerROI(cv::Mat image, cv::Mat &upperRoi, cv::Mat &lowerRoi,
-			 unsigned minX, unsigned maxX);
 
 		/** Overwrites the \c doFindPeople function from the \c Tracker class
 		 * to make it work with the feature extraction.
@@ -201,6 +178,10 @@ class featureDetector:public Tracker{
 		templateCenter, cv::Point offset=cv::Point(0,0), double minHeadSize=20,\
 		double maxHeadSize=40);
 
+		/** Creates a gabor with the parameters given by the parameter vector.
+		 */
+		cv::Mat createGabor(double *params = NULL);
+
 		/** Convolves an image with a Gabor filter with the given parameters and
 		 * returns the response image.
 		 */
@@ -224,7 +205,7 @@ class featureDetector:public Tracker{
 		/** Returns the size of a window around a template centered in a given point.
 		 */
 		void templateWindow(cv::Size imgSize, int &minX, int &maxX,\
-		int &minY, int &maxY, std::vector<CvPoint> &templ, unsigned tplBorder = 100);
+		int &minY, int &maxY, std::vector<CvPoint> &templ, int tplBorder = 100);
 
 		/** Initializes the parameters of the tracker.
 		 */
@@ -260,6 +241,23 @@ class featureDetector:public Tracker{
 		std::vector<CvPoint> rotateTemplWrtCamera(cv::Point feetLocation,\
 			cv::Point cameraLocation, std::vector<CvPoint> templ,\
 			cv::Point rotBorders, cv::Point2f rotCenter);
+
+		/** Get template extremities (if needed, considering some borders --
+		 * relative to the ROI).
+		 */
+		void templateExtremes(std::vector<CvPoint> templ, double\
+			&minTmplX, double &maxTmplX, double &minTmplY, double &maxTmplY,\
+			int minX = 0, int minY = 0);
+
+		/** If only a part needs to be used to extract the features then the threshold
+		 * and the template need to be changed.
+		 */
+		void onlyPart(cv::Mat &thresholded, std::vector<CvPoint> &templ,\
+			double offsetX, double offsetY);
+
+		/** Computes the motion vector for the current image given the tracks so far.
+		 */
+		double motionVector(cv::Point center);
 		//======================================================================
 	public:
 		/** @var plotTracks
@@ -312,20 +310,14 @@ class featureDetector:public Tracker{
 		 */
 		unsigned meanSize;
 
-		/** @var Gabor
-		 * The gabor wavelet to be used.
-		 */
-		cv::Mat gabor;
-
 		/** @var colorspaceCode
 		 * The colorspace code to be used before extracting the features.
 		 */
 		int colorspaceCode;
 
-		/** @var wrtCamera
-		 * Indicates if the image is rotated wrt to the camer before extracting
-		 * the features or not.
+		/** @var featurePart
+		 * Indicates if the part from the image to be used (feet, head, or both).
 		 */
-		unsigned wrtCamera;
+		char featurePart;
 };
 #endif /* FESTUREDETECTOR_H_ */

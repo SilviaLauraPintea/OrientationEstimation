@@ -101,7 +101,7 @@ class classifyImages {
 		/** Build dictionary for vector quantization.
 		 */
 		void buildDictionary(char* fileToStore = const_cast<char*>("dictSIFT.bin"),\
-			char* dataFile=const_cast<char*>("test_stuff/sift/"));
+			char* dataFile=const_cast<char*>("test/sift/"));
 
 		/** Creates the training data (according to the options), the labels and
 		 * trains the a \c GaussianProcess on the data.

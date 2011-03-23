@@ -378,6 +378,7 @@ usedImages, int imgIndex){
 	// set the handler of the mouse events to the method: <<mouseHandler>>
 	image = cvLoadImage(imgs[index].c_str());
 	plotHull(image, priorHull);
+
 	cv::namedWindow("image");
 	cvSetMouseCallback("image", mouseHandlerAnn, NULL);
 	cv::imshow("image", image);
