@@ -255,7 +255,7 @@ std::vector<CvPoint> templ, int minX, int minY, cv::Point center){
 	// HISTOGRAM OF NICE FEATURES
 	std::vector<cv::Point2f> corners;
 	cv::Ptr<cv::FeatureDetector> detector = \
-		new cv::GoodFeaturesToTrackDetector(5000, 0.001, 1.0, 3.0);
+		new cv::GoodFeaturesToTrackDetector(5000, 0.00001, 1.0, 3.0);
 	cv::GridAdaptedFeatureDetector gafd(detector, 5000, no, no);
 	std::vector<cv::KeyPoint> keys;
 	std::vector<unsigned> indices;
@@ -294,6 +294,7 @@ std::vector<CvPoint> templ, int minX, int minY, cv::Point center){
 	histoMat.copyTo(stupid);
 	histoMat.release();
 	//-----------------REMOVE--------------------------
+	std::cout<<"IPOINTS-FEATURES: "<<std::endl;
 	for(int i=0; i<feature.cols; i++){
 		std::cout<<feature.at<double>(0,i)<<" ";
 	}
@@ -647,8 +648,7 @@ cv::Point center){
 
 		// CONSIDER ONLY THE RESPONSE WITHIN THE THRESHOLDED AREA
 		response = response.reshape(0,1);
-		cv::Mat temp = feature.colRange(i*(image.cols*image.rows), (i+1)*\
-						(image.cols*image.rows));
+		cv::Mat temp = feature.colRange(i*response.cols, (i+1)*response.cols);
 		if(!thresholded.empty()){
 			response.copyTo(temp,thresholded);
 		}else{
@@ -760,13 +760,22 @@ void featureDetector::extractDataRow(std::vector<unsigned> existing, IplImage *b
 		cv::Mat cloneFeature = cv::Mat::zeros(feature.rows,feature.cols+1,\
 								cv::DataType<double>::type);
 		cloneFeature.at<double>(0,0) = this->motionVector(center);
-		cv::Mat tmp = cloneFeature.colRange(1,cloneFeature.rows);
-		feature.copyTo(tmp);
+		cv::Mat tmpClone = cloneFeature.colRange(1,cloneFeature.cols);
+		feature.copyTo(tmpClone);
+		cloneFeature.convertTo(feature, cv::DataType<double>::type);
+
+		//-----------------REMOVE--------------------------
+		for(int m=0; m<cloneFeature.cols; m++){
+			std::cout<<cloneFeature.at<double>(0,m)<<" ";
+		}
+		std::cout<<std::endl;
+		//-------------------------------------------------
+
 		this->data.push_back(cloneFeature);
 
 		thresholded.release();
 		cloneFeature.release();
-		tmp.release();
+		tmpClone.release();
 		feature.release();
 		imgRoi.release();
 	}
@@ -1315,8 +1324,30 @@ double offsetX, double offsetY){
 /** Computes the motion vector for the current image given the tracks so far.
  */
 double featureDetector::motionVector(cv::Point center){
+	cv::Point prev = center;
+	double angle = 0;
+	if(this->tracks.size()>1){
+		for(unsigned i=0; i<this->tracks.size();i++){
+			if(this->tracks[i].positions[this->tracks[i].positions.size()-1].x ==\
+			center.x && this->tracks[i].positions[this->tracks[i].positions.size()-1].y\
+			== center.y){
+				if(this->tracks[i].positions.size()>1){
+					prev.x = this->tracks[i].positions[this->tracks[i].positions.size()-2].x;
+					prev.y = this->tracks[i].positions[this->tracks[i].positions.size()-2].y;
+				}
+				break;
+			}
+		}
 
-
+		if(this->plotTracks){
+			cv::Mat tmp(this->current->img);
+			cv::line(tmp,prev,center,cv::Scalar(50,100,255),1,8,0);
+			cv::imshow("tracks",tmp);
+		}
+		angle = std::atan2(center.y-prev.y,center.x-prev.x);
+		std::cout<<"Motion angle>>> "<<(angle*180/M_PI)<<std::endl;
+	}
+	return angle;
 }
 //==============================================================================
 /*

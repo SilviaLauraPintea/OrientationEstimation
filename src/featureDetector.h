@@ -64,7 +64,7 @@ class featureDetector:public Tracker{
 		};
 		//======================================================================
 		featureDetector(int argc,char** argv):Tracker(argc, argv, 10, true, true){
-			this->plotTracks     = true;
+			this->plotTracks     = false;
 			this->featureType    = EDGES;
 			this->lastIndex      = 0;
 			this->producer       = NULL;

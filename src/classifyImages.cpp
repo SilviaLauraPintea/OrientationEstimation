@@ -272,7 +272,7 @@ int main(int argc, char **argv){
 		const_cast<char*>("test/sift/"));
 */
   	//LONGITUDE TRAINING AND PREDICTING
-	classi.init(1e-3,100.0,&gaussianProcess::sqexp,featureDetector::SIFT);
+	classi.init(1e-3,100.0,&gaussianProcess::sqexp,featureDetector::IPOINTS);
 	classi.trainGP(annotationsHandle::LONGITUDE);
 	cv::Mat predictions;
 	classi.predictGP(predictions,annotationsHandle::LONGITUDE);
