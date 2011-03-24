@@ -93,6 +93,26 @@ class classifyImages {
 		 * Feature to be extracted.
 		 */
 		featureDetector::FEATURE feature;
+
+		/** @var readFromFolder
+		 * If the images are read from folder or from a file with image names.
+		 */
+		bool readFromFolder;
+
+		/** @var imageList
+		 * All images are stored in this list for cross-validation.
+		 */
+		std::vector<std::string> imageList;
+
+		/** @var annoList
+		 * All annotations for all images are stored in this list for cross-validation.
+		 */
+		std::vector<std::string> annoList;
+
+		/** @var foldSize
+		 * The size of one fold in cross-validation.
+		 */
+		unsigned foldSize;
 		//======================================================================
 	public:
 		classifyImages(int argc, char **argv);
@@ -111,18 +131,47 @@ class classifyImages {
 		/** Creates the test data and applies \c GaussianProcess prediction on the test
 		 * data.
 		 */
-		void predictGP(cv::Mat &predictions, annotationsHandle::POSE what);
+		void predictGP(std::vector<gaussianProcess::prediction> &predictionsSin,\
+			std::vector<gaussianProcess::prediction> &predictionsCos,\
+			annotationsHandle::POSE what);
 
 		/** Initialize the options for the Gaussian Process regression.
 		 */
 		void init(double theNoise, double theLength, gaussianProcess::kernelFunction\
 			theKFunction, featureDetector::FEATURE theFeature, char* fileSIFT =\
-			const_cast<char*>("dictSIFT.bin"), int colorSp = CV_BGR2Lab);
+			const_cast<char*>("dictSIFT.bin"), int colorSp = CV_BGR2Lab,\
+			bool fromFolder=true);
 
 		/** Evaluate one prediction versus its target.
 		 */
-		void evaluate(cv::Mat predictions, double &error,\
-			double &accuracy,  annotationsHandle::POSE what, char choice='O');
+		void evaluate(std::vector<gaussianProcess::prediction> predictionsSin,\
+			std::vector<gaussianProcess::prediction> predictionsCos,\
+			double &error, double &accuracy,  annotationsHandle::POSE what);
+
+		/** Do k-fold cross-validation by splitting the training folder into
+		 * training-set and validation-set.
+		 */
+		void crossValidation(unsigned k, unsigned fold);
+
+		/** Does the cross-validation and computes the average error over all folds.
+		 */
+		void runCrossValidation(unsigned k, double theNoise, double theLength,\
+			gaussianProcess::kernelFunction theKFunction, featureDetector::FEATURE\
+			theFeature, char* fileSIFT = const_cast<char*>("dictSIFT.bin"),\
+			int colorSp = CV_BGR2Lab, bool fromFolder=false);
+
+		/** Runs the final evaluation (test).
+		 */
+		void runTest(double theNoise, double theLength,\
+		gaussianProcess::kernelFunction theKFunction, featureDetector::FEATURE\
+		theFeature, char* fileSIFT = const_cast<char*>("dictSIFT.bin"),\
+		int colorSp = CV_BGR2Lab, bool fromFolder=false);
+
+		/** Try to optimize the prediction of the angle considering the variance of sin
+		 * and cos.
+		 */
+		double optimizePrediction(gaussianProcess::prediction predictionsSin,\
+			gaussianProcess::prediction predictionsCos);
 };
 
 #endif /* CLASSIFYIMAGES_H_ */

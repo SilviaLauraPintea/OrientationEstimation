@@ -31,8 +31,9 @@ struct compareImg{
 //==============================================================================
 /** Initializes the parameters of the tracker.
  */
-void featureDetector::init(std::string dataFolder, std::string theAnnotationsFile){
-	this->initProducer(dataFolder.c_str(), true);
+void featureDetector::init(std::string dataFolder, std::string theAnnotationsFile,\
+bool readFromFolder){
+	this->initProducer(readFromFolder, dataFolder.c_str());
 
 	// CLEAR DATA AND TARGETS
 	if(!this->targets.empty()){
@@ -763,14 +764,6 @@ void featureDetector::extractDataRow(std::vector<unsigned> existing, IplImage *b
 		cv::Mat tmpClone = cloneFeature.colRange(1,cloneFeature.cols);
 		feature.copyTo(tmpClone);
 		cloneFeature.convertTo(feature, cv::DataType<double>::type);
-
-		//-----------------REMOVE--------------------------
-		for(int m=0; m<cloneFeature.cols; m++){
-			std::cout<<cloneFeature.at<double>(0,m)<<" ";
-		}
-		std::cout<<std::endl;
-		//-------------------------------------------------
-
 		this->data.push_back(cloneFeature);
 
 		thresholded.release();
@@ -1109,8 +1102,8 @@ void featureDetector::fixLabels(std::vector<cv::Point> feetPos){
 			angle = angle*M_PI/180.0;
 			angle = this->fixAngle((*index).annos[i].location,\
 					cv::Point(camPosX,camPosY),angle);
-			tmp.at<double>(0,0) = std::sin(angle);
-			tmp.at<double>(0,1) = std::cos(angle);
+			tmp.at<double>(0,0) = std::sin(angle)*std::sin(angle);
+			tmp.at<double>(0,1) = std::cos(angle)*std::cos(angle);
 
 			// READ THE TARGET ANGLE FOR LATITUDE
 			angle = static_cast<double>\
@@ -1120,8 +1113,8 @@ void featureDetector::fixLabels(std::vector<cv::Point> feetPos){
 			angle = angle*M_PI/180.0;
 			angle = this->fixAngle((*index).annos[i].location,\
 					cv::Point(camPosX,camPosY),angle);
-			tmp.at<double>(0,2) = std::sin(angle);
-			tmp.at<double>(0,3) = std::cos(angle);
+			tmp.at<double>(0,2) = std::sin(angle)*std::sin(angle);
+			tmp.at<double>(0,3) = std::cos(angle)*std::cos(angle);
 
 			this->targets[this->lastIndex+assignments[i]] = tmp.clone();
 			tmp.release();

@@ -209,7 +209,8 @@ class featureDetector:public Tracker{
 
 		/** Initializes the parameters of the tracker.
 		 */
-		void init(std::string dataFolder, std::string theAnnotationsFile);
+		void init(std::string dataFolder, std::string theAnnotationsFile,\
+			bool readFromFolder = true);
 
 		/** Checks to see if an annotation can be assigned to a detection.
 		 */
