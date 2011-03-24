@@ -235,7 +235,7 @@ predictionsSin, gaussianProcess::prediction predictionsCos){
 				1.0/predictionsSin.variance[0]-1.0/predictionsCos.variance[0]);
 
 	double a = 1.0/predictionsSin.variance[0] - 1.0/predictionsCos.variance[0];
-	double c = 1.0/predictionsSin.variance[0];
+	double c = 1.0/predictionsSin.variance[0]*predictionsCos.mean[0];
 
 	std::vector<double> alphas;
 	alphas.push_back((-b + std::sqrt(b*b - 4*a*c))/2*a);
