@@ -218,9 +218,9 @@ double &error, double &accuracy, annotationsHandle::POSE what){
 	error          = std::sqrt(error);
 	accuracy       = 1-error;
 
-	std::cout<<"Sin-Cos Error: "<<sinCosError<<" Sin-Cos Accuracy: "<<\
+	std::cout<<"sin-cos-error:"<<sinCosError<<" sin-cos-accuracy:"<<\
 		sinCosAccuracy<<std::endl;
-	std::cout<<"RMS Error: "<<error<<" RMS Accuracy: "<<accuracy<<std::endl;
+	std::cout<<"RMS-error: "<<error<<" RMS-accuracy:"<<accuracy<<std::endl;
 }
 //==============================================================================
 /** Try to optimize the prediction of the angle considering the variance of sin
@@ -228,19 +228,34 @@ double &error, double &accuracy, annotationsHandle::POSE what){
  */
 double classifyImages::optimizePrediction(gaussianProcess::prediction \
 predictionsSin, gaussianProcess::prediction predictionsCos){
-	double closeTo = std::atan2(predictionsSin.mean[0], predictionsCos.mean[0]);
+	double closeTo = std::atan2(std::sqrt(predictionsSin.mean[0]),\
+						std::sqrt(predictionsCos.mean[0]));
 
-	double b = -1*(1.0/predictionsSin.variance[0]*predictionsSin.mean[0] + \
-				1.0/predictionsCos.variance[0]*predictionsCos.mean[0] + \
-				1.0/predictionsSin.variance[0]-1.0/predictionsCos.variance[0]);
+	std::cout<<"close to: "<<closeTo<<std::endl;
 
-	double a = 1.0/predictionsSin.variance[0] - 1.0/predictionsCos.variance[0];
-	double c = 1.0/predictionsSin.variance[0]*predictionsCos.mean[0];
-
+	double betaS = 1.0/(predictionsSin.variance[0]);
+	double betaC = 1.0/(predictionsCos.variance[0]);
+	double x     = predictionsSin.mean[0];
+	double y     = predictionsCos.mean[0];
 	std::vector<double> alphas;
-	alphas.push_back((-b + std::sqrt(b*b - 4*a*c))/2*a);
-	alphas.push_back((-b - std::sqrt(b*b - 4*a*c))/2*a);
-	double minDist = 2*M_PI, minAngle;
+	if(betaS != betaC){
+		std::cout<<"betaS="<<betaS<<" betaC="<<betaC<<" x="<<x<<" y="<<y<<std::endl;
+
+		double b = -1.0*(betaS*x + betaC*y + betaS - betaC);
+		double a = betaS - betaC;
+		double c = betaS*x;
+
+		std::cout<<"b="<<b<<" a="<<a<<" c="<<c<<std::endl;
+		std::cout<<"alpha1: "<<((-b + std::sqrt(b*b - 4.0*a*c))/2.0*a)<<std::endl;
+		std::cout<<"alpha2: "<<((-b - std::sqrt(b*b - 4.0*a*c))/2.0*a)<<std::endl;
+
+		alphas.push_back((-b + std::sqrt(b*b - 4.0*a*c))/2.0*a);
+		alphas.push_back((-b - std::sqrt(b*b - 4.0*a*c))/2.0*a);
+	}else{
+		std::cout<<"alpha1: "<<(betaS*x/(betaS*x + betaC*y))<<std::endl;
+		alphas.push_back(betaS*x/(betaS*x + betaC*y));
+	}
+	double minDist = 2.0*M_PI, minAngle;
 	for(unsigned i=0; i<alphas.size(); i++){
 		if(alphas[i]>=0){
 			double alpha1 = std::asin(std::sqrt(alphas[i]));
@@ -314,8 +329,8 @@ void classifyImages::buildDictionary(char* fileToStore, char* dataFile){
 void classifyImages::runCrossValidation(unsigned k, double theNoise,\
 double theLength, gaussianProcess::kernelFunction theKFunction,\
 featureDetector::FEATURE theFeature, char* fileSIFT, int colorSp, bool fromFolder){
-	double finalErrorLong, finalAccuracyLong;
-	double finalErrorLat, finalAccuracyLat;
+	double finalErrorLong=0.0, finalAccuracyLong=0.0;
+	double finalErrorLat=0.0, finalAccuracyLat=0.0;
 	for(unsigned i=0; i<k; i++){
 		// SPLIT TRAINING AND TESTING ACCORDING TO THE CURRENT FOLD
 		this->crossValidation(k,i);
@@ -332,6 +347,8 @@ featureDetector::FEATURE theFeature, char* fileSIFT, int colorSp, bool fromFolde
 			annotationsHandle::LONGITUDE);
 		finalErrorLong += errorLong;
 		finalAccuracyLong += accuracyLong;
+		std::cout<<"!!!!!!!!!!!!LONGITUDE>>> sum-of-error:"<<finalErrorLong<<\
+			" sum-of-accuracy:"<<finalAccuracyLong<<" k:"<<i<<std::endl;
 
 	  	//LATITUDE TRAINING AND PREDICTING
 		this->init(theNoise,theLength,theKFunction,theFeature,fileSIFT,colorSp,\
@@ -343,16 +360,18 @@ featureDetector::FEATURE theFeature, char* fileSIFT, int colorSp, bool fromFolde
 			annotationsHandle::LATITUDE);
 		finalErrorLat += errorLat;
 		finalAccuracyLat += accuracyLat;
+		std::cout<<"!!!!!!!!!!!!LATITUDE>>> sum-of-error:"<<finalErrorLat<<\
+			" sum-of-accuracy:"<<finalAccuracyLat<<" k:"<<i<<std::endl;
 	}
 	finalErrorLong /= static_cast<double>(k);
 	finalAccuracyLong /= static_cast<double>(k);
-	std::cout<<"LONGITUDE>>> FINAL RMS-Error: "<<finalErrorLong<<\
-		"FINAL RMS-Accuracy: "<<finalAccuracyLong<<std::endl;
+	std::cout<<"LONGITUDE>>> final-RMS-error:"<<finalErrorLong<<\
+		" final-RMS-accuracy:"<<finalAccuracyLong<<std::endl;
 
 	finalErrorLat /= static_cast<double>(k);
 	finalAccuracyLat /= static_cast<double>(k);
-	std::cout<<"LATITUDE>>> FINAL RMS-Error: "<<finalErrorLat<<\
-		"FINAL RMS-Accuracy: "<<finalAccuracyLat<<std::endl;
+	std::cout<<"LATITUDE>>> final-RMS-error:"<<finalErrorLat<<\
+		" final-RMS-accuracy:"<<finalAccuracyLat<<std::endl;
 }
 //==============================================================================
 /** Do k-fold cross-validation by splitting the training folder into training-set

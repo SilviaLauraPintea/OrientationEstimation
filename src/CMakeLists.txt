@@ -56,7 +56,7 @@ ADD_LIBRARY(helpers
 # FROM NOW ON MY FILES WILL COME
 
 #ADD_EXECUTABLE(annotationsHandle ${MT_SRC}/annotationsHandle.cpp)
-#TARGET_LINK_LIBRARIES(annotationsHandle helpers opencv_core opencv_imgproc opencv_highgui cmn tools iberty vnl_algo vnl v3p_netlib boost_filesystem boost_date_time-mt boost_thread-mt ${XML2_LDFLAGS})
+#TARGET_LINK_LIBRARIES(annotationsHandle helpers opencv_core opencv_imgproc opencv_highgui opencv_calib3d cmn tools iberty vnl_algo vnl v3p_netlib boost_filesystem boost_date_time-mt boost_thread-mt ${XML2_LDFLAGS})
 
 #ADD_EXECUTABLE(featureDetector ${MT_SRC}/featureDetector.cpp)
 #TARGET_LINK_LIBRARIES(featureDetector helpers opencv_core opencv_imgproc opencv_highgui opencv_features2d cmn tools iberty vnl_algo vnl v3p_netlib boost_filesystem boost_date_time-mt boost_thread-mt ${XML2_LDFLAGS})
@@ -65,4 +65,4 @@ ADD_LIBRARY(helpers
 #TARGET_LINK_LIBRARIES(gaussianProcess helpers opencv_core opencv_imgproc opencv_highgui cmn tools iberty vnl_algo vnl v3p_netlib ${XML2_LDFLAGS})
 
 ADD_EXECUTABLE(classifyImages ${MT_SRC}/classifyImages.cpp)
-TARGET_LINK_LIBRARIES(classifyImages helpers opencv_core opencv_imgproc opencv_highgui opencv_features2d cmn tools iberty vnl_algo vnl v3p_netlib boost_filesystem boost_date_time-mt boost_thread-mt ${XML2_LDFLAGS})
+TARGET_LINK_LIBRARIES(classifyImages helpers opencv_core opencv_imgproc opencv_video opencv_highgui opencv_features2d cmn tools iberty vnl_algo vnl v3p_netlib boost_filesystem boost_date_time-mt boost_thread-mt ${XML2_LDFLAGS})

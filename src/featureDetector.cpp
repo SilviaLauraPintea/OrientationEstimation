@@ -35,6 +35,13 @@ void featureDetector::init(std::string dataFolder, std::string theAnnotationsFil
 bool readFromFolder){
 	this->initProducer(readFromFolder, dataFolder.c_str());
 
+	if(!this->prevSURF.empty()){
+		this->prevSURF.release();
+	}
+	if(!this->prevSIFT.empty()){
+		this->prevSIFT.release();
+	}
+
 	// CLEAR DATA AND TARGETS
 	if(!this->targets.empty()){
 		for(std::size_t i=0; i<this->targets.size(); i++){
@@ -181,14 +188,18 @@ int minY, std::vector<CvPoint> templ, cv::Point center){
 	std::sort(kD.begin(),kD.end(),(&featureDetector::compareDescriptors));
 
 	// COPY TO FEATURE THE FIRST 10 DESCRIPTORS
-	feature = cv::Mat::zeros(cv::Size(10*aSURF.descriptorSize(),1),\
+	feature = cv::Mat::zeros(cv::Size(10*aSURF.descriptorSize()+1,1),\
 				cv::DataType<double>::type);
 	for(unsigned i=0; i<std::min(10,static_cast<int>(kD.size())); i++){
 		for(std::size_t k=0; k<kD[i].descr.size(); k++){
-			feature.at<double>(0,i*aSURF.descriptorSize()+k) = \
+			feature.at<double>(0,i*aSURF.descriptorSize()+k+1) = \
 				static_cast<double>(kD[i].descr[k]);
 		}
 	}
+
+	//GET DOMINANT DIRECTION OF THE OPTICAL FLOW APPLIED TO SIFT
+	double flowDir = this->opticalFlowFeature(feature,"surf");
+	feature.at<double>(0,0) = flowDir;
 
 	std::cout<<"key-size:"<<kD.size()<<" feat-size:"<<feature.cols<<std::endl;
 	if(this->plotTracks){
@@ -758,17 +769,21 @@ void featureDetector::extractDataRow(std::vector<unsigned> existing, IplImage *b
 				break;
 		}
 		feature.convertTo(feature, cv::DataType<double>::type);
-		cv::Mat cloneFeature = cv::Mat::zeros(feature.rows,feature.cols+1,\
-								cv::DataType<double>::type);
-		cloneFeature.at<double>(0,0) = this->motionVector(center);
-		cv::Mat tmpClone = cloneFeature.colRange(1,cloneFeature.cols);
-		feature.copyTo(tmpClone);
-		cloneFeature.convertTo(feature, cv::DataType<double>::type);
-		this->data.push_back(cloneFeature);
 
+		if(this->tracking){
+			cv::Mat cloneFeature = cv::Mat::zeros(feature.rows,feature.cols+1,\
+									cv::DataType<double>::type);
+			cloneFeature.at<double>(0,0) = this->motionVector(center);
+			cv::Mat tmpClone = cloneFeature.colRange(1,cloneFeature.cols);
+			feature.copyTo(tmpClone);
+			cloneFeature.convertTo(feature, cv::DataType<double>::type);
+			this->data.push_back(cloneFeature);
+			cloneFeature.release();
+			tmpClone.release();
+		}else{
+			this->data.push_back(feature);
+		}
 		thresholded.release();
-		cloneFeature.release();
-		tmpClone.release();
 		feature.release();
 		imgRoi.release();
 	}
@@ -817,6 +832,36 @@ int minY, std::vector<CvPoint> templ, cv::Point center){
 	gray.release();
 }
 //==============================================================================
+/** Compute the dominant direction of the SIFT or SURF features.
+ */
+double featureDetector::opticalFlowFeature(cv::Mat preFeature, std::string what){
+	// GET THE OPTICAL FLOW MATRIX FROM THE FEATURES
+	cv::Mat flow;
+	double direction = -1;
+	if(what == "sift"){
+		if(this->tracking && !this->prevSIFT.empty()){
+			cv::Mat flow;
+			cv::calcOpticalFlowFarneback(this->prevSIFT,preFeature,flow,0.5,1,15,\
+				10,5,1.1,cv::OPTFLOW_FARNEBACK_GAUSSIAN);
+			this->prevSIFT = preFeature;
+		}
+	}else if(what == "surf"){
+		if(this->tracking && !this->prevSURF.empty()){
+			cv::calcOpticalFlowFarneback(this->prevSURF,preFeature,flow,0.5,1,15,\
+				10,5,1.1,cv::OPTFLOW_FARNEBACK_GAUSSIAN);
+			this->prevSURF = preFeature;
+		}
+	}
+
+	//GET THE DIRECTION OF THE MAXIMUM OPTICAL FLOW
+	if(!flow.empty()){
+		//???????????
+	}
+
+	flow.release();
+	return direction;
+}
+//==============================================================================
 /** Compute the features from the SIFT descriptors by doing vector quantization.
  */
 void featureDetector::getSIFT(cv::Mat &feature, cv::Mat image, int minX,\
@@ -825,6 +870,9 @@ int minY, std::vector<CvPoint> templ, cv::Point center){
 	cv::Mat preFeature;
 	this->extractSIFT(preFeature, image, minX, minY, templ, center);
 	preFeature.convertTo(preFeature, cv::DataType<double>::type);
+
+	//GET DOMINANT DIRECTION OF THE OPTICAL FLOW APPLIED TO SIFT
+	double flowDir = this->opticalFlowFeature(preFeature,"sift");
 
 	// NORMALIZE THE FEATURES ALSO
 	for(int i=0; i<preFeature.rows; i++){
@@ -863,16 +911,30 @@ int minY, std::vector<CvPoint> templ, cv::Point center){
 	}
 
 	// CREATE A HISTOGRAM(COUNT TO WHICH DICT FEATURE WAS ASSIGNED EACH NEW ONE)
-	feature = cv::Mat::zeros(cv::Size(this->dictionarySIFT.rows, 1),\
-				cv::DataType<double>::type);
-	for(int i=0; i<minLabel.cols; i++){
-		int which = minLabel.at<double>(0,i);
-		feature.at<double>(0,which) += 1.0;
+	if(flowDir != -1){
+		feature = cv::Mat::zeros(cv::Size(this->dictionarySIFT.rows+1, 1),\
+					cv::DataType<double>::type);
+		for(int i=0; i<minLabel.cols; i++){
+			int which = minLabel.at<double>(0,i);
+			feature.at<double>(0,which+1) += 1.0;
+		}
+	}else{
+		feature = cv::Mat::zeros(cv::Size(this->dictionarySIFT.rows+1, 1),\
+					cv::DataType<double>::type);
+		for(int i=0; i<minLabel.cols; i++){
+			int which = minLabel.at<double>(0,i);
+			feature.at<double>(0,which) += 1.0;
+		}
 	}
 
 	// NORMALIZE THE HOSTOGRAM
 	cv::Scalar scalar = cv::sum(feature);
 	feature /= static_cast<double>(scalar[0]);
+
+	//IF THERE IS ANY FLOW DIRECTION ADD IT TO THE FEATURE
+	if(flowDir != -1){
+		feature.at<double>(0,0) += flowDir;
+	}
 
 	preFeature.release();
 	distances.release();

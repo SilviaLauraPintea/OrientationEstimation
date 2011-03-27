@@ -73,6 +73,7 @@ class featureDetector:public Tracker{
 			this->meanSize       = 128;
 			this->colorspaceCode = CV_BGR2Lab;
 			this->featurePart    = 't';
+			this->tracking 	     = 1;
 		}
 
 		virtual ~featureDetector(){
@@ -97,6 +98,13 @@ class featureDetector:public Tracker{
 			// CLEAR THE ANNOTATIONS
 			if(!this->targetAnno.empty()){
 				this->targetAnno.clear();
+			}
+
+			if(!this->prevSURF.empty()){
+				this->prevSURF.release();
+			}
+			if(!this->prevSIFT.empty()){
+				this->prevSIFT.release();
 			}
 		}
 
@@ -259,6 +267,10 @@ class featureDetector:public Tracker{
 		/** Computes the motion vector for the current image given the tracks so far.
 		 */
 		double motionVector(cv::Point center);
+
+		/** Compute the dominant direction of the SIFT or SURF features.
+		 */
+		double opticalFlowFeature(cv::Mat currentFeat, std::string what);
 		//======================================================================
 	public:
 		/** @var plotTracks
@@ -320,5 +332,20 @@ class featureDetector:public Tracker{
 		 * Indicates if the part from the image to be used (feet, head, or both).
 		 */
 		char featurePart;
+
+		/** @var tracking
+		 * If the data is sequential motion information can be used.
+		 */
+		uchar tracking;
+
+		/** @var prevSURF
+		 * SURF features detected at the previous frame.
+		 */
+		cv::Mat prevSURF;
+
+		/** @var prevSIFT
+		 * SIFT features detected at the previous frame.
+		 */
+		cv::Mat prevSIFT;
 };
 #endif /* FESTUREDETECTOR_H_ */
