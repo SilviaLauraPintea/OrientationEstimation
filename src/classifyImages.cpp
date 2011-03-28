@@ -485,7 +485,7 @@ int main(int argc, char **argv){
 
   	// CROSS-VALIDATION
   	classi.runCrossValidation(2,1e-3,100.0,&gaussianProcess::sqexp,\
-  		featureDetector::EDGES);
+  		featureDetector::SURF);
 }
 
 

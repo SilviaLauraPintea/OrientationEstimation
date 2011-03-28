@@ -100,11 +100,8 @@ class featureDetector:public Tracker{
 				this->targetAnno.clear();
 			}
 
-			if(!this->prevSURF.empty()){
-				this->prevSURF.release();
-			}
-			if(!this->prevSIFT.empty()){
-				this->prevSIFT.release();
+			if(!this->prevImage.empty()){
+				this->prevImage.release();
 			}
 		}
 
@@ -167,8 +164,8 @@ class featureDetector:public Tracker{
 
 		/** SIFT descriptors (Scale Invariant Feature Transform).
 		 */
-		void extractSIFT(cv::Mat &feature, cv::Mat image, int minX, int minY,\
-			std::vector<CvPoint> templ, cv::Point center);
+		std::vector<cv::KeyPoint> extractSIFT(cv::Mat &feature, cv::Mat image,\
+			int minX, int minY, std::vector<CvPoint> templ, cv::Point center);
 
 		/** Creates a "histogram" of interest points + number of blobs.
 		 */
@@ -270,7 +267,8 @@ class featureDetector:public Tracker{
 
 		/** Compute the dominant direction of the SIFT or SURF features.
 		 */
-		double opticalFlowFeature(cv::Mat currentFeat, std::string what);
+		double opticalFlowFeature(std::vector<cv::KeyPoint> keypoints,\
+			cv::Mat currentImg);
 		//======================================================================
 	public:
 		/** @var plotTracks
@@ -336,16 +334,11 @@ class featureDetector:public Tracker{
 		/** @var tracking
 		 * If the data is sequential motion information can be used.
 		 */
-		uchar tracking;
+		unsigned int tracking;
 
-		/** @var prevSURF
-		 * SURF features detected at the previous frame.
+		/** @var prevImage
+		 * The (same) currently selected head/body-area from the previous image.
 		 */
-		cv::Mat prevSURF;
-
-		/** @var prevSIFT
-		 * SIFT features detected at the previous frame.
-		 */
-		cv::Mat prevSIFT;
+		cv::Mat prevImage;
 };
 #endif /* FESTUREDETECTOR_H_ */

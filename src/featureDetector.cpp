@@ -34,12 +34,8 @@ struct compareImg{
 void featureDetector::init(std::string dataFolder, std::string theAnnotationsFile,\
 bool readFromFolder){
 	this->initProducer(readFromFolder, dataFolder.c_str());
-
-	if(!this->prevSURF.empty()){
-		this->prevSURF.release();
-	}
-	if(!this->prevSIFT.empty()){
-		this->prevSIFT.release();
+	if(!this->prevImage.empty()){
+		this->prevImage.release();
 	}
 
 	// CLEAR DATA AND TARGETS
@@ -172,6 +168,7 @@ int minY, std::vector<CvPoint> templ, cv::Point center){
 
 	// KEEP THE DESCRIPTORS WITHIN THE BORDERS ONLY
 	std::vector<featureDetector::keyDescr> kD;
+	cv::vector<cv::KeyPoint> goodSURFS;
 	for(std::size_t i=0; i<keypoints.size();i++){
 		if(this->isInTemplate(keypoints[i].pt.x+minX,keypoints[i].pt.y+minY,templ)){
 			featureDetector::keyDescr tmp;
@@ -179,6 +176,7 @@ int minY, std::vector<CvPoint> templ, cv::Point center){
 				tmp.descr.push_back(descriptors[i*aSURF.descriptorSize()+j]);
 			}
 			tmp.keys = keypoints[i];
+			goodSURFS.push_back(keypoints[i]);
 			kD.push_back(tmp);
 			tmp.descr.clear();
 		}
@@ -187,19 +185,19 @@ int minY, std::vector<CvPoint> templ, cv::Point center){
 	// SORT THE REMAINING DESCRIPTORS AND KEEP ONLY THE FIRST ?
 	std::sort(kD.begin(),kD.end(),(&featureDetector::compareDescriptors));
 
-	// COPY TO FEATURE THE FIRST 10 DESCRIPTORS
+	//GET DOMINANT DIRECTION OF THE OPTICAL FLOW APPLIED TO SIFT
+	double flowDir = this->opticalFlowFeature(goodSURFS,image);
 	feature = cv::Mat::zeros(cv::Size(10*aSURF.descriptorSize()+1,1),\
 				cv::DataType<double>::type);
+	feature.at<double>(0,0) = flowDir;
+
+	// COPY TO FEATURE THE FIRST 10 DESCRIPTORS
 	for(unsigned i=0; i<std::min(10,static_cast<int>(kD.size())); i++){
 		for(std::size_t k=0; k<kD[i].descr.size(); k++){
 			feature.at<double>(0,i*aSURF.descriptorSize()+k+1) = \
 				static_cast<double>(kD[i].descr[k]);
 		}
 	}
-
-	//GET DOMINANT DIRECTION OF THE OPTICAL FLOW APPLIED TO SIFT
-	double flowDir = this->opticalFlowFeature(feature,"surf");
-	feature.at<double>(0,0) = flowDir;
 
 	std::cout<<"key-size:"<<kD.size()<<" feat-size:"<<feature.cols<<std::endl;
 	if(this->plotTracks){
@@ -697,6 +695,12 @@ void featureDetector::setSIFTDictionary(char* fileSIFT){
 void featureDetector::extractDataRow(std::vector<unsigned> existing, IplImage *bg){
 	cv::Mat image(this->current->img);
 	cv::cvtColor(image, image, this->colorspaceCode);
+	cv::Mat entirePrev;
+	if(this->tracking && this->producer->nextFrame>0){
+		entirePrev = cv::imread(this->producer->filelist[\
+		              this->producer->nextFrame-2].c_str());;
+		cv::cvtColor(entirePrev, entirePrev, this->colorspaceCode);
+	}
 
 	// REDUCE THE IMAGE TO ONLY THE INTERESTING AREA
 	std::vector<featureDetector::people> allPeople(existing.size(),\
@@ -742,6 +746,17 @@ void featureDetector::extractDataRow(std::vector<unsigned> existing, IplImage *b
 				allPeople[i].borders[2]);
 		}
 
+		// IF WE WANT TO COMPUTE OPTICAL FLOW WE NEED THE PREV. CORRESP. AREA
+		if(this->tracking && !entirePrev.empty()){
+			this->prevImage = cv::Mat(entirePrev.clone(),cv::Rect(cv::Point(\
+				allPeople[i].borders[0],allPeople[i].borders[2]),\
+				cv::Size(width,height)));
+			tmp = this->rotateWrtCamera(center,cv::Point(camPosX,camPosY),\
+					this->prevImage,rotBorders);
+			tmp.copyTo(this->prevImage);
+			tmp.release();
+		}
+
 		// EXTRACT FEATURES
 		cv::Mat feature;
 		switch(this->featureType){
@@ -755,6 +770,12 @@ void featureDetector::extractDataRow(std::vector<unsigned> existing, IplImage *b
 			case featureDetector::SURF:
 				this->getSURF(feature, imgRoi, allPeople[i].borders[0],\
 					allPeople[i].borders[2], templ, center);
+				if(this->tracking){
+					feature.at<double>(0,0) = this->fixAngle(center,\
+							cv::Point(camPosX,camPosY),feature.at<double>(0,0));
+					std::cout<<"flow wrt camera:"<<\
+						feature.at<double>(0,0)<<std::endl;
+				}
 				break;
 			case featureDetector::GABOR:
 				this->getGabor(feature, imgRoi, thresholded, center);
@@ -766,6 +787,10 @@ void featureDetector::extractDataRow(std::vector<unsigned> existing, IplImage *b
 			case featureDetector::SIFT:
 				this->getSIFT(feature, imgRoi, allPeople[i].borders[0],\
 					allPeople[i].borders[2], templ, center);
+				if(this->tracking){
+					feature.at<double>(0,0) = this->fixAngle(center,\
+						cv::Point(camPosX,camPosY),feature.at<double>(0,0));
+				}
 				break;
 		}
 		feature.convertTo(feature, cv::DataType<double>::type);
@@ -776,7 +801,8 @@ void featureDetector::extractDataRow(std::vector<unsigned> existing, IplImage *b
 			cloneFeature.at<double>(0,0) = this->motionVector(center);
 			cv::Mat tmpClone = cloneFeature.colRange(1,cloneFeature.cols);
 			feature.copyTo(tmpClone);
-			cloneFeature.convertTo(feature, cv::DataType<double>::type);
+
+			cloneFeature.convertTo(cloneFeature, cv::DataType<double>::type);
 			this->data.push_back(cloneFeature);
 			cloneFeature.release();
 			tmpClone.release();
@@ -786,7 +812,14 @@ void featureDetector::extractDataRow(std::vector<unsigned> existing, IplImage *b
 		thresholded.release();
 		feature.release();
 		imgRoi.release();
+		if(!this->prevImage.empty()){
+			this->prevImage.release();
+		}
 	}
+	if(!entirePrev.empty()){
+		entirePrev.release();
+	}
+
 	// FIX THE LABELS TO CORRESPOND TO THE PEOPLE DETECTED IN THE IMAGE
 	if(!this->targetAnno.empty()){
 		this->fixLabels(allLocations);
@@ -795,8 +828,8 @@ void featureDetector::extractDataRow(std::vector<unsigned> existing, IplImage *b
 //==============================================================================
 /** SIFT descriptors (Scale Invariant Feature Transform).
  */
-void featureDetector::extractSIFT(cv::Mat &feature, cv::Mat image, int minX,\
-int minY, std::vector<CvPoint> templ, cv::Point center){
+std::vector<cv::KeyPoint> featureDetector::extractSIFT(cv::Mat &feature,\
+cv::Mat image, int minX, int minY, std::vector<CvPoint> templ, cv::Point center){
 	// EXTRACT THE SURF KEYPOINTS AND THE DESCRIPTORS
 	std::vector<cv::KeyPoint> keypoints;
 	cv::SIFT::DetectorParams detectP  = cv::SIFT::DetectorParams(0.0001,10.0);
@@ -812,7 +845,7 @@ int minY, std::vector<CvPoint> templ, cv::Point center){
 	aSIFT(gray, cv::Mat(), keypoints);
 
 	// KEEP THE DESCRIPTORS WITHIN THE BORDERS ONLY
-	cv::vector<cv::KeyPoint> goodKP;
+	std::vector<cv::KeyPoint> goodKP;
 	for(std::size_t i=0; i<keypoints.size();i++){
 		if(this->isInTemplate(keypoints[i].pt.x+minX,keypoints[i].pt.y+minY,templ)){
 			goodKP.push_back(keypoints[i]);
@@ -830,34 +863,67 @@ int minY, std::vector<CvPoint> templ, cv::Point center){
 		cv::waitKey(0);
 	}
 	gray.release();
+	return goodKP;
 }
 //==============================================================================
 /** Compute the dominant direction of the SIFT or SURF features.
  */
-double featureDetector::opticalFlowFeature(cv::Mat preFeature, std::string what){
+double featureDetector::opticalFlowFeature(std::vector<cv::KeyPoint> keypoints,\
+cv::Mat currentImg){
 	// GET THE OPTICAL FLOW MATRIX FROM THE FEATURES
-	cv::Mat flow;
+	cv::Mat flow     = cv::Mat::zeros(currentImg.size(), CV_32FC2);
 	double direction = -1;
-	if(what == "sift"){
-		if(this->tracking && !this->prevSIFT.empty()){
-			cv::Mat flow;
-			cv::calcOpticalFlowFarneback(this->prevSIFT,preFeature,flow,0.5,1,15,\
-				10,5,1.1,cv::OPTFLOW_FARNEBACK_GAUSSIAN);
-			this->prevSIFT = preFeature;
-		}
-	}else if(what == "surf"){
-		if(this->tracking && !this->prevSURF.empty()){
-			cv::calcOpticalFlowFarneback(this->prevSURF,preFeature,flow,0.5,1,15,\
-				10,5,1.1,cv::OPTFLOW_FARNEBACK_GAUSSIAN);
-			this->prevSURF = preFeature;
-		}
-	}
+	if(this->tracking && !this->prevImage.empty()){
+		cv::Mat currGray, prevGray;
+		cv::cvtColor(currentImg,currGray,CV_RGB2GRAY);
+		cv::cvtColor(this->prevImage,prevGray,CV_RGB2GRAY);
+		cv::calcOpticalFlowFarneback(prevGray,currGray,flow,0.5,1,15,10,5,1.1,\
+			cv::OPTFLOW_FARNEBACK_GAUSSIAN);
 
-	//GET THE DIRECTION OF THE MAXIMUM OPTICAL FLOW
-	if(!flow.empty()){
-		//???????????
-	}
+		cv::imshow("cgray",currGray);
+		cv::imshow("pgray",prevGray);
+		cv::waitKey(0);
 
+		//GET THE DIRECTION OF THE MAXIMUM OPTICAL FLOW
+		double avgX = 0.0, avgY = 0.0, avgFlowX = 0.0, avgFlowY = 0.0;
+		for(std::size_t i=0;i<keypoints.size();i++){
+			avgX 	 += keypoints[i].pt.x;
+			avgY	 += keypoints[i].pt.y;
+			avgFlowX += flow.at<cv::Vec2f>(keypoints[i].pt.y,keypoints[i].pt.x)[0];
+			avgFlowY += flow.at<cv::Vec2f>(keypoints[i].pt.y,keypoints[i].pt.x)[1];
+
+//			std::cout<<flow.at<cv::Vec2f>(keypoints[i].pt.y,keypoints[i].pt.x)[0]<<\
+				" "<<flow.at<cv::Vec2f>(keypoints[i].pt.y,keypoints[i].pt.x)[1]<<\
+				std::endl;
+
+			cv::line(currentImg,cv::Point(keypoints[i].pt.x,keypoints[i].pt.y),\
+				cv::Point(flow.at<cv::Vec2f>(keypoints[i].pt.y,keypoints[i].pt.x)[0],\
+				flow.at<cv::Vec2f>(keypoints[i].pt.y,keypoints[i].pt.x)[1]),\
+				cv::Scalar(0,0,255),1,8,0);
+			cv::circle(currentImg,\
+				cv::Point(flow.at<cv::Vec2f>(keypoints[i].pt.y,keypoints[i].pt.x)[0],\
+				flow.at<cv::Vec2f>(keypoints[i].pt.y,keypoints[i].pt.x)[1]),\
+				2,cv::Scalar(0,200,0),1,8,0);
+		}
+		avgX 	 /= keypoints.size();
+		avgY	 /= keypoints.size();
+		avgFlowX /= keypoints.size();
+		avgFlowY /= keypoints.size();
+		cv::line(currentImg,cv::Point(avgX,avgY),cv::Point(avgFlowX,avgFlowY),\
+			cv::Scalar(255,0,0),1,8,0);
+		cv::circle(currentImg,cv::Point(avgFlowX,avgFlowY),2,cv::Scalar(0,200,0),\
+			1,8,0);
+
+		// DIRECTION OF THE AVERAGE FLOW
+		direction = std::atan2(avgFlowY- avgY,avgFlowX- avgX);
+		std::cout<<"flow direction: "<<direction*180/M_PI<<std::endl;
+
+		cv::imshow("optical",currentImg);
+		cv::waitKey(0);
+
+		currGray.release();
+		prevGray.release();
+	}
 	flow.release();
 	return direction;
 }
@@ -868,11 +934,12 @@ void featureDetector::getSIFT(cv::Mat &feature, cv::Mat image, int minX,\
 int minY, std::vector<CvPoint> templ, cv::Point center){
 	// EXTRACT SIFT FEATURES
 	cv::Mat preFeature;
-	this->extractSIFT(preFeature, image, minX, minY, templ, center);
+	std::vector<cv::KeyPoint> keypoints = this->extractSIFT(preFeature, image,\
+											minX, minY, templ, center);
 	preFeature.convertTo(preFeature, cv::DataType<double>::type);
 
 	//GET DOMINANT DIRECTION OF THE OPTICAL FLOW APPLIED TO SIFT
-	double flowDir = this->opticalFlowFeature(preFeature,"sift");
+	double flowDir = this->opticalFlowFeature(keypoints,image);
 
 	// NORMALIZE THE FEATURES ALSO
 	for(int i=0; i<preFeature.rows; i++){
