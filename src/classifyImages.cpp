@@ -15,7 +15,7 @@ classifyImages::classifyImages(int argc, char **argv){
 	this->kFunction        = &gaussianProcess::sqexp;
 	this->feature          = featureDetector::EDGES;
 	this->features         = NULL;
-	this->foldSize		   = 0;
+	this->foldSize		   = 5;
 
 	// READ THE COMMAND LINE ARGUMENTS
 	if(argc != 8 && argc!=5 && argc!=6){
@@ -194,14 +194,16 @@ double &error, double &accuracy, annotationsHandle::POSE what){
 	accuracy = 0.0;
 	error    = 0.0;
 	for(int y=0; y<this->testTargets.rows; y++){
-		double targetAngle = std::atan2(std::sqrt(this->testTargets.at<double>(y,0)),\
-								std::sqrt(this->testTargets.at<double>(y,1)));
+		double targetAngle;
+		targetAngle = std::atan2(this->testTargets.at<double>(y,0),\
+						this->testTargets.at<double>(y,1));
 
+		// GET THE PREDICTED ANGLE
 		double prediAngle = this->optimizePrediction(predictionsCos[y],\
 							predictionsSin[y]);
 
-		std::cout<<"target: "<<targetAngle*180.0/M_PI<<\
-			" VS "<<prediAngle*180.0/M_PI<<std::endl;
+		std::cout<<"target: "<<(targetAngle*180.0/M_PI)<<\
+			" VS "<<(prediAngle*180.0/M_PI)<<std::endl;
 
 		sinCosError += std::pow(std::cos(targetAngle)-std::cos(prediAngle),2)+\
 				std::pow(std::sin(targetAngle)-std::sin(prediAngle),2);
@@ -228,15 +230,19 @@ double &error, double &accuracy, annotationsHandle::POSE what){
  */
 double classifyImages::optimizePrediction(gaussianProcess::prediction \
 predictionsSin, gaussianProcess::prediction predictionsCos){
-	double closeTo = std::atan2(std::sqrt(predictionsSin.mean[0]),\
-						std::sqrt(predictionsCos.mean[0]));
-
-	std::cout<<"close to: "<<closeTo<<std::endl;
-
 	double betaS = 1.0/(predictionsSin.variance[0]);
 	double betaC = 1.0/(predictionsCos.variance[0]);
 	double x     = predictionsSin.mean[0];
 	double y     = predictionsCos.mean[0];
+
+	if(betaS == betaC){
+		return std::atan2(betaS*x,betaC*y);
+	}else{
+		return std::atan2(x,y);
+	}
+	/*
+	double closeTo;
+	closeTo = std::atan2(predictionsSin.mean[0],predictionsCos.mean[0]);
 	std::vector<double> alphas;
 	if(betaS != betaC){
 		std::cout<<"betaS="<<betaS<<" betaC="<<betaC<<" x="<<x<<" y="<<y<<std::endl;
@@ -271,6 +277,7 @@ predictionsSin, gaussianProcess::prediction predictionsCos){
 		}
 	}
 	return minAngle;
+	*/
 }
 //==============================================================================
 /** Build dictionary for vector quantization.
@@ -347,8 +354,6 @@ featureDetector::FEATURE theFeature, char* fileSIFT, int colorSp, bool fromFolde
 			annotationsHandle::LONGITUDE);
 		finalErrorLong += errorLong;
 		finalAccuracyLong += accuracyLong;
-		std::cout<<"!!!!!!!!!!!!LONGITUDE>>> sum-of-error:"<<finalErrorLong<<\
-			" sum-of-accuracy:"<<finalAccuracyLong<<" k:"<<i<<std::endl;
 
 	  	//LATITUDE TRAINING AND PREDICTING
 		this->init(theNoise,theLength,theKFunction,theFeature,fileSIFT,colorSp,\
@@ -360,8 +365,6 @@ featureDetector::FEATURE theFeature, char* fileSIFT, int colorSp, bool fromFolde
 			annotationsHandle::LATITUDE);
 		finalErrorLat += errorLat;
 		finalAccuracyLat += accuracyLat;
-		std::cout<<"!!!!!!!!!!!!LATITUDE>>> sum-of-error:"<<finalErrorLat<<\
-			" sum-of-accuracy:"<<finalAccuracyLat<<" k:"<<i<<std::endl;
 	}
 	finalErrorLong /= static_cast<double>(k);
 	finalAccuracyLong /= static_cast<double>(k);
@@ -484,7 +487,7 @@ int main(int argc, char **argv){
 */
 
   	// CROSS-VALIDATION
-  	classi.runCrossValidation(2,1e-3,100.0,&gaussianProcess::sqexp,\
+  	classi.runCrossValidation(5,1e-3,100.0,&gaussianProcess::sqexp,\
   		featureDetector::SURF);
 }
 

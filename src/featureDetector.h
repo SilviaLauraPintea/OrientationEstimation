@@ -64,12 +64,12 @@ class featureDetector:public Tracker{
 		};
 		//======================================================================
 		featureDetector(int argc,char** argv):Tracker(argc, argv, 10, true, true){
-			this->plotTracks     = false;
+			this->plotTracks     = true;
 			this->featureType    = EDGES;
 			this->lastIndex      = 0;
 			this->producer       = NULL;
 			this->dictFileName   = const_cast<char*>("dictSIFT.bin");
-			this->noMeans        = 10;
+			this->noMeans        = 500;
 			this->meanSize       = 128;
 			this->colorspaceCode = CV_BGR2Lab;
 			this->featurePart    = 't';
@@ -102,6 +102,10 @@ class featureDetector:public Tracker{
 
 			if(!this->prevImage.empty()){
 				this->prevImage.release();
+			}
+
+			if(!this->entirePrev.empty()){
+				this->entirePrev.release();
 			}
 		}
 
@@ -340,5 +344,10 @@ class featureDetector:public Tracker{
 		 * The (same) currently selected head/body-area from the previous image.
 		 */
 		cv::Mat prevImage;
+
+		/** @var entirePrev
+		 * The the previous image.
+		 */
+		cv::Mat entirePrev;
 };
 #endif /* FESTUREDETECTOR_H_ */

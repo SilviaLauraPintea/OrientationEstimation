@@ -38,6 +38,10 @@ bool readFromFolder){
 		this->prevImage.release();
 	}
 
+	if(!this->entirePrev.empty()){
+		this->entirePrev.release();
+	}
+
 	// CLEAR DATA AND TARGETS
 	if(!this->targets.empty()){
 		for(std::size_t i=0; i<this->targets.size(); i++){
@@ -317,7 +321,7 @@ std::vector<CvPoint> templ, int minX, int minY, cv::Point center){
 void featureDetector::showZoomedImage(cv::Mat image, const std::string title){
 	cv::Mat large;
 	cv::resize(image, large, cv::Size(0,0), 5, 5, cv::INTER_CUBIC);
-	cv::imshow(title, image);
+	cv::imshow(title, large);
 	cv::waitKey(0);
 	cvDestroyWindow(title.c_str());
 	large.release();
@@ -470,9 +474,6 @@ int &minY, int &maxY, std::vector<CvPoint> &templ, int tplBorder){
 
 	if(maxX-minX!=tplBorder){
 		int diffX2 = tplBorder-(maxX-minX);
-
-		std::cout<<"diff on X:"<<diffX2<<std::endl;
-
 		if(minX>diffX2){
 			minX -= diffX2;
 		}else if(maxX<imgSize.width-diffX2){
@@ -696,10 +697,11 @@ void featureDetector::extractDataRow(std::vector<unsigned> existing, IplImage *b
 	cv::Mat image(this->current->img);
 	cv::cvtColor(image, image, this->colorspaceCode);
 	cv::Mat entirePrev;
-	if(this->tracking && this->producer->nextFrame>0){
-		entirePrev = cv::imread(this->producer->filelist[\
-		              this->producer->nextFrame-2].c_str());;
-		cv::cvtColor(entirePrev, entirePrev, this->colorspaceCode);
+	if(this->tracking && !this->entirePrev.empty()){
+		cv::cvtColor(this->entirePrev, this->entirePrev, this->colorspaceCode);
+		cv::imshow("PrevImg",this->entirePrev);
+		cv::imshow("CurrImg",image);
+		cv::waitKey(0);
 	}
 
 	// REDUCE THE IMAGE TO ONLY THE INTERESTING AREA
@@ -747,8 +749,8 @@ void featureDetector::extractDataRow(std::vector<unsigned> existing, IplImage *b
 		}
 
 		// IF WE WANT TO COMPUTE OPTICAL FLOW WE NEED THE PREV. CORRESP. AREA
-		if(this->tracking && !entirePrev.empty()){
-			this->prevImage = cv::Mat(entirePrev.clone(),cv::Rect(cv::Point(\
+		if(this->tracking && !this->entirePrev.empty()){
+			this->prevImage = cv::Mat(this->entirePrev.clone(),cv::Rect(cv::Point(\
 				allPeople[i].borders[0],allPeople[i].borders[2]),\
 				cv::Size(width,height)));
 			tmp = this->rotateWrtCamera(center,cv::Point(camPosX,camPosY),\
@@ -816,9 +818,7 @@ void featureDetector::extractDataRow(std::vector<unsigned> existing, IplImage *b
 			this->prevImage.release();
 		}
 	}
-	if(!entirePrev.empty()){
-		entirePrev.release();
-	}
+	image.copyTo(this->entirePrev);
 
 	// FIX THE LABELS TO CORRESPOND TO THE PEOPLE DETECTED IN THE IMAGE
 	if(!this->targetAnno.empty()){
@@ -880,47 +880,62 @@ cv::Mat currentImg){
 		cv::calcOpticalFlowFarneback(prevGray,currGray,flow,0.5,1,15,10,5,1.1,\
 			cv::OPTFLOW_FARNEBACK_GAUSSIAN);
 
-		cv::imshow("cgray",currGray);
-		cv::imshow("pgray",prevGray);
-		cv::waitKey(0);
-
 		//GET THE DIRECTION OF THE MAXIMUM OPTICAL FLOW
-		double avgX = 0.0, avgY = 0.0, avgFlowX = 0.0, avgFlowY = 0.0;
+		//double avgX = 0.0, avgY = 0.0, avgFlowX = 0.0, avgFlowY = 0.0;
+		double maxX = 0.0, maxY = 0.0, maxFlowX = 0.0, maxFlowY = 0.0, magni = 0.0;
 		for(std::size_t i=0;i<keypoints.size();i++){
-			avgX 	 += keypoints[i].pt.x;
-			avgY	 += keypoints[i].pt.y;
-			avgFlowX += flow.at<cv::Vec2f>(keypoints[i].pt.y,keypoints[i].pt.x)[0];
-			avgFlowY += flow.at<cv::Vec2f>(keypoints[i].pt.y,keypoints[i].pt.x)[1];
+			double ix,iy,fx,fy;
+			ix = keypoints[i].pt.x;
+			iy = keypoints[i].pt.y;
+			fx = flow.at<cv::Vec2f>(keypoints[i].pt.y,keypoints[i].pt.x)[0]+\
+					keypoints[i].pt.x;
+			fy = flow.at<cv::Vec2f>(keypoints[i].pt.y,keypoints[i].pt.x)[1]+\
+					keypoints[i].pt.y;
 
-//			std::cout<<flow.at<cv::Vec2f>(keypoints[i].pt.y,keypoints[i].pt.x)[0]<<\
-				" "<<flow.at<cv::Vec2f>(keypoints[i].pt.y,keypoints[i].pt.x)[1]<<\
-				std::endl;
-
-			cv::line(currentImg,cv::Point(keypoints[i].pt.x,keypoints[i].pt.y),\
-				cv::Point(flow.at<cv::Vec2f>(keypoints[i].pt.y,keypoints[i].pt.x)[0],\
-				flow.at<cv::Vec2f>(keypoints[i].pt.y,keypoints[i].pt.x)[1]),\
-				cv::Scalar(0,0,255),1,8,0);
-			cv::circle(currentImg,\
-				cv::Point(flow.at<cv::Vec2f>(keypoints[i].pt.y,keypoints[i].pt.x)[0],\
-				flow.at<cv::Vec2f>(keypoints[i].pt.y,keypoints[i].pt.x)[1]),\
-				2,cv::Scalar(0,200,0),1,8,0);
+			double newMagni = std::sqrt((fx-ix)*(fx-ix) + (fy-iy)*(fy-iy));
+			if(newMagni>magni){
+				magni    = newMagni;
+				maxX     = ix;
+				maxY     = iy;
+				maxFlowX = fx;
+				maxFlowY = fy;
+			}
+			/*
+			avgX 	 += ix;
+			avgY	 += iy;
+			avgFlowX += fx;
+			avgFlowY += fy;
+			*/
+			if(this->plotTracks){
+				cv::line(currentImg,cv::Point(ix,iy),cv::Point(fx,fy),\
+					cv::Scalar(0,0,255),1,8,0);
+				cv::circle(currentImg,cv::Point(fx,fy),2,cv::Scalar(0,200,0),1,8,0);
+			}
 		}
+		/*
 		avgX 	 /= keypoints.size();
 		avgY	 /= keypoints.size();
 		avgFlowX /= keypoints.size();
 		avgFlowY /= keypoints.size();
-		cv::line(currentImg,cv::Point(avgX,avgY),cv::Point(avgFlowX,avgFlowY),\
-			cv::Scalar(255,0,0),1,8,0);
-		cv::circle(currentImg,cv::Point(avgFlowX,avgFlowY),2,cv::Scalar(0,200,0),\
-			1,8,0);
+		*/
+
+		if(this->plotTracks){
+			//cv::line(currentImg,cv::Point(avgX,avgY),cv::Point(avgFlowX,avgFlowY),\
+				cv::Scalar(255,0,0),1,8,0);
+			//cv::circle(currentImg,cv::Point(avgFlowX,avgFlowY),2,cv::Scalar(0,200,0),\
+				1,8,0);
+
+			cv::line(currentImg,cv::Point(maxX,maxY),cv::Point(maxFlowX,maxFlowY),\
+				cv::Scalar(255,0,0),1,8,0);
+			cv::circle(currentImg,cv::Point(maxFlowX,maxFlowY),2,cv::Scalar(0,200,0),\
+				1,8,0);
+			this->showZoomedImage(currentImg, "optical");
+		}
 
 		// DIRECTION OF THE AVERAGE FLOW
-		direction = std::atan2(avgFlowY- avgY,avgFlowX- avgX);
+		//direction = std::atan2(avgFlowY - avgY,avgFlowX - avgX);
+		direction = std::atan2(maxFlowY - maxY,maxFlowX - maxX);
 		std::cout<<"flow direction: "<<direction*180/M_PI<<std::endl;
-
-		cv::imshow("optical",currentImg);
-		cv::waitKey(0);
-
 		currGray.release();
 		prevGray.release();
 	}
@@ -1231,8 +1246,8 @@ void featureDetector::fixLabels(std::vector<cv::Point> feetPos){
 			angle = angle*M_PI/180.0;
 			angle = this->fixAngle((*index).annos[i].location,\
 					cv::Point(camPosX,camPosY),angle);
-			tmp.at<double>(0,0) = std::sin(angle)*std::sin(angle);
-			tmp.at<double>(0,1) = std::cos(angle)*std::cos(angle);
+			tmp.at<double>(0,0) = std::sin(angle);
+			tmp.at<double>(0,1) = std::cos(angle);
 
 			// READ THE TARGET ANGLE FOR LATITUDE
 			angle = static_cast<double>\
@@ -1242,8 +1257,8 @@ void featureDetector::fixLabels(std::vector<cv::Point> feetPos){
 			angle = angle*M_PI/180.0;
 			angle = this->fixAngle((*index).annos[i].location,\
 					cv::Point(camPosX,camPosY),angle);
-			tmp.at<double>(0,2) = std::sin(angle)*std::sin(angle);
-			tmp.at<double>(0,3) = std::cos(angle)*std::cos(angle);
+			tmp.at<double>(0,2) = std::sin(angle);
+			tmp.at<double>(0,3) = std::cos(angle);
 
 			this->targets[this->lastIndex+assignments[i]] = tmp.clone();
 			tmp.release();
@@ -1437,8 +1452,7 @@ double offsetX, double offsetY){
 		}
 		plotTemplate2(new IplImage(thresholded), cv::Point(0,0), persHeight,\
 				camHeight, cvScalar(150,0,0),tmpTempl);
-		cv::imshow("templ", thresholded);
-		cv::imshow("Part", thresholded);
+		cv::imshow("part", thresholded);
 		cv::waitKey(0);
 	}
 }
@@ -1469,6 +1483,9 @@ double featureDetector::motionVector(cv::Point center){
 		angle = std::atan2(center.y-prev.y,center.x-prev.x);
 		std::cout<<"Motion angle>>> "<<(angle*180/M_PI)<<std::endl;
 	}
+
+	// FIX ANGLE WRT CAMERA
+	angle = this->fixAngle(center,cv::Point(camPosX,camPosY),angle);
 	return angle;
 }
 //==============================================================================
