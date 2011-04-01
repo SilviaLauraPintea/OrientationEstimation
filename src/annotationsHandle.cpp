@@ -29,21 +29,19 @@ annotationsHandle::POSE operator++(annotationsHandle::POSE &refPose, int){
 /** Mouse handler for annotating people's positions and poses.
  */
 void annotationsHandle::mouseHandlerAnn(int event, int x, int y, int flags, void *param){
-	cv::Point pt = cv::Point(x,y);
-	y            = pt.y;
-	x            = pt.x;
+	cv::Point3d bkp = backproject(cv::Point(x,y));
 	static bool down = false;
 	switch (event){
 		case CV_EVENT_LBUTTONDOWN:
 			if(choice == 'c'){
 				down = true;
 				cout<<"Left button down at >>> ("<<x<<","<<y<<")"<<endl;
-				Annotate::plotAreaTmp(image,(float)x,(float)y);
+				Annotate::plotAreaTmp(image,(float)bkp.x,(float)bkp.y);
 			}
 			break;
 		case CV_EVENT_MOUSEMOVE:
 			if(down){
-				Annotate::plotAreaTmp(image,(float)x,(float)y);
+				Annotate::plotAreaTmp(image,(float)bkp.x,(float)bkp.y);
 			}
 			break;
 		case CV_EVENT_LBUTTONUP:
@@ -52,12 +50,12 @@ void annotationsHandle::mouseHandlerAnn(int event, int x, int y, int flags, void
 				choice = ' ';
 				down = false;
 				annotationsHandle::ANNOTATION temp;
-				temp.location = pt;
+				temp.location = cv::Point2d(bkp.x,bkp.y);
 				temp.id       = annotations.size();
 				temp.poses.assign(poseSize, 0);
 				temp.poses[(int)LATITUDE] = 90;
 				annotations.push_back(temp);
-				showMenu(pt);
+				showMenu(cv::Point2f(x,y));
 				for(unsigned i=0;i!=annotations.size(); ++i){
 					Annotate::plotArea(image, (float)annotations[i].location.x, \
 						(float)annotations[i].location.y);
