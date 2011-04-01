@@ -55,7 +55,7 @@ void annotationsHandle::mouseHandlerAnn(int event, int x, int y, int flags, void
 				temp.poses.assign(poseSize, 0);
 				temp.poses[(int)LATITUDE] = 90;
 				annotations.push_back(temp);
-				showMenu(cv::Point2f(x,y));
+				showMenu(cv::Point2d(x,y));
 				for(unsigned i=0;i!=annotations.size(); ++i){
 					Annotate::plotArea(image, (float)annotations[i].location.x, \
 						(float)annotations[i].location.y);
