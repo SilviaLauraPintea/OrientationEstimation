@@ -102,12 +102,12 @@ class classifyImages {
 		/** @var imageList
 		 * All images are stored in this list for cross-validation.
 		 */
-		std::vector<std::string> imageList;
+		std::deque<std::string> imageList;
 
 		/** @var annoList
 		 * All annotations for all images are stored in this list for cross-validation.
 		 */
-		std::vector<std::string> annoList;
+		std::deque<std::string> annoList;
 
 		/** @var foldSize
 		 * The size of one fold in cross-validation.
@@ -131,8 +131,8 @@ class classifyImages {
 		/** Creates the test data and applies \c GaussianProcess prediction on the test
 		 * data.
 		 */
-		void predictGP(std::vector<gaussianProcess::prediction> &predictionsSin,\
-			std::vector<gaussianProcess::prediction> &predictionsCos,\
+		void predictGP(std::deque<gaussianProcess::prediction> &predictionsSin,\
+			std::deque<gaussianProcess::prediction> &predictionsCos,\
 			annotationsHandle::POSE what);
 
 		/** Initialize the options for the Gaussian Process regression.
@@ -144,8 +144,8 @@ class classifyImages {
 
 		/** Evaluate one prediction versus its target.
 		 */
-		void evaluate(std::vector<gaussianProcess::prediction> predictionsSin,\
-			std::vector<gaussianProcess::prediction> predictionsCos,\
+		void evaluate(std::deque<gaussianProcess::prediction> predictionsSin,\
+			std::deque<gaussianProcess::prediction> predictionsCos,\
 			double &error, double &accuracy,  annotationsHandle::POSE what);
 
 		/** Do k-fold cross-validation by splitting the training folder into

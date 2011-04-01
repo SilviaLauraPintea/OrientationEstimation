@@ -38,11 +38,11 @@ class annotationsHandle {
  		 */
 		struct ANNOTATION {
 			short int id;
-			cv::Point location;
-			std::vector<unsigned int> poses;
+			cv::Point2f location;
+			std::deque<unsigned int> poses;
 			ANNOTATION(){
 				this->id    = 0;
-				this->poses = std::vector<unsigned int>(5,0);
+				this->poses = std::deque<unsigned int>(5,0);
 			}
 			~ANNOTATION(){
 				if(!this->poses.empty()){
@@ -55,7 +55,7 @@ class annotationsHandle {
 		 */
 		struct FULL_ANNOTATIONS {
 			string imgFile;
-			std::vector<annotationsHandle::ANNOTATION> annos;
+			std::deque<annotationsHandle::ANNOTATION> annos;
 			FULL_ANNOTATIONS(){
 				this->imgFile = "";
 			}
@@ -103,11 +103,11 @@ class annotationsHandle {
 
 		/** Draws the "menu" of possible poses for the current position.
 		 */
-		static void showMenu(cv::Point center);
+		static void showMenu(cv::Point2f center);
 
 		/** Plots the hull indicated by the parameter \c hull on the given image.
 		 */
-		static void plotHull(IplImage *img, std::vector<CvPoint> &hull);
+		static void plotHull(IplImage *img, std::vector<cv::Point2f> &hull);
 
 		/** Starts the annotation of the images. The parameters that need to be indicated
 		 * are:
@@ -132,33 +132,33 @@ class annotationsHandle {
 		/** Load annotations from file.
 		 */
 		static void loadAnnotations(char* filename,\
-			std::vector<annotationsHandle::FULL_ANNOTATIONS> &loadedAnno);
+			std::deque<annotationsHandle::FULL_ANNOTATIONS> &loadedAnno);
 
 		/** Computes the average distance from the predicted location and the
 		 * annotated one, the number of unpredicted people in each image and
 		 * the differences in the pose estimation.
 		 */
-		static void annoDifferences(std::vector<annotationsHandle::FULL_ANNOTATIONS>\
-			&train, std::vector<annotationsHandle::FULL_ANNOTATIONS> &test,\
+		static void annoDifferences(std::deque<annotationsHandle::FULL_ANNOTATIONS>\
+			&train, std::deque<annotationsHandle::FULL_ANNOTATIONS> &test,\
 			double &avgDist, double &Ndiff, double ssdLongDiff, double ssdLatDiff,\
 			double poseDiff);
 
 		/** Correlate annotations' from locations in \c annoOld to locations in
 		 * \c annoNew through IDs.
 		 */
-		static void correltateLocs(std::vector<annotationsHandle::ANNOTATION> &annoOld,\
-			std::vector<annotationsHandle::ANNOTATION> &annoNew,\
-			std::vector<annotationsHandle::ASSIGNED> &idAssignedTo);
+		static void correltateLocs(std::deque<annotationsHandle::ANNOTATION> &annoOld,\
+			std::deque<annotationsHandle::ANNOTATION> &annoNew,\
+			std::deque<annotationsHandle::ASSIGNED> &idAssignedTo);
 
 		/** Checks to see if a location can be assigned to a specific ID given the
 		 * new distance.
 		 */
-		static bool canBeAssigned(std::vector<annotationsHandle::ASSIGNED> &idAssignedTo, short int id, \
+		static bool canBeAssigned(std::deque<annotationsHandle::ASSIGNED> &idAssignedTo, short int id, \
 			double newDist, short int to);
 
 		/** Displays the complete annotations for all images.
 		 */
-		static void displayFullAnns(std::vector<annotationsHandle::FULL_ANNOTATIONS>\
+		static void displayFullAnns(std::deque<annotationsHandle::FULL_ANNOTATIONS>\
 			&fullAnns);
 
 		/** Starts the annotation of the images. The parameters that need to be
@@ -171,20 +171,20 @@ class annotationsHandle {
 
 		/** Shows how the selected orientation looks on the image.
 		 */
-		static void drawOrientation(cv::Point center, unsigned int orient,\
+		static void drawOrientation(cv::Point2f center, unsigned int orient,\
 			annotationsHandle::POSE pose);
 
 		/** Shows how the selected orientation looks on the image.
 		 */
-		static void drawLatitude(cv::Point head, cv::Point feet,\
+		static void drawLatitude(cv::Point2f head, cv::Point2f feet,\
 			unsigned int orient, annotationsHandle::POSE pose);
 
-		static cv::Mat rotateWrtCamera(cv::Point feetLocation,\
-			cv::Point cameraLocation, cv::Mat toRotate, cv::Point &borders);
+		static cv::Mat rotateWrtCamera(cv::Point2f feetLocation,\
+			cv::Point2f cameraLocation, cv::Mat toRotate, cv::Point2f &borders);
 
 		/** Writes a given FULL_ANNOTATIONS structure into a given file.
 		 */
-		static void writeAnnoToFile(std::vector<annotationsHandle::FULL_ANNOTATIONS>\
+		static void writeAnnoToFile(std::deque<annotationsHandle::FULL_ANNOTATIONS>\
 			fullAnno, std::string fileName);
 
 		/** Initializes all the values of the class variables.
@@ -200,7 +200,7 @@ class annotationsHandle {
 		 * An instance of the structure \c ANNOTATIONS storing the annotations
 		 * for each image.
 		 */
-		static std::vector<annotationsHandle::ANNOTATION> annotations;
+		static std::deque<annotationsHandle::ANNOTATION> annotations;
 		/** @var choice
 		 * Indicates if the pose was defined for the current frame.
 		 */
@@ -222,7 +222,7 @@ class annotationsHandle {
 		/** @var poseNames
 		 * The strings corresponding to the names of the poses
 		 */
-		static std::vector<std::string> poseNames;
+		static std::deque<std::string> poseNames;
 };
 
 #endif /* ANNOTATIONSHANDLE_H_ */

@@ -9,6 +9,7 @@
 #include <string>
 #include <cmath>
 #include <exception>
+#include <deque>
 #include <opencv2/opencv.hpp>
 #include "cholesky.h"
 
@@ -23,8 +24,8 @@ class gaussianProcess {
 		/** A structure used to define predictions.
 		 */
 		struct prediction {
-		  std::vector<double> mean;
-		  std::vector<double> variance;
+		  std::deque<double> mean;
+		  std::deque<double> variance;
 		  ~prediction(){
 			  if(!this->mean.empty()){
 				  this->mean.clear();

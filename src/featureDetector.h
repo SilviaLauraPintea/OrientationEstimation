@@ -29,13 +29,13 @@ class featureDetector:public Tracker{
 		/** Structure containing images of the size of the detected people.
 		 */
 		struct people {
-			cv::Point absoluteLoc;
-			cv::Point relativeLoc;
-			std::vector<unsigned> borders;
+			cv::Point2f absoluteLoc;
+			cv::Point2f relativeLoc;
+			std::deque<unsigned> borders;
 			cv::Mat_<cv::Vec3b> pixels;
 			people(){
-				this->absoluteLoc = cv::Point(0,0);
-				this->relativeLoc = cv::Point(0,0);
+				this->absoluteLoc = cv::Point2f(0,0);
+				this->relativeLoc = cv::Point2f(0,0);
 			}
 			~people(){
 				if(!this->borders.empty()){
@@ -55,7 +55,7 @@ class featureDetector:public Tracker{
 		 */
 		struct keyDescr {
 			cv::KeyPoint keys;
-			std::vector<float> descr;
+			std::deque<float> descr;
 			~keyDescr(){
 				if(!this->descr.empty()){
 					this->descr.clear();
@@ -122,59 +122,59 @@ class featureDetector:public Tracker{
 
 		/** Creates a symmetrical Gaussian kernel.
 		 */
-		void gaussianKernel(cv::Mat &gauss, cv::Size size, double sigma,cv::Point offset);
+		void gaussianKernel(cv::Mat &gauss, cv::Size size, double sigma,cv::Point2f offset);
 
 		/** Get the foreground pixels corresponding to each person.
 		 */
-		void allForegroundPixels(std::vector<featureDetector::people> &allPeople,\
-			std::vector<unsigned> existing, IplImage *bg, double threshold);
+		void allForegroundPixels(std::deque<featureDetector::people> &allPeople,\
+			std::deque<unsigned> existing, IplImage *bg, double threshold);
 
 		/** Gets the distance to the given template from a given pixel location.
 		 */
-		double getDistToTemplate(int pixelX,int pixelY,std::vector<CvPoint> templ);
+		double getDistToTemplate(int pixelX,int pixelY,std::vector<cv::Point2f> templ);
 
 		/** Checks to see if a given pixel is inside a template.
 		 */
-		bool isInTemplate(unsigned pixelX, unsigned pixelY, std::vector<CvPoint> templ);
+		bool isInTemplate(unsigned pixelX, unsigned pixelY, std::vector<cv::Point2f> templ);
 
 		/** Shows a ROI in a given image.
 		 */
-		void showROI(cv::Mat image, cv::Point top_left, cv::Size ROI_size);
+		void showROI(cv::Mat image, cv::Point2f top_left, cv::Size ROI_size);
 
 		/** Get perpendicular to a line given by 2 points A, B in point C.
 		 */
-		void getLinePerpendicular(cv::Point A, cv::Point B, cv::Point C, \
+		void getLinePerpendicular(cv::Point2f A, cv::Point2f B, cv::Point2f C, \
 			double &m, double &b);
 
 		/** Checks to see if a point is on the same side of a line like another given point.
 		 */
-		bool sameSubplane(cv::Point test,cv::Point point, double m, double b);
+		bool sameSubplane(cv::Point2f test,cv::Point2f point, double m, double b);
 
 		/** Gets the edges in an image.
 		 */
-		void getEdges(cv::Point center, cv::Mat &feature, cv::Mat image,\
+		void getEdges(cv::Point2f center, cv::Mat &feature, cv::Mat image,\
 			unsigned reshape=1, cv::Mat thresholded=cv::Mat());
 
 		/** SURF descriptors (Speeded Up Robust Features).
 		 */
 		void getSURF(cv::Mat &feature, cv::Mat image, int minX, int minY,\
-			std::vector<CvPoint> templ, cv::Point center);
+			std::vector<cv::Point2f> templ, cv::Point2f center);
 
 		/** Compute the features from the SIFT descriptors by doing vector
 		 * quantization.
 		 */
 		void getSIFT(cv::Mat &feature, cv::Mat image, int minX, int minY,\
-			std::vector<CvPoint> templ, cv::Point center);
+			std::vector<cv::Point2f> templ, cv::Point2f center);
 
 		/** SIFT descriptors (Scale Invariant Feature Transform).
 		 */
 		std::vector<cv::KeyPoint> extractSIFT(cv::Mat &feature, cv::Mat image,\
-			int minX, int minY, std::vector<CvPoint> templ, cv::Point center);
+			int minX, int minY, std::vector<cv::Point2f> templ, cv::Point2f center);
 
 		/** Creates a "histogram" of interest points + number of blobs.
 		 */
 		void interestPointsGrid(cv::Mat &feature, cv::Mat image,\
-			std::vector<CvPoint> templ, int minX, int minY, cv::Point center);
+			std::vector<cv::Point2f> templ, int minX, int minY, cv::Point2f center);
 
 		/** Just displaying an image a bit larger to visualize it better.
 		 */
@@ -183,8 +183,8 @@ class featureDetector:public Tracker{
 		/** Head detection by fitting ellipses (if \i templateCenter is relative to
 		 * the \i img the offset needs to be used).
 		 */
-		void skinEllipses(cv::RotatedRect &finalBox, cv::Mat img, cv::Point \
-		templateCenter, cv::Point offset=cv::Point(0,0), double minHeadSize=20,\
+		void skinEllipses(cv::RotatedRect &finalBox, cv::Mat img, cv::Point2f \
+		templateCenter, cv::Point2f offset=cv::Point2f(0,0), double minHeadSize=20,\
 		double maxHeadSize=40);
 
 		/** Creates a gabor with the parameters given by the parameter vector.
@@ -195,7 +195,7 @@ class featureDetector:public Tracker{
 		 * returns the response image.
 		 */
 		void getGabor(cv::Mat &feature,cv::Mat image,cv::Mat thresholded,\
-			cv::Point center);
+			cv::Point2f center);
 
 		/** Set what kind of features to extract.
 		 */
@@ -204,17 +204,17 @@ class featureDetector:public Tracker{
 		/** Creates on data row in the final data matrix by getting the feature
 		 * descriptors.
 		 */
-		void extractDataRow(std::vector<unsigned> existing, IplImage *bg);
+		void extractDataRow(std::deque<unsigned> existing, IplImage *bg);
 
 		/** For each row added in the data matrix (each person detected for which we
 		 * have extracted some features) find the corresponding label.
 		 */
-		void fixLabels(std::vector<cv::Point> feetPos);
+		void fixLabels(std::vector<cv::Point2f> feetPos);
 
 		/** Returns the size of a window around a template centered in a given point.
 		 */
 		void templateWindow(cv::Size imgSize, int &minX, int &maxX,\
-		int &minY, int &maxY, std::vector<CvPoint> &templ, int tplBorder = 100);
+		int &minY, int &maxY, std::vector<cv::Point2f> &templ, int tplBorder = 100);
 
 		/** Initializes the parameters of the tracker.
 		 */
@@ -223,13 +223,13 @@ class featureDetector:public Tracker{
 
 		/** Checks to see if an annotation can be assigned to a detection.
 		 */
-		bool canBeAssigned(unsigned l,std::vector<double> &minDistances,\
-		unsigned k,double distance, std::vector<int> &assignment);
+		bool canBeAssigned(unsigned l,std::deque<double> &minDistances,\
+		unsigned k,double distance, std::deque<int> &assignment);
 
 		/** Fixes the angle to be relative to the camera position with respect to the
 		 * detected position.
 		 */
-		double fixAngle(cv::Point feetLocation, cv::Point cameraLocation,\
+		double fixAngle(cv::Point2f feetLocation, cv::Point2f cameraLocation,\
 			double angle);
 
 		/** Compares SURF 2 descriptors and returns the boolean value of their comparison.
@@ -239,8 +239,8 @@ class featureDetector:public Tracker{
 
 		/** Rotate matrix wrt to the camera location.
 		 */
-		cv::Mat rotateWrtCamera(cv::Point feetLocation, cv::Point cameraLocation,\
-			cv::Mat toRotate, cv::Point &borders);
+		cv::Mat rotateWrtCamera(cv::Point2f feetLocation, cv::Point2f cameraLocation,\
+			cv::Mat toRotate, cv::Point2f &borders);
 
 		/** Set the name of the file where the SIFT dictionary is stored.
 		 */
@@ -248,26 +248,26 @@ class featureDetector:public Tracker{
 
 		/** Rotate the points corresponding to the template wrt to the camera location.
 		 */
-		std::vector<CvPoint> rotateTemplWrtCamera(cv::Point feetLocation,\
-			cv::Point cameraLocation, std::vector<CvPoint> templ,\
-			cv::Point rotBorders, cv::Point2f rotCenter);
+		std::vector<cv::Point2f> rotateTemplWrtCamera(cv::Point2f feetLocation,\
+			cv::Point2f cameraLocation, std::vector<cv::Point2f> templ,\
+			cv::Point2f rotBorders, cv::Point2f rotCenter);
 
 		/** Get template extremities (if needed, considering some borders --
 		 * relative to the ROI).
 		 */
-		void templateExtremes(std::vector<CvPoint> templ, double\
+		void templateExtremes(std::vector<cv::Point2f> templ, double\
 			&minTmplX, double &maxTmplX, double &minTmplY, double &maxTmplY,\
 			int minX = 0, int minY = 0);
 
 		/** If only a part needs to be used to extract the features then the threshold
 		 * and the template need to be changed.
 		 */
-		void onlyPart(cv::Mat &thresholded, std::vector<CvPoint> &templ,\
+		void onlyPart(cv::Mat &thresholded, std::vector<cv::Point2f> &templ,\
 			double offsetX, double offsetY);
 
 		/** Computes the motion vector for the current image given the tracks so far.
 		 */
-		double motionVector(cv::Point center);
+		double motionVector(cv::Point2f center);
 
 		/** Compute the dominant direction of the SIFT or SURF features.
 		 */
@@ -288,17 +288,17 @@ class featureDetector:public Tracker{
 		/** @var data
 		 * The training data obtained from the feature descriptors.
 		 */
-		std::vector<cv::Mat> data;
+		std::deque<cv::Mat> data;
 
 		/** @var data
 		 * The targets/labels of the data.
 		 */
-		std::vector<cv::Mat> targets;
+		std::deque<cv::Mat> targets;
 
 		/** @var annotations
 		 * Loaded annotations for the read images.
 		 */
-		std::vector<annotationsHandle::FULL_ANNOTATIONS> targetAnno;
+		std::deque<annotationsHandle::FULL_ANNOTATIONS> targetAnno;
 
 		/** @var lastIndex
 		 * The previous size of the data matrix before adding new detections.

@@ -30,8 +30,8 @@ INCLUDE_DIRECTORIES(${OPENCV2} ${VXL_BIN} ${VXL_BIN} ${VXL_BIN}/contrib/tbl ${VX
 LINK_DIRECTORIES(${VXL_BIN}/lib ${CMN_BIN} ${OPENCV2LIB})
 
 ADD_LIBRARY(helpers
-  ${EIGEN_SRC}/calib/sample/cameraModel.cpp
-  ${EIGEN_SRC}/calib/CamCalib.cc
+#  ${EIGEN_SRC}/calib/sample/cameraModel.cpp
+ # ${EIGEN_SRC}/calib/CamCalib.cc
 
   ${EIGEN_SRC}/defines.cc
   ${EIGEN_SRC}/Helpers.cc
@@ -44,11 +44,11 @@ ADD_LIBRARY(helpers
  # ${MT_SRC}/annotationsHandle.cpp
  # ${MT_SRC}/featureDetector.cpp  
  # ${MT_SRC}/cholesky.cpp  
-#  ${MT_SRC}/gaussianProcess.cpp    
+ # ${MT_SRC}/gaussianProcess.cpp    
   )
 
 #ADD_EXECUTABLE(Tracker ${EIGEN_SRC}/Tracker.cc )
-#TARGET_LINK_LIBRARIES(Tracker helpers opencv_core opencv_imgproc opencv_highgui cmn tools iberty vnl_algo vnl v3p_netlib boost_date_time-mt boost_thread-mt ${XML2_LDFLAGS})
+#TARGET_LINK_LIBRARIES(Tracker helpers opencv_core opencv_calib3d opencv_imgproc opencv_highgui cmn tools iberty vnl_algo vnl v3p_netlib boost_date_time-mt boost_thread-mt ${XML2_LDFLAGS})
 
 #ADD_EXECUTABLE(Annotate ${EIGEN_SRC}/Annotate.cc )
 #TARGET_LINK_LIBRARIES(Annotate helpers opencv_calib3d opencv_core opencv_imgproc opencv_highgui cmn tools iberty vnl_algo vnl v3p_netlib boost_date_time-mt boost_thread-mt ${XML2_LDFLAGS})

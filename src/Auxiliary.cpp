@@ -80,7 +80,7 @@ void txtFile2Mat(cv::Mat &matrix, char* fileName){
 		// FIRST LINE IS THE SIZE OF THE MATRIX
 		std::string fline;
 		std::getline(dictFile, fline);
-		std::vector<std::string> flineVect = splitLine(const_cast<char*>\
+		std::deque<std::string> flineVect = splitLine(const_cast<char*>\
 											(fline.c_str()),' ');
 		if(flineVect.size() == 2){
 			char *pRows, *pCols;
@@ -96,7 +96,7 @@ void txtFile2Mat(cv::Mat &matrix, char* fileName){
 		while(dictFile.good()){
 			std::string line;
 			std::getline(dictFile, line);
-			std::vector<std::string> lineVect = splitLine(const_cast<char*>\
+			std::deque<std::string> lineVect = splitLine(const_cast<char*>\
 												(line.c_str()),' ');
 			if(lineVect.size()>=1){
 				for(std::size_t x=0; x<lineVect.size(); x++){

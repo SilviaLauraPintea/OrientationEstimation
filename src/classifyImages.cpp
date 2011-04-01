@@ -142,8 +142,8 @@ void classifyImages::trainGP(annotationsHandle::POSE what){
 /** Creates the test data and applies \c GaussianProcess prediction on the test
  * data.
  */
-void classifyImages::predictGP(std::vector<gaussianProcess::prediction> &predictionsSin,\
-std::vector<gaussianProcess::prediction> &predictionsCos,\
+void classifyImages::predictGP(std::deque<gaussianProcess::prediction> &predictionsSin,\
+std::deque<gaussianProcess::prediction> &predictionsCos,\
 annotationsHandle::POSE what){
 	this->features->setFeatureType(this->feature);
 	this->features->init(this->testFolder, this->annotationsTest,this->readFromFolder);
@@ -187,8 +187,8 @@ annotationsHandle::POSE what){
 //==============================================================================
 /** Evaluate one prediction versus its target.
  */
-void classifyImages::evaluate(std::vector<gaussianProcess::prediction>\
-predictionsSin, std::vector<gaussianProcess::prediction> predictionsCos,\
+void classifyImages::evaluate(std::deque<gaussianProcess::prediction>\
+predictionsSin, std::deque<gaussianProcess::prediction> predictionsCos,\
 double &error, double &accuracy, annotationsHandle::POSE what){
 	double sinCosAccuracy = 0.0, sinCosError = 0.0;
 	accuracy = 0.0;
@@ -243,7 +243,7 @@ predictionsSin, gaussianProcess::prediction predictionsCos){
 	/*
 	double closeTo;
 	closeTo = std::atan2(predictionsSin.mean[0],predictionsCos.mean[0]);
-	std::vector<double> alphas;
+	std::deque<double> alphas;
 	if(betaS != betaC){
 		std::cout<<"betaS="<<betaS<<" betaC="<<betaC<<" x="<<x<<" y="<<y<<std::endl;
 
@@ -346,8 +346,8 @@ featureDetector::FEATURE theFeature, char* fileSIFT, int colorSp, bool fromFolde
 		this->init(theNoise,theLength,theKFunction,theFeature,fileSIFT,colorSp,\
 			fromFolder);
 		this->trainGP(annotationsHandle::LONGITUDE);
-		std::vector<gaussianProcess::prediction> predictionsSin;
-		std::vector<gaussianProcess::prediction> predictionsCos;
+		std::deque<gaussianProcess::prediction> predictionsSin;
+		std::deque<gaussianProcess::prediction> predictionsCos;
 		this->predictGP(predictionsSin,predictionsCos,annotationsHandle::LONGITUDE);
 		double errorLong, accuracyLong;
 		this->evaluate(predictionsSin, predictionsCos, errorLong, accuracyLong,\
@@ -456,8 +456,8 @@ char* fileSIFT, int colorSp, bool fromFolder){
 	this->init(theNoise,theLength,theKFunction,theFeature,fileSIFT,colorSp,\
 		fromFolder);
 	this->trainGP(annotationsHandle::LONGITUDE);
-	std::vector<gaussianProcess::prediction> predictionsSin;
-	std::vector<gaussianProcess::prediction> predictionsCos;
+	std::deque<gaussianProcess::prediction> predictionsSin;
+	std::deque<gaussianProcess::prediction> predictionsCos;
 	this->predictGP(predictionsSin,predictionsCos,annotationsHandle::LONGITUDE);
 	double errorLong, accuracyLong;
 	this->evaluate(predictionsSin, predictionsCos, errorLong, accuracyLong,\

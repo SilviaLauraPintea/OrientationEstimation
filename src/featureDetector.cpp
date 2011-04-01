@@ -20,7 +20,7 @@ struct compareImg{
 	public:
 		std::string imgName;
 		compareImg(std::string image){
-			std::vector<std::string> parts = splitLine(\
+			std::deque<std::string> parts = splitLine(\
 											const_cast<char*>(image.c_str()),'/');
 			this->imgName = parts[parts.size()-1];
 		}
@@ -75,8 +75,8 @@ bool readFromFolder){
 //==============================================================================
 /** Get perpendicular to a line given by 2 points A, B in point C.
  */
-void featureDetector::getLinePerpendicular(cv::Point A, cv::Point B, cv::Point C,\
-double &m, double &b){
+void featureDetector::getLinePerpendicular(cv::Point2f A, cv::Point2f B,
+cv::Point2f C, double &m, double &b){
 	double slope = (double)(B.y - A.y)/(double)(B.x - A.x);
 	m            = -1.0/slope;
 	b            = C.y - m * C.x;
@@ -84,7 +84,8 @@ double &m, double &b){
 //==============================================================================
 /** Checks to see if a point is on the same side of a line like another given point.
  */
-bool featureDetector::sameSubplane(cv::Point test,cv::Point point, double m, double b){
+bool featureDetector::sameSubplane(cv::Point2f test, cv::Point2f point,\
+double m, double b){
 	if(isnan(m)){
 		return (point.x*test.x)>=0.0;
 	}else if(m == 0){
@@ -96,8 +97,8 @@ bool featureDetector::sameSubplane(cv::Point test,cv::Point point, double m, dou
 //==============================================================================
 /** Creates a symmetrical Gaussian kernel.
  */
-void featureDetector::gaussianKernel(cv::Mat &gauss, cv::Size size, double sigma,\
-cv::Point offset){
+void featureDetector::gaussianKernel(cv::Mat &gauss, cv::Size size,\
+double sigma, cv::Point2f offset){
 	int xmin = -1 * size.width/2, xmax = size.width/2;
 	int ymin = -1 * size.height/2, ymax = size.height/2;
 
@@ -113,7 +114,7 @@ cv::Point offset){
 //==============================================================================
 /** Gets the edges in an image.
  */
-void featureDetector::getEdges(cv::Point center, cv::Mat &feature, cv::Mat image,\
+void featureDetector::getEdges(cv::Point2f center, cv::Mat &feature, cv::Mat image,\
 unsigned reshape, cv::Mat thresholded){
 	//cv::Mat up, low;
 	//this->upperLowerROI(image,up,low,0,0);
@@ -157,7 +158,7 @@ const featureDetector::keyDescr k2){
 /** SURF descriptors (Speeded Up Robust Features).
  */
 void featureDetector::getSURF(cv::Mat &feature, cv::Mat image, int minX,\
-int minY, std::vector<CvPoint> templ, cv::Point center){
+int minY, std::vector<cv::Point2f> templ, cv::Point2f center){
 	// EXTRACT THE SURF KEYPOINTS AND THE DESCRIPTORS
 	std::vector<float> descriptors;
 	std::vector<cv::KeyPoint> keypoints;
@@ -171,7 +172,7 @@ int minY, std::vector<CvPoint> templ, cv::Point center){
 	aSURF(gray, cv::Mat(), keypoints, descriptors, false);
 
 	// KEEP THE DESCRIPTORS WITHIN THE BORDERS ONLY
-	std::vector<featureDetector::keyDescr> kD;
+	std::deque<featureDetector::keyDescr> kD;
 	cv::vector<cv::KeyPoint> goodSURFS;
 	for(std::size_t i=0; i<keypoints.size();i++){
 		if(this->isInTemplate(keypoints[i].pt.x+minX,keypoints[i].pt.y+minY,templ)){
@@ -206,7 +207,7 @@ int minY, std::vector<CvPoint> templ, cv::Point center){
 	std::cout<<"key-size:"<<kD.size()<<" feat-size:"<<feature.cols<<std::endl;
 	if(this->plotTracks){
 		for(std::size_t i=0; i<kD.size(); i++){
-			cv::circle(image, cv::Point(kD[i].keys.pt.x, kD[i].keys.pt.y),\
+			cv::circle(image, cv::Point2f(kD[i].keys.pt.x, kD[i].keys.pt.y),\
 				kD[i].keys.size, cv::Scalar(0,0,255), 1, 8, 0);
 		}
 		cv::imshow("SURFS", image);
@@ -219,13 +220,13 @@ int minY, std::vector<CvPoint> templ, cv::Point center){
 /** Get template extremities (if needed, considering some borders --
  * relative to the ROI).
  */
-void featureDetector::templateExtremes(std::vector<CvPoint> templ, double\
+void featureDetector::templateExtremes(std::vector<cv::Point2f> templ, double\
 &minTmplX, double &maxTmplX, double &minTmplY, double &maxTmplY, int minX,\
 int minY){
-	minTmplX = std::max(0,templ[0].x-minX),\
-	maxTmplX = std::max(0,templ[0].x-minX),\
-	minTmplY = std::max(0,templ[0].y-minY),\
-	maxTmplY = std::max(0,templ[0].y-minY);
+	minTmplX = std::max(0.0f,templ[0].x-minX),\
+	maxTmplX = std::max(0.0f,templ[0].x-minX),\
+	minTmplY = std::max(0.0f,templ[0].y-minY),\
+	maxTmplY = std::max(0.0f,templ[0].y-minY);
 	for(std::size_t i=0; i<templ.size();i++){
 		if(minTmplY>=templ[i].y-minY) minTmplY  = templ[i].y - minY;
 		if(maxTmplY<=templ[i].y-minY) maxTmplY = templ[i].y - minY;
@@ -237,7 +238,7 @@ int minY){
 /** Creates a "histogram" of interest points + number of blobs.
  */
 void featureDetector::interestPointsGrid(cv::Mat &feature, cv::Mat image,\
-std::vector<CvPoint> templ, int minX, int minY, cv::Point center){
+std::vector<cv::Point2f> templ, int minX, int minY, cv::Point2f center){
 	double minTmplX,maxTmplX,minTmplY,maxTmplY;
 	this->templateExtremes(templ,minTmplX,maxTmplX,minTmplY,maxTmplY,minX,minY);
 
@@ -272,7 +273,7 @@ std::vector<CvPoint> templ, int minX, int minY, cv::Point center){
 		new cv::GoodFeaturesToTrackDetector(5000, 0.00001, 1.0, 3.0);
 	cv::GridAdaptedFeatureDetector gafd(detector, 5000, no, no);
 	std::vector<cv::KeyPoint> keys;
-	std::vector<unsigned> indices;
+	std::deque<unsigned> indices;
 	gafd.detect(image, keys);
 
 	//COUNT THE INTEREST POINTS IN EACH CELL
@@ -331,7 +332,7 @@ void featureDetector::showZoomedImage(cv::Mat image, const std::string title){
  * \i img the offset needs to be used).
  */
 void featureDetector::skinEllipses(cv::RotatedRect &finalBox, cv::Mat img,\
-cv::Point templateCenter,cv::Point offset,double minHeadSize,double maxHeadSize){
+cv::Point2f templateCenter,cv::Point2f offset,double minHeadSize,double maxHeadSize){
 	// TRANSFORM FROM BGR TO HSV TO BE ABLE TO DETECT MORE SKIN-LIKE PIXELS
 	cv::Mat hsv;
 	cv::cvtColor(img, hsv, CV_BGR2HSV);
@@ -349,7 +350,7 @@ cv::Point templateCenter,cv::Point offset,double minHeadSize,double maxHeadSize)
 
 	// GET EDGES OF THE IMAGE
 	cv::Mat_<uchar> edges;
-	this->getEdges(cv::Point(0,0), edges, img, 0);
+	this->getEdges(cv::Point2f(0,0), edges, img, 0);
 
 	// GROUP THE EDGES INTO CONTOURS
 	std::vector<std::vector<cv::Point> > contours;
@@ -360,9 +361,9 @@ cv::Point templateCenter,cv::Point offset,double minHeadSize,double maxHeadSize)
 	cvDestroyWindow("Contours");
 
 	// GET THE HEAD CENTER
-	std::vector<CvPoint> templ;
+	std::vector<cv::Point2f> templ;
 	genTemplate2(templateCenter, persHeight, camHeight, templ);
-	cv::Point headCenter((templ[12].x+templ[14].x)/2-offset.x, \
+	cv::Point2f headCenter((templ[12].x+templ[14].x)/2-offset.x, \
 		(templ[12].y+templ[14].y)/2-offset.y);
 
 	// FIND THE BEST ELLIPSE YOU CAN FIND
@@ -399,7 +400,7 @@ cv::Point templateCenter,cv::Point offset,double minHeadSize,double maxHeadSize)
 //==============================================================================
 /** Shows a ROI in a given image.
  */
-void featureDetector::showROI(cv::Mat image, cv::Point top_left, cv::Size ROI_size){
+void featureDetector::showROI(cv::Mat image, cv::Point2f top_left, cv::Size ROI_size){
 	cv::Mat aRoi(image.clone(), cv::Rect(top_left,ROI_size));
 	cv::imshow("ROI", aRoi);
 	cv::waitKey(0);
@@ -410,8 +411,8 @@ void featureDetector::showROI(cv::Mat image, cv::Point top_left, cv::Size ROI_si
 /** Gets the distance to the given template from a given pixel location.
  */
 double featureDetector::getDistToTemplate(int pixelX, int pixelY, \
-std::vector<CvPoint> templ){
-	std::vector<CvPoint> hull;
+std::vector<cv::Point2f> templ){
+	std::vector<cv::Point2f> hull;
 	convexHull(templ, hull);
 	double minDist = -1;
 	unsigned i=0, j=1;
@@ -431,13 +432,13 @@ std::vector<CvPoint> templ){
 /** Checks to see if a given pixel is inside a template.
  */
 bool featureDetector::isInTemplate(unsigned pixelX, unsigned pixelY,\
-std::vector<CvPoint> templ){
-	std::vector<CvPoint> hull;
+std::vector<cv::Point2f> templ){
+	std::vector<cv::Point2f> hull;
 	convexHull(templ, hull);
-	std::vector<scanline_t> lines;
+	std::deque<scanline_t> lines;
 	getScanLines(hull, lines);
 
-	std::vector<scanline_t>::iterator iter = std::find_if(lines.begin(),\
+	std::deque<scanline_t>::iterator iter = std::find_if(lines.begin(),\
 		lines.end(), onScanline(pixelY));
 	if(iter == lines.end()){
 		return false;
@@ -455,7 +456,7 @@ std::vector<CvPoint> templ){
 /** Returns the size of a window around a template centered in a given point.
  */
 void featureDetector::templateWindow(cv::Size imgSize, int &minX, int &maxX,\
-int &minY, int &maxY, std::vector<CvPoint> &templ, int tplBorder){
+int &minY, int &maxY, std::vector<cv::Point2f> &templ, int tplBorder){
 	// GET THE MIN/MAX SIZE OF THE TEMPLATE
 	for(unsigned i=0; i<templ.size(); i++){
 		if(minX>=templ[i].x){minX = templ[i].x;}
@@ -492,8 +493,8 @@ int &minY, int &maxY, std::vector<CvPoint> &templ, int tplBorder){
 //==============================================================================
 /** Get the foreground pixels corresponding to each person.
  */
-void featureDetector::allForegroundPixels(std::vector<featureDetector::people>\
-&allPeople, std::vector<unsigned> existing, IplImage *bg, double threshold){
+void featureDetector::allForegroundPixels(std::deque<featureDetector::people>\
+&allPeople, std::deque<unsigned> existing, IplImage *bg, double threshold){
 	// INITIALIZING STUFF
 	cv::Mat thsh(bg);
 	cv::Mat thrsh(thsh.rows, thsh.cols, CV_8UC1);
@@ -504,9 +505,9 @@ void featureDetector::allForegroundPixels(std::vector<featureDetector::people>\
 	// FOR EACH EXISTING TEMPLATE LOOK ON AN AREA OF 100 PIXELS AROUND IT
 	cout<<"number of templates: "<<existing.size()<<endl;
 	for(unsigned k=0; k<existing.size();k++){
-		cv::Point center         = this->cvPoint(existing[k]);
+		cv::Point2f center       = this->cvPoint(existing[k]);
 		allPeople[k].absoluteLoc = center;
-		std::vector<CvPoint> templ;
+		std::vector<cv::Point2f> templ;
 		genTemplate2(center, persHeight, camHeight, templ);
 
 		// GET THE 100X100 WINDOW ON THE TEMPLATE
@@ -515,7 +516,7 @@ void featureDetector::allForegroundPixels(std::vector<featureDetector::people>\
 			minY, maxY, templ);
 		int width        = maxX-minX;
 		int height       = maxY-minY;
-		cv::Mat colorRoi = cv::Mat(foregr.clone(),cv::Rect(cv::Point(minX,minY),\
+		cv::Mat colorRoi = cv::Mat(foregr.clone(),cv::Rect(cv::Point2f(minX,minY),\
 							cv::Size(width,height)));
 
 		// LOOP OVER THE AREA OF OUR TEMPLATE AND THERESHOLD ONLY THOSE PIXELS
@@ -528,8 +529,8 @@ void featureDetector::allForegroundPixels(std::vector<featureDetector::people>\
 						double minDist = thrsh.rows*thrsh.cols;
 						unsigned label = -1;
 						for(unsigned l=0; l<existing.size(); l++){
-							cv::Point aCenter = this->cvPoint(existing[l]);
-							std::vector<CvPoint> aTempl;
+							cv::Point2f aCenter = this->cvPoint(existing[l]);
+							std::vector<cv::Point2f> aTempl;
 							genTemplate2(aCenter,persHeight,camHeight,aTempl);
 							if(k!=l && this->isInTemplate((x+minX),(y+minY),aTempl)){
 								minDist = 0;
@@ -554,15 +555,15 @@ void featureDetector::allForegroundPixels(std::vector<featureDetector::people>\
 				}
 			}
 		}
-		allPeople[k].relativeLoc = cv::Point(center.x - (int)(minX),\
+		allPeople[k].relativeLoc = cv::Point2f(center.x - (int)(minX),\
 									center.y - (int)(minY));
 		allPeople[k].borders.assign(4,0);
 		allPeople[k].borders[0] = minX;
 		allPeople[k].borders[1] = maxX;
 		allPeople[k].borders[2] = minY;
 		allPeople[k].borders[3] = maxY;
-		cv::Point rotBorders;
-		allPeople[k].pixels = this->rotateWrtCamera(center, cv::Point(camPosX,\
+		cv::Point2f rotBorders;
+		allPeople[k].pixels = this->rotateWrtCamera(center, cv::Point2f(camPosX,\
 								camPosY),colorRoi.clone(),rotBorders);
 		if(this->plotTracks){
 			cv::imshow("people",allPeople[k].pixels);
@@ -621,7 +622,7 @@ cv::Mat featureDetector::createGabor(double *params){
  * returns the response image.
  */
 void featureDetector::getGabor(cv::Mat &feature,cv::Mat image,cv::Mat thresholded,\
-cv::Point center){
+cv::Point2f center){
 	// DEFINE THE PARAMETERS FOR A FEW GABORS
 	// params[0] -- sigma: (3, 68) // the actual size
 	// params[1] -- gamma: (0.2, 1) // how round the filter is
@@ -629,7 +630,7 @@ cv::Point center){
 	// params[3] -- theta: (0, 180) or (-90, 90) // angle
 	// params[4] -- lambda: (2, 256) // thickness
 	// params[5] -- psi: (0, 180) // number of lines
-	std::vector<double*> allParams;
+	std::deque<double*> allParams;
 	double *params1 = new double[6];
 	params1[0] = 10.0; params1[1] = 0.9; params1[2] = 2.0;
 	params1[3] = M_PI/4.0; params1[4] = 50.0; params1[5] = 15.0;
@@ -654,7 +655,7 @@ cv::Point center){
 
 		// FILTER THE IMAGE WITH THE GABOR FILTER
 		cv::Mat response;
-		cv::filter2D(gray, response, -1, agabor, cv::Point(-1,-1), 0,\
+		cv::filter2D(gray, response, -1, agabor, cv::Point2f(-1,-1), 0,\
 			cv::BORDER_REPLICATE);
 
 		// CONSIDER ONLY THE RESPONSE WITHIN THE THRESHOLDED AREA
@@ -693,7 +694,7 @@ void featureDetector::setSIFTDictionary(char* fileSIFT){
 /** Creates on data row in the final data matrix by getting the feature
  * descriptors.
  */
-void featureDetector::extractDataRow(std::vector<unsigned> existing, IplImage *bg){
+void featureDetector::extractDataRow(std::deque<unsigned> existing, IplImage *bg){
 	cv::Mat image(this->current->img);
 	cv::cvtColor(image, image, this->colorspaceCode);
 	cv::Mat entirePrev;
@@ -705,35 +706,35 @@ void featureDetector::extractDataRow(std::vector<unsigned> existing, IplImage *b
 	}
 
 	// REDUCE THE IMAGE TO ONLY THE INTERESTING AREA
-	std::vector<featureDetector::people> allPeople(existing.size(),\
+	std::deque<featureDetector::people> allPeople(existing.size(),\
 		featureDetector::people());
 	this->allForegroundPixels(allPeople, existing, bg, 7.0);
 	this->lastIndex = this->data.size();
 
 	// FOR EACH LOCATION IN THE IMAGE EXTRACT FEATURES, FILTER THEM AND RESHAPE
-	std::vector<cv::Point> allLocations;
+	std::vector<cv::Point2f> allLocations;
 	for(std::size_t i=0; i<existing.size(); i++){
 		// READ THE TEMPLATE
-		cv::Point center = this->cvPoint(existing[i]);
+		cv::Point2f center = this->cvPoint(existing[i]);
 		allLocations.push_back(center);
-		std::vector<CvPoint> templ;
+		std::vector<cv::Point2f> templ;
 		genTemplate2(center, persHeight, camHeight, templ);
 
 		// GET THE AREA OF 100/100 AROUND THE TEAMPLATE
-		std::vector<unsigned> borders = allPeople[i].borders;
+		std::deque<unsigned> borders = allPeople[i].borders;
 		unsigned width  = allPeople[i].borders[1]-allPeople[i].borders[0];
 		unsigned height = allPeople[i].borders[3]-allPeople[i].borders[2];
-		cv::Mat imgRoi(image.clone(),cv::Rect(cv::Point(\
+		cv::Mat imgRoi(image.clone(),cv::Rect(cv::Point2f(\
 			allPeople[i].borders[0],allPeople[i].borders[2]),\
 			cv::Size(width,height)));
 
 		//	ROTATE ROI, ROTATE TEMPLATE & ROATE PERSON PIXELS
-		cv::Point rotBorders;
-		cv::Mat tmp = this->rotateWrtCamera(center,cv::Point(camPosX,camPosY),\
+		cv::Point2f rotBorders;
+		cv::Mat tmp = this->rotateWrtCamera(center,cv::Point2f(camPosX,camPosY),\
 			imgRoi,rotBorders);
 		tmp.copyTo(imgRoi);
 		tmp.release();
-		templ = this->rotateTemplWrtCamera(center,cv::Point(camPosX,camPosY),\
+		templ = this->rotateTemplWrtCamera(center,cv::Point2f(camPosX,camPosY),\
 				templ, rotBorders, cv::Point2f(\
 				imgRoi.cols/2.0+allPeople[i].borders[0],\
 				imgRoi.rows/2.0+allPeople[i].borders[2]));
@@ -750,10 +751,10 @@ void featureDetector::extractDataRow(std::vector<unsigned> existing, IplImage *b
 
 		// IF WE WANT TO COMPUTE OPTICAL FLOW WE NEED THE PREV. CORRESP. AREA
 		if(this->tracking && !this->entirePrev.empty()){
-			this->prevImage = cv::Mat(this->entirePrev.clone(),cv::Rect(cv::Point(\
+			this->prevImage = cv::Mat(this->entirePrev.clone(),cv::Rect(cv::Point2f(\
 				allPeople[i].borders[0],allPeople[i].borders[2]),\
 				cv::Size(width,height)));
-			tmp = this->rotateWrtCamera(center,cv::Point(camPosX,camPosY),\
+			tmp = this->rotateWrtCamera(center,cv::Point2f(camPosX,camPosY),\
 					this->prevImage,rotBorders);
 			tmp.copyTo(this->prevImage);
 			tmp.release();
@@ -774,7 +775,7 @@ void featureDetector::extractDataRow(std::vector<unsigned> existing, IplImage *b
 					allPeople[i].borders[2], templ, center);
 				if(this->tracking){
 					feature.at<double>(0,0) = this->fixAngle(center,\
-							cv::Point(camPosX,camPosY),feature.at<double>(0,0));
+							cv::Point2f(camPosX,camPosY),feature.at<double>(0,0));
 					std::cout<<"flow wrt camera:"<<\
 						feature.at<double>(0,0)<<std::endl;
 				}
@@ -791,7 +792,7 @@ void featureDetector::extractDataRow(std::vector<unsigned> existing, IplImage *b
 					allPeople[i].borders[2], templ, center);
 				if(this->tracking){
 					feature.at<double>(0,0) = this->fixAngle(center,\
-						cv::Point(camPosX,camPosY),feature.at<double>(0,0));
+						cv::Point2f(camPosX,camPosY),feature.at<double>(0,0));
 				}
 				break;
 		}
@@ -829,7 +830,7 @@ void featureDetector::extractDataRow(std::vector<unsigned> existing, IplImage *b
 /** SIFT descriptors (Scale Invariant Feature Transform).
  */
 std::vector<cv::KeyPoint> featureDetector::extractSIFT(cv::Mat &feature,\
-cv::Mat image, int minX, int minY, std::vector<CvPoint> templ, cv::Point center){
+cv::Mat image, int minX, int minY, std::vector<cv::Point2f> templ, cv::Point2f center){
 	// EXTRACT THE SURF KEYPOINTS AND THE DESCRIPTORS
 	std::vector<cv::KeyPoint> keypoints;
 	cv::SIFT::DetectorParams detectP  = cv::SIFT::DetectorParams(0.0001,10.0);
@@ -856,7 +857,7 @@ cv::Mat image, int minX, int minY, std::vector<CvPoint> templ, cv::Point center)
 
 	if(this->plotTracks){
 		for(std::size_t i=0; i<goodKP.size(); i++){
-			cv::circle(image, cv::Point(goodKP[i].pt.x, goodKP[i].pt.y),\
+			cv::circle(image, cv::Point2f(goodKP[i].pt.x, goodKP[i].pt.y),\
 				goodKP[i].response, cv::Scalar(0,0,255), 1, 8, 0);
 		}
 		cv::imshow("SIFT", image);
@@ -907,9 +908,9 @@ cv::Mat currentImg){
 			avgFlowY += fy;
 			*/
 			if(this->plotTracks){
-				cv::line(currentImg,cv::Point(ix,iy),cv::Point(fx,fy),\
+				cv::line(currentImg,cv::Point2f(ix,iy),cv::Point2f(fx,fy),\
 					cv::Scalar(0,0,255),1,8,0);
-				cv::circle(currentImg,cv::Point(fx,fy),2,cv::Scalar(0,200,0),1,8,0);
+				cv::circle(currentImg,cv::Point2f(fx,fy),2,cv::Scalar(0,200,0),1,8,0);
 			}
 		}
 		/*
@@ -920,14 +921,14 @@ cv::Mat currentImg){
 		*/
 
 		if(this->plotTracks){
-			//cv::line(currentImg,cv::Point(avgX,avgY),cv::Point(avgFlowX,avgFlowY),\
+			//cv::line(currentImg,cv::Point2f(avgX,avgY),cv::Point2f(avgFlowX,avgFlowY),\
 				cv::Scalar(255,0,0),1,8,0);
-			//cv::circle(currentImg,cv::Point(avgFlowX,avgFlowY),2,cv::Scalar(0,200,0),\
+			//cv::circle(currentImg,cv::Point2f(avgFlowX,avgFlowY),2,cv::Scalar(0,200,0),\
 				1,8,0);
 
-			cv::line(currentImg,cv::Point(maxX,maxY),cv::Point(maxFlowX,maxFlowY),\
+			cv::line(currentImg,cv::Point2f(maxX,maxY),cv::Point2f(maxFlowX,maxFlowY),\
 				cv::Scalar(255,0,0),1,8,0);
-			cv::circle(currentImg,cv::Point(maxFlowX,maxFlowY),2,cv::Scalar(0,200,0),\
+			cv::circle(currentImg,cv::Point2f(maxFlowX,maxFlowY),2,cv::Scalar(0,200,0),\
 				1,8,0);
 			this->showZoomedImage(currentImg, "optical");
 		}
@@ -946,7 +947,7 @@ cv::Mat currentImg){
 /** Compute the features from the SIFT descriptors by doing vector quantization.
  */
 void featureDetector::getSIFT(cv::Mat &feature, cv::Mat image, int minX,\
-int minY, std::vector<CvPoint> templ, cv::Point center){
+int minY, std::vector<cv::Point2f> templ, cv::Point2f center){
 	// EXTRACT SIFT FEATURES
 	cv::Mat preFeature;
 	std::vector<cv::KeyPoint> keypoints = this->extractSIFT(preFeature, image,\
@@ -1026,8 +1027,8 @@ int minY, std::vector<CvPoint> templ, cv::Point center){
 //==============================================================================
 /** Checks to see if an annotation can be assigned to a detection.
  */
-bool featureDetector::canBeAssigned(unsigned l,std::vector<double> &minDistances,\
-unsigned k,double distance, std::vector<int> &assignment){
+bool featureDetector::canBeAssigned(unsigned l,std::deque<double> &minDistances,\
+unsigned k,double distance, std::deque<int> &assignment){
 	unsigned isThere = 1;
 	while(isThere){
 		isThere = 0;
@@ -1049,8 +1050,8 @@ unsigned k,double distance, std::vector<int> &assignment){
 //==============================================================================
 /** Rotate the points corresponding to the template wrt to the camera location.
  */
-std::vector<CvPoint> featureDetector::rotateTemplWrtCamera(cv::Point feetLocation,\
-cv::Point cameraLocation, std::vector<CvPoint> templ, cv::Point rotBorders,\
+std::vector<cv::Point2f> featureDetector::rotateTemplWrtCamera(cv::Point2f feetLocation,\
+cv::Point2f cameraLocation, std::vector<cv::Point2f> templ, cv::Point2f rotBorders,\
 cv::Point2f rotCenter){
 	// GET THE ANGLE WITH WHICH WE NEED TO ROTATE
 	double cameraAngle = std::atan2((feetLocation.y-cameraLocation.y),\
@@ -1079,7 +1080,7 @@ cv::Point2f rotCenter){
 	rotated.convertTo(rotated, cv::DataType<double>::type);
 
 	// COPY THE RESULT BACK INTO A TEMPLATE SHAPE
-	std::vector<CvPoint> newTempl(rotated.rows);
+	std::vector<cv::Point2f> newTempl(rotated.rows);
 	for(int y=0; y<rotated.rows; y++){
 		newTempl[y].x = rotated.at<double>(y,0);
 		newTempl[y].y = rotated.at<double>(y,1);
@@ -1122,8 +1123,8 @@ cv::Mat featureDetector::vertProject(cv::Mat img){
 //==============================================================================
 /** Rotate matrix wrt to the camera location.
  */
-cv::Mat featureDetector::rotateWrtCamera(cv::Point feetLocation,\
-cv::Point cameraLocation, cv::Mat toRotate, cv::Point &borders){
+cv::Mat featureDetector::rotateWrtCamera(cv::Point2f feetLocation,\
+cv::Point2f cameraLocation, cv::Mat toRotate, cv::Point2f &borders){
 	// GET THE ANGLE TO ROTATE WITH
 	double cameraAngle = std::atan2((feetLocation.y-cameraLocation.y),\
 						(feetLocation.x-cameraLocation.x));
@@ -1160,7 +1161,7 @@ cv::Point cameraLocation, cv::Mat toRotate, cv::Point &borders){
 /** Fixes the angle to be relative to the camera position with respect to the
  * detected position.
  */
-double featureDetector::fixAngle(cv::Point feetLocation, cv::Point cameraLocation,\
+double featureDetector::fixAngle(cv::Point2f feetLocation, cv::Point2f cameraLocation,\
 double angle){
 	double cameraAngle = std::atan2((feetLocation.y-cameraLocation.y),\
 						(feetLocation.x-cameraLocation.x));
@@ -1176,15 +1177,15 @@ double angle){
 /** For each row added in the data matrix (each person detected for which we
  * have extracted some features) find the corresponding label.
  */
-void featureDetector::fixLabels(std::vector<cv::Point> feetPos){
+void featureDetector::fixLabels(std::vector<cv::Point2f> feetPos){
 	// FIND	THE INDEX FOR THE CURRENT IMAGE
-	std::vector<annotationsHandle::FULL_ANNOTATIONS>::iterator index = \
+	std::deque<annotationsHandle::FULL_ANNOTATIONS>::iterator index = \
 		std::find_if (this->targetAnno.begin(), this->targetAnno.end(),\
 		compareImg(this->current->sourceName));
 
 	// LOOP OVER ALL ANNOTATIONS FOR THE CURRENT IMAGE AND FIND THE CLOSEST ONES
-	std::vector<int> assignments((*index).annos.size(),-1);
-	std::vector<double> minDistances((*index).annos.size(),\
+	std::deque<int> assignments((*index).annos.size(),-1);
+	std::deque<double> minDistances((*index).annos.size(),\
 		(double)INFINITY);
 	unsigned canAssign = 1;
 	while(canAssign){
@@ -1208,7 +1209,7 @@ void featureDetector::fixLabels(std::vector<cv::Point> feetPos){
 	}
 
 	// DELETE DETECTED LOCATIONS THAT ARE NOT LABELLED
-	std::vector<unsigned> unlabelled;
+	std::deque<unsigned> unlabelled;
 	for(std::size_t k=0; k<feetPos.size(); k++){
 		bool inThere = false;
 		for(std::size_t i=0; i<assignments.size(); i++){
@@ -1245,7 +1246,7 @@ void featureDetector::fixLabels(std::vector<cv::Point> feetPos){
 
 			angle = angle*M_PI/180.0;
 			angle = this->fixAngle((*index).annos[i].location,\
-					cv::Point(camPosX,camPosY),angle);
+					cv::Point2f(camPosX,camPosY),angle);
 			tmp.at<double>(0,0) = std::sin(angle);
 			tmp.at<double>(0,1) = std::cos(angle);
 
@@ -1256,7 +1257,7 @@ void featureDetector::fixLabels(std::vector<cv::Point> feetPos){
 
 			angle = angle*M_PI/180.0;
 			angle = this->fixAngle((*index).annos[i].location,\
-					cv::Point(camPosX,camPosY),angle);
+					cv::Point2f(camPosX,camPosY),angle);
 			tmp.at<double>(0,2) = std::sin(angle);
 			tmp.at<double>(0,3) = std::cos(angle);
 
@@ -1300,11 +1301,11 @@ bool featureDetector::doFindPerson(unsigned imgNum, IplImage *src,\
 const vnl_vector<FLOAT> &imgVec, vnl_vector<FLOAT> &bgVec,\
 const FLOAT logBGProb,const vnl_vector<FLOAT> &logSumPixelBGProb){
 	//1) START THE TIMER & INITIALIZE THE PROBABLITIES, THE VECTOR OF POSITIONS
-	stic();	std::vector<FLOAT> marginal;
+	stic();	std::deque<FLOAT> marginal;
 	FLOAT lNone = logBGProb + this->logNumPrior[0], lSum = -INFINITY;
-	std::vector<unsigned> existing;
-	std::vector< vnl_vector<FLOAT> > logPosProb;
-	std::vector<scanline_t> mask;
+	std::deque<unsigned> existing;
+	std::deque< vnl_vector<FLOAT> > logPosProb;
+	std::deque<scanline_t> mask;
 	marginal.push_back(lNone);
 	logPosProb.push_back(vnl_vector<FLOAT>());
 
@@ -1351,7 +1352,7 @@ const FLOAT logBGProb,const vnl_vector<FLOAT> &logSumPixelBGProb){
 	if(this->plotTracks){
 		this->plotHull(bg, this->priorHull);
 		for(unsigned i=0; i!=existing.size(); ++i){
-			cv::Point pt = this->cvPoint(existing[i]);
+			cv::Point2f pt = this->cvPoint(existing[i]);
 			plotTemplate2(bg, pt, persHeight, camHeight, CV_RGB(255,255,255));
 			plotScanLines(src, mask, CV_RGB(0,255,0), 0.3);
 		}
@@ -1404,7 +1405,7 @@ bool featureDetector::imageProcessingMenu(){
 /** If only a part needs to be used to extract the features then the threshold
  * and the template need to be changed.
  */
-void featureDetector::onlyPart(cv::Mat &thresholded, std::vector<CvPoint> &templ,\
+void featureDetector::onlyPart(cv::Mat &thresholded, std::vector<cv::Point2f> &templ,\
 double offsetX, double offsetY){
 	// CHANGE THRESHOLD
 	unsigned minY = thresholded.rows, maxY = 0;
@@ -1445,12 +1446,12 @@ double offsetX, double offsetY){
 	}
 
 	if(this->plotTracks){
-		std::vector<CvPoint> tmpTempl = templ;
+		std::vector<cv::Point2f> tmpTempl = templ;
 		for(unsigned i=0; i<tmpTempl.size(); i++){
 			tmpTempl[i].x -= offsetX;
 			tmpTempl[i].y -= offsetY;
 		}
-		plotTemplate2(new IplImage(thresholded), cv::Point(0,0), persHeight,\
+		plotTemplate2(new IplImage(thresholded), cv::Point2f(0,0), persHeight,\
 				camHeight, cvScalar(150,0,0),tmpTempl);
 		cv::imshow("part", thresholded);
 		cv::waitKey(0);
@@ -1459,8 +1460,8 @@ double offsetX, double offsetY){
 //==============================================================================
 /** Computes the motion vector for the current image given the tracks so far.
  */
-double featureDetector::motionVector(cv::Point center){
-	cv::Point prev = center;
+double featureDetector::motionVector(cv::Point2f center){
+	cv::Point2f prev = center;
 	double angle = 0;
 	if(this->tracks.size()>1){
 		for(unsigned i=0; i<this->tracks.size();i++){
@@ -1485,7 +1486,7 @@ double featureDetector::motionVector(cv::Point center){
 	}
 
 	// FIX ANGLE WRT CAMERA
-	angle = this->fixAngle(center,cv::Point(camPosX,camPosY),angle);
+	angle = this->fixAngle(center,cv::Point2f(camPosX,camPosY),angle);
 	return angle;
 }
 //==============================================================================
