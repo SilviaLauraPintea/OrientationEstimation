@@ -515,15 +515,17 @@ void featureDetector::allForegroundPixels(std::deque<featureDetector::people>\
 		int minY=thrsh.rows, maxY=0, minX=thrsh.cols, maxX=0;
 		this->templateWindow(cv::Size(foregr.cols,foregr.rows),minX, maxX,\
 			minY, maxY, templ);
-		int width        = maxX-minX;
-		int height       = maxY-minY;
+		int width  = maxX-minX;
+		int height = maxY-minY;
 		cv::Mat colorRoi = cv::Mat(foregr.clone(),cv::Rect(cv::Point2f(minX,minY),\
 							cv::Size(width,height)));
-
+		cv::Mat thrshRoi = cv::Mat(thrsh.clone(),cv::Rect(cv::Point2f(minX,minY),\
+							cv::Size(width,height)));
+		this->keepLargestBlob(thrshRoi,cv::Point2f(center.x+minX,center.y+minY));
 		// LOOP OVER THE AREA OF OUR TEMPLATE AND THERESHOLD ONLY THOSE PIXELS
 		for(unsigned x=0; x<maxX-minX; x++){
 			for(unsigned y=0; y<maxY-minY; y++){
-				if((int)(thrsh.at<uchar>((int)(y+minY),(int)(x+minX)))>0){
+				if((int)(thrshRoi.at<uchar>((int)(y),(int)(x)))>0){
 					// IF THE PIXEL IS NOT INSIDE OF THE TEMPLATE
 					if(!this->isInTemplate((x+minX),(y+minY),templ) &&\
 					existing.size()>1){
@@ -567,10 +569,12 @@ void featureDetector::allForegroundPixels(std::deque<featureDetector::people>\
 		allPeople[k].pixels = this->rotateWrtCamera(head,center,colorRoi.clone(),\
 								rotBorders);
 		if(this->plotTracks){
-			cv::imshow("people",allPeople[k].pixels);
+			cv::imshow("people", allPeople[k].pixels);
+			cv::imshow("threshold", thrshRoi);
 			cv::waitKey(0);
 		}
 		colorRoi.release();
+		thrshRoi.release();
 	}
 	thrsh.release();
 }
@@ -690,6 +694,40 @@ void featureDetector::setFeatureType(featureDetector::FEATURE type){
  */
 void featureDetector::setSIFTDictionary(char* fileSIFT){
 	this->dictFileName = const_cast<char*>(fileSIFT);
+}
+//==============================================================================
+/** Keeps only the largest blob from the thresholded image.
+ */
+void featureDetector::keepLargestBlob(cv::Mat &thresh,cv::Point2f center){
+	std::vector<std::vector<cv::Point> > contours;
+	cv::findContours(thresh,contours,CV_RETR_EXTERNAL,CV_CHAIN_APPROX_SIMPLE);
+	cv::drawContours(thresh,contours,-1,cv::Scalar(255,0,0));
+	cv::imshow("pre_contours", thresh);
+
+	int contourIdx =-1;
+	double minDist = thresh.cols*thresh.rows;
+	for(size_t i=0; i<contours.size(); i++){
+		unsigned minX=contours[i][0].x,maxX=contours[i][0].x,minY=contours[i][0].y,\
+			maxY=contours[i][0].y;
+		for(size_t j=1; j<contours[i].size(); j++){
+			if(minX>=contours[i][j].x){minX = contours[i][j].x;}
+			if(maxX<contours[i][j].x){maxX = contours[i][j].x;}
+			if(minY>=contours[i][j].y){minY = contours[i][j].y;}
+			if(maxY<contours[i][j].y){maxY = contours[i][j].y;}
+		}
+		double ptDist = dist(center,cv::Point2f((maxX-minX)/2,(maxY-minY)/2));
+		if(ptDist<minDist){
+			contourIdx = i;
+			minDist    = ptDist;
+		}
+		std::cout<<"Contour:"<<i<<"  Distance:"<<ptDist<<std::endl;
+	}
+	contours[contourIdx].clear();
+	contours.erase(contours.begin()+contourIdx);
+
+	cv::drawContours(thresh,contours,-1,cv::Scalar(0,0,0),CV_FILLED);
+	cv::imshow("contours", thresh);
+	cv::waitKey(0);
 }
 //==============================================================================
 /** Creates on data row in the final data matrix by getting the feature

@@ -273,6 +273,9 @@ class featureDetector:public Tracker{
 		 */
 		double opticalFlowFeature(std::vector<cv::KeyPoint> keypoints,\
 			cv::Mat currentImg, bool maxOrAvg = false);
+		/** Keeps only the largest blob from the thresholded image.
+		 */
+		void keepLargestBlob(cv::Mat &thresh, cv::Point2f center);
 		//======================================================================
 	public:
 		/** @var plotTracks
