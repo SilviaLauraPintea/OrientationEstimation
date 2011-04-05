@@ -16,6 +16,8 @@ classifyImages::classifyImages(int argc, char **argv){
 	this->feature          = featureDetector::EDGES;
 	this->features         = NULL;
 	this->foldSize		   = 5;
+	this->storeData 	   = true;
+	this->modelName       = "";
 
 	// READ THE COMMAND LINE ARGUMENTS
 	if(argc != 8 && argc!=5 && argc!=6){
@@ -87,7 +89,7 @@ classifyImages::~classifyImages(){
  */
 void classifyImages::init(double theNoise, double theLength,\
 gaussianProcess::kernelFunction theKFunction, featureDetector::FEATURE theFeature,\
-char* fileSIFT, int colorSp, bool fromFolder){
+char* fileSIFT, int colorSp, bool fromFolder, bool store, std::string aModelName){
 	this->noise     = theNoise;
 	this->length    = theLength;
 	this->kFunction = theKFunction;
@@ -95,35 +97,53 @@ char* fileSIFT, int colorSp, bool fromFolder){
 	this->features->setSIFTDictionary(fileSIFT);
 	this->features->colorspaceCode = colorSp;
 	this->readFromFolder           = fromFolder;
+	this->storeData                = store;
+	this->modelName                = aModelName;
 }
 //==============================================================================
 /** Creates the training data (according to the options), the labels and
  * trains the a \c GaussianProcess on the data.
  */
 void classifyImages::trainGP(annotationsHandle::POSE what){
-	this->features->setFeatureType(this->feature);
-	this->features->init(this->trainFolder, this->annotationsTrain,this->readFromFolder);
-	this->features->run(this->readFromFolder);
-	this->trainData = cv::Mat::zeros(cv::Size(this->features->data[0].cols,\
-						this->features->data.size()),cv::DataType<double>::type);
-	this->trainTargets = cv::Mat::zeros(cv::Size(this->features->targets[0].cols,\
-						this->features->targets.size()),cv::DataType<double>::type);
+	// WE ASSUME THAT IF WE DO NOT WANT TO STORE DATA THEN WE WANT TO LOAD DATA
+	if(this->storeData){
+		this->features->setFeatureType(this->feature);
+		this->features->init(this->trainFolder, this->annotationsTrain,this->readFromFolder);
+		this->features->run(this->readFromFolder);
+		this->trainData = cv::Mat::zeros(cv::Size(this->features->data[0].cols,\
+							this->features->data.size()),cv::DataType<double>::type);
+		this->trainTargets = cv::Mat::zeros(cv::Size(this->features->targets[0].cols,\
+							this->features->targets.size()),cv::DataType<double>::type);
 
-	std::cout<<"SIZE: "<<this->trainData.cols<<" "<<this->trainData.rows<<std::endl;
-	std::cout<<"SIZE: "<<this->trainTargets.cols<<" "<<this->trainTargets.rows<<std::endl;
+		std::cout<<"SIZE: "<<this->trainData.cols<<" "<<this->trainData.rows<<std::endl;
+		std::cout<<"SIZE: "<<this->trainTargets.cols<<" "<<this->trainTargets.rows<<std::endl;
 
-	// CONVERT FROM VECTOR OF CV::MAT TO MAT
-	for(std::size_t i=0; i<this->features->data.size(); i++){
-		cv::Mat dummy1 = this->trainData.row(i);
-		this->features->data[i].copyTo(dummy1);
+		// CONVERT FROM VECTOR OF CV::MAT TO MAT
+		for(std::size_t i=0; i<this->features->data.size(); i++){
+			cv::Mat dummy1 = this->trainData.row(i);
+			this->features->data[i].copyTo(dummy1);
 
-		cv::Mat dummy2 = this->trainTargets.row(i);
-		this->features->targets[i].copyTo(dummy2);
+			cv::Mat dummy2 = this->trainTargets.row(i);
+			this->features->targets[i].copyTo(dummy2);
+		}
+		this->trainData.convertTo(this->trainData, cv::DataType<double>::type);
+		this->trainTargets.convertTo(this->trainTargets, cv::DataType<double>::type);
+		range1Mat(this->trainData);
+
+		//IF WE WANT TO STORE DATA, THEN WE STORE IT
+		if(!this->modelName.empty()){
+			mat2BinFile(this->trainData,const_cast<char*>((this->modelName+\
+				"Data.bin").c_str()),false);
+			mat2BinFile(this->trainTargets,const_cast<char*>((this->modelName+\
+				"Labels.bin").c_str()),false);
+		}
+	}else if(!this->modelName.empty()){
+		// WE JUST LOAD THE DATA AND TRAIN AND PREDICT
+		binFile2mat(this->trainData,const_cast<char*>((this->modelName+\
+			"Data.bin").c_str()));
+		binFile2mat(this->trainTargets,const_cast<char*>((this->modelName+\
+			"Labels.bin").c_str()));
 	}
-	this->trainData.convertTo(this->trainData, cv::DataType<double>::type);
-	this->trainTargets.convertTo(this->trainTargets, cv::DataType<double>::type);
-	range1Mat(this->trainData);
-
 	// TRAIN THE SIN AND COS SEPARETELY FOR LONGITUDE || LATITUDe
 	if(what == annotationsHandle::LONGITUDE){
 		this->gpSin.train(this->trainData,this->trainTargets.col(0),\
@@ -145,30 +165,47 @@ void classifyImages::trainGP(annotationsHandle::POSE what){
 void classifyImages::predictGP(std::deque<gaussianProcess::prediction> &predictionsSin,\
 std::deque<gaussianProcess::prediction> &predictionsCos,\
 annotationsHandle::POSE what){
-	this->features->setFeatureType(this->feature);
-	this->features->init(this->testFolder, this->annotationsTest,this->readFromFolder);
-	this->features->run(this->readFromFolder);
-	this->testData = cv::Mat::zeros(cv::Size(this->features->data[0].cols,\
-					this->features->data.size()), cv::DataType<double>::type);
-	this->testTargets = cv::Mat::zeros(cv::Size(2,this->features->data.size()),\
-					cv::DataType<double>::type);
+	// WE ASSUME THAT IF WE DO NOT WANT TO STORE DATA THEN WE WANT TO LOAD DATA
+	if(this->storeData){
+		this->features->setFeatureType(this->feature);
+		this->features->init(this->testFolder, this->annotationsTest,this->readFromFolder);
+		this->features->run(this->readFromFolder);
+		this->testData = cv::Mat::zeros(cv::Size(this->features->data[0].cols,\
+						this->features->data.size()), cv::DataType<double>::type);
+		this->testTargets = cv::Mat::zeros(cv::Size(2,this->features->data.size()),\
+						cv::DataType<double>::type);
 
-	// CONVERT FROM VECTOR OF CV::MAT TO MAT
-	for(std::size_t i=0; i<this->features->data.size(); i++){
-		cv::Mat dummy1 = this->testData.row(i);
-		this->features->data[i].copyTo(dummy1);
+		// CONVERT FROM VECTOR OF CV::MAT TO MAT
+		for(std::size_t i=0; i<this->features->data.size(); i++){
+			cv::Mat dummy1 = this->testData.row(i);
+			this->features->data[i].copyTo(dummy1);
 
-		cv::Mat dummy2;
-		dummy2 = this->testTargets.row(i);
-		if(what == annotationsHandle::LONGITUDE){
-			this->features->targets[i].colRange(0,2).copyTo(dummy2);
-		}else if(what == annotationsHandle::LATITUDE){
-			this->features->targets[i].colRange(2,4).copyTo(dummy2);
+			cv::Mat dummy2;
+			dummy2 = this->testTargets.row(i);
+			if(what == annotationsHandle::LONGITUDE){
+				this->features->targets[i].colRange(0,2).copyTo(dummy2);
+			}else if(what == annotationsHandle::LATITUDE){
+				this->features->targets[i].colRange(2,4).copyTo(dummy2);
+			}
 		}
+		this->testData.convertTo(this->testData, cv::DataType<double>::type);
+		this->testTargets.convertTo(this->testTargets, cv::DataType<double>::type);
+		range1Mat(this->testData);
+
+		//IF WE WANT TO STORE DATA, THEN WE STORE IT
+		if(!this->modelName.empty()){
+			mat2BinFile(this->testData,const_cast<char*>((this->modelName+\
+				"Data.bin").c_str()),false);
+			mat2BinFile(this->testTargets,const_cast<char*>((this->modelName+\
+				"Labels.bin").c_str()),false);
+		}
+	}else if(!this->modelName.empty()){
+		// WE JUST LOAD THE TEST DATA AND TEST
+		binFile2mat(this->testData,const_cast<char*>((this->modelName+\
+			"Data.bin").c_str()));
+		binFile2mat(this->testTargets,const_cast<char*>((this->modelName+\
+			"Labels.bin").c_str()));
 	}
-	this->testData.convertTo(this->testData, cv::DataType<double>::type);
-	this->testTargets.convertTo(this->testTargets, cv::DataType<double>::type);
-	range1Mat(this->testData);
 
 	// FOR EACH ROW IN THE TEST MATRIX PREDICT
 	for(unsigned i=0; i<this->testData.rows; i++){
@@ -335,7 +372,8 @@ void classifyImages::buildDictionary(char* fileToStore, char* dataFile){
  */
 void classifyImages::runCrossValidation(unsigned k, double theNoise,\
 double theLength, gaussianProcess::kernelFunction theKFunction,\
-featureDetector::FEATURE theFeature, char* fileSIFT, int colorSp, bool fromFolder){
+featureDetector::FEATURE theFeature, char* fileSIFT, int colorSp, bool fromFolder,\
+bool store, std::string modelName){
 	double finalErrorLong=0.0, finalAccuracyLong=0.0;
 	double finalErrorLat=0.0, finalAccuracyLat=0.0;
 	for(unsigned i=0; i<k; i++){
@@ -344,11 +382,20 @@ featureDetector::FEATURE theFeature, char* fileSIFT, int colorSp, bool fromFolde
 
 	  	//LONGITUDE TRAINING AND PREDICTING
 		this->init(theNoise,theLength,theKFunction,theFeature,fileSIFT,colorSp,\
-			fromFolder);
+			fromFolder, store, modelName);
+
+		// ADD THE NUMBER OF THE CURRENT FOLD & THEN REMOVE IT BACK
+		this->modelName += ("train/"+int2string(k));
 		this->trainGP(annotationsHandle::LONGITUDE);
+		this->modelName = this->modelName.substr(0,this->modelName.size()-7);
+
+		// ADD THE NUMBER OF THE CURRENT FOLD & THEN REMOVE IT BACK
+		this->modelName += ("eval/"+int2string(k));
 		std::deque<gaussianProcess::prediction> predictionsSin;
 		std::deque<gaussianProcess::prediction> predictionsCos;
 		this->predictGP(predictionsSin,predictionsCos,annotationsHandle::LONGITUDE);
+		this->modelName = this->modelName.substr(0,this->modelName.size()-6);
+
 		double errorLong, accuracyLong;
 		this->evaluate(predictionsSin, predictionsCos, errorLong, accuracyLong,\
 			annotationsHandle::LONGITUDE);
@@ -451,14 +498,22 @@ void classifyImages::crossValidation(unsigned k, unsigned fold){
  */
 void classifyImages::runTest(double theNoise, double theLength,\
 gaussianProcess::kernelFunction theKFunction, featureDetector::FEATURE theFeature,\
-char* fileSIFT, int colorSp, bool fromFolder){
+char* fileSIFT, int colorSp, bool fromFolder, bool store, std::string modelName){
   	//LONGITUDE TRAINING AND PREDICTING
 	this->init(theNoise,theLength,theKFunction,theFeature,fileSIFT,colorSp,\
-		fromFolder);
+		fromFolder,store,modelName);
+
+	// ADD THE NUMBER OF THE CURRENT FOLD & THEN REMOVE IT BACK
+	this->modelName += ("model");
 	this->trainGP(annotationsHandle::LONGITUDE);
+	this->modelName = this->modelName.substr(0,this->modelName.size()-5);
+
+	this->modelName += ("test");
 	std::deque<gaussianProcess::prediction> predictionsSin;
 	std::deque<gaussianProcess::prediction> predictionsCos;
 	this->predictGP(predictionsSin,predictionsCos,annotationsHandle::LONGITUDE);
+	this->modelName = this->modelName.substr(0,this->modelName.size()-4);
+
 	double errorLong, accuracyLong;
 	this->evaluate(predictionsSin, predictionsCos, errorLong, accuracyLong,\
 		annotationsHandle::LONGITUDE);
@@ -487,8 +542,12 @@ int main(int argc, char **argv){
 */
 
   	// CROSS-VALIDATION
-  	classi.runCrossValidation(5,1e-3,100.0,&gaussianProcess::sqexp,\
+//  	classi.runCrossValidation(5,1e-3,100.0,&gaussianProcess::sqexp,\
   		featureDetector::SURF);
+
+  	classi.runCrossValidation(2,1e-3,100.0,&gaussianProcess::sqexp,\
+  		featureDetector::SURF, const_cast<char*>("dictSIFT.bin"),\
+		CV_BGR2Lab,false,true,std::string("models/SURF/"));
 }
 
 

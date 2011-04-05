@@ -272,7 +272,7 @@ class featureDetector:public Tracker{
 		/** Compute the dominant direction of the SIFT or SURF features.
 		 */
 		double opticalFlowFeature(std::vector<cv::KeyPoint> keypoints,\
-			cv::Mat currentImg);
+			cv::Mat currentImg, bool maxOrAvg = false);
 		//======================================================================
 	public:
 		/** @var plotTracks

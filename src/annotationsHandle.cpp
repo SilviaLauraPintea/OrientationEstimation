@@ -476,7 +476,7 @@ usedImages, int imgIndex){
 	annoOut.close();
 	cout<<"Thank you for your time ;)!"<<endl;
 	cvReleaseImage(&image);
-	cvDestroyWindow("image");
+	cvDestroyAllWindows();
 	return 0;
 }
 //==============================================================================
@@ -491,9 +491,10 @@ std::deque<annotationsHandle::FULL_ANNOTATIONS> &loadedAnno){
 	if(annoFile.is_open()){
 		annotationsHandle::FULL_ANNOTATIONS tmpFullAnno;
 		while(annoFile.good()){
-			char *line = new char[1024];
-			annoFile.getline(line,sizeof(char*)*1024);
-			std::deque<std::string> lineVect = splitLine(line,' ');
+			std::string line;
+			std::getline(annoFile, line);
+			std::deque<std::string> lineVect = splitLine(\
+				const_cast<char*>(line.c_str()),' ');
 
 			// IF IT IS NOT AN EMPTY FILE
 			if(lineVect.size()>0){
@@ -540,7 +541,7 @@ std::deque<annotationsHandle::FULL_ANNOTATIONS> &loadedAnno){
 				loadedAnno.push_back(tmpFullAnno);
 				tmpFullAnno.annos.clear();
 			}
-			delete [] line;
+			line.clear();
 		}
 		annoFile.close();
 	}
@@ -808,9 +809,9 @@ boost::mutex annotationsHandle::trackbarMutex;
 IplImage *annotationsHandle::image;
 std::deque<annotationsHandle::ANNOTATION> annotationsHandle::annotations;
 //==============================================================================
-
+/*
 int main(int argc, char **argv){
 	annotationsHandle::runAnn(argc,argv,20,"_train",91);
 	//annotationsHandle::runEvaluation(argc,argv);
 }
-
+*/

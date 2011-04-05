@@ -170,3 +170,11 @@ void binFile2mat(cv::Mat &matrix, char* fileName){
 	matrix.convertTo(matrix, cv::DataType<double>::type);
 }
 //==============================================================================
+/** Convert int to string.
+ */
+std::string int2string(int i){
+	std::stringstream out;
+	out << i;
+	return out.str();
+}
+//==============================================================================

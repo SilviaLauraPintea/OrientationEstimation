@@ -5,6 +5,7 @@
 #define AUXILIARY_H_
 #include <vector>
 #include <string>
+#include <sstream>
 #include <set>
 #include <cstdlib>
 #include <stdio.h>
@@ -52,4 +53,7 @@ void mat2BinFile(cv::Mat matrix, char* fileName, bool append = false);
 /* Reads a 2D-matrix from a binary file (first the dimension of the matrix).
  */
 void binFile2mat(cv::Mat &matrix, char* fileName);
+/** Convert int to string.
+ */
+std::string int2string(int i);
 #endif /* AUXILIARY_H_ */

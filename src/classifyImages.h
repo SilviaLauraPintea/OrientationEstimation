@@ -113,6 +113,16 @@ class classifyImages {
 		 * The size of one fold in cross-validation.
 		 */
 		unsigned foldSize;
+
+		/** @var storeData
+		 * If data is stored locally or not.
+		 */
+		bool storeData;
+
+		/** @var modelName
+		 * The name of the model the be loaded/saved.
+		 */
+		std::string modelName;
 		//======================================================================
 	public:
 		classifyImages(int argc, char **argv);
@@ -140,7 +150,7 @@ class classifyImages {
 		void init(double theNoise, double theLength, gaussianProcess::kernelFunction\
 			theKFunction, featureDetector::FEATURE theFeature, char* fileSIFT =\
 			const_cast<char*>("dictSIFT.bin"), int colorSp = CV_BGR2Lab,\
-			bool fromFolder=true);
+			bool fromFolder=true, bool store=true, std::string aModelName="none");
 
 		/** Evaluate one prediction versus its target.
 		 */
@@ -158,14 +168,16 @@ class classifyImages {
 		void runCrossValidation(unsigned k, double theNoise, double theLength,\
 			gaussianProcess::kernelFunction theKFunction, featureDetector::FEATURE\
 			theFeature, char* fileSIFT = const_cast<char*>("dictSIFT.bin"),\
-			int colorSp = CV_BGR2Lab, bool fromFolder=false);
+			int colorSp = CV_BGR2Lab, bool fromFolder=false, bool store=true,\
+			std::string modelName="none");
 
 		/** Runs the final evaluation (test).
 		 */
 		void runTest(double theNoise, double theLength,\
 		gaussianProcess::kernelFunction theKFunction, featureDetector::FEATURE\
 		theFeature, char* fileSIFT = const_cast<char*>("dictSIFT.bin"),\
-		int colorSp = CV_BGR2Lab, bool fromFolder=false);
+		int colorSp = CV_BGR2Lab, bool fromFolder=false, bool store=true,\
+		std::string modelName="none");
 
 		/** Try to optimize the prediction of the angle considering the variance of sin
 		 * and cos.
