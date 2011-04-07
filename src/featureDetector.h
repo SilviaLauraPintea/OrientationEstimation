@@ -73,7 +73,7 @@ class featureDetector:public Tracker{
 			this->meanSize       = 128;
 			this->colorspaceCode = CV_BGR2Lab;
 			this->featurePart    = 't';
-			this->tracking 	     = 1;
+			this->tracking 	      = 1;
 		}
 
 		virtual ~featureDetector(){
@@ -275,7 +275,12 @@ class featureDetector:public Tracker{
 			cv::Mat currentImg, bool maxOrAvg = false);
 		/** Keeps only the largest blob from the thresholded image.
 		 */
-		void keepLargestBlob(cv::Mat &thresh, cv::Point2f center);
+		void keepLargestBlob(cv::Mat &thresh, cv::Point2f center,\
+			double tmplArea);
+		/** Instead of running the tracker and extracting features, just load
+		 * features and labels and the pick up parts.
+		 */
+		//void offline();
 		//======================================================================
 	public:
 		/** @var plotTracks

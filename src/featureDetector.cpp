@@ -65,7 +65,6 @@ bool readFromFolder){
 	}
 	this->targetAnno.clear();
 	this->lastIndex = 0;
-
 	// LOAD THE DESIRED ANNOTATIONS FROM THE FILE
 	if(!theAnnotationsFile.empty() && this->targetAnno.empty()){
 		annotationsHandle::loadAnnotations(const_cast<char*>\
@@ -116,9 +115,6 @@ double sigma, cv::Point2f offset){
  */
 void featureDetector::getEdges(cv::Point2f center, cv::Mat &feature, cv::Mat image,\
 unsigned reshape, cv::Mat thresholded){
-	//cv::Mat up, low;
-	//this->upperLowerROI(image,up,low,0,0);
-
 	// GET THE EDGES
 	cv::Mat gray, edges;
 	cv::cvtColor(image, gray, CV_BGR2GRAY);
@@ -509,8 +505,10 @@ void featureDetector::allForegroundPixels(std::deque<featureDetector::people>\
 		allPeople[k].absoluteLoc = center;
 		std::vector<cv::Point2f> templ;
 		genTemplate2(center, persHeight, camHeight, templ);
-
 		cv::Point2f head((templ[12].x+templ[14].x)/2,(templ[12].y+templ[14].y)/2);
+		double tmplHeight = dist(head,center);
+		double tmplArea   = tmplHeight*dist(templ[0],templ[1]);
+
 		// GET THE 100X100 WINDOW ON THE TEMPLATE
 		int minY=thrsh.rows, maxY=0, minX=thrsh.cols, maxX=0;
 		this->templateWindow(cv::Size(foregr.cols,foregr.rows),minX, maxX,\
@@ -519,37 +517,43 @@ void featureDetector::allForegroundPixels(std::deque<featureDetector::people>\
 		int height = maxY-minY;
 		cv::Mat colorRoi = cv::Mat(foregr.clone(),cv::Rect(cv::Point2f(minX,minY),\
 							cv::Size(width,height)));
-		cv::Mat thrshRoi = cv::Mat(thrsh.clone(),cv::Rect(cv::Point2f(minX,minY),\
-							cv::Size(width,height)));
-		this->keepLargestBlob(thrshRoi,cv::Point2f(center.x+minX,center.y+minY));
+
 		// LOOP OVER THE AREA OF OUR TEMPLATE AND THERESHOLD ONLY THOSE PIXELS
 		for(unsigned x=0; x<maxX-minX; x++){
 			for(unsigned y=0; y<maxY-minY; y++){
-				if((int)(thrshRoi.at<uchar>((int)(y),(int)(x)))>0){
+				if((int)(thrsh.at<uchar>((int)(y+minY),(int)(x+minX)))>0){
+
 					// IF THE PIXEL IS NOT INSIDE OF THE TEMPLATE
 					if(!this->isInTemplate((x+minX),(y+minY),templ) &&\
 					existing.size()>1){
 						double minDist = thrsh.rows*thrsh.cols;
 						unsigned label = -1;
 						for(unsigned l=0; l<existing.size(); l++){
-							cv::Point2f aCenter = this->cvPoint(existing[l]);
-							std::vector<cv::Point2f> aTempl;
-							genTemplate2(aCenter,persHeight,camHeight,aTempl);
-							if(k!=l && this->isInTemplate((x+minX),(y+minY),aTempl)){
-								minDist = 0;
-								label   = l;
-								break;
-							}else{
-								double dist = this->getDistToTemplate((int)(x+minX),\
-												(int)(y+minY),aTempl);
-								if(minDist>dist){
-									minDist = dist;
+							if(k!=l){
+								cv::Point2f aCenter = this->cvPoint(existing[l]);
+								std::vector<cv::Point2f> aTempl;
+								genTemplate2(aCenter,persHeight,camHeight,aTempl);
+
+								// IF IT IS IN ANOTHER TEMPLATE THEN IGNORE THE PIXEL
+								if(this->isInTemplate((x+minX),(y+minY),aTempl)){
+									minDist = 0;
 									label   = l;
+									break;
+								// ELSE COMPUTE THE DISTANCE FROM THE PIXEL TO THE TEMPLATE
+								}else{
+									//double ptDist = this->getDistToTemplate((int)(x+minX),\
+														(int)(y+minY),aTempl);
+									double ptDist = dist(cv::Point2f(x+minX,\
+														y+minY),aCenter);
+									if(minDist>ptDist){
+										minDist = ptDist;
+										label   = l;
+									}
 								}
 							}
 						}
 						// IF THE PIXEL HAS A DIFFERENT LABEL THEN THE CURR TEMPL
-						if(label != k || minDist>=persHeight/5){
+						if(label != k || minDist>=tmplHeight){
 							colorRoi.at<cv::Vec3b>((int)y,(int)x) = cv::Vec3b(0,0,0);
 						}
 					}
@@ -558,15 +562,22 @@ void featureDetector::allForegroundPixels(std::deque<featureDetector::people>\
 				}
 			}
 		}
-		allPeople[k].relativeLoc = cv::Point2f(center.x - (int)(minX),\
-									center.y - (int)(minY));
+		// FOR MULTIPLE DISCONNECTED BLOBS KEEP THE CLOSEST TO CENTER
+		cv::Mat thrshRoi, foregrRoi;
+		cv::cvtColor(colorRoi, thrshRoi, CV_BGR2GRAY);
+		this->keepLargestBlob(thrshRoi,cv::Point2f(center.x-minX,center.y-minY),
+				tmplArea);
+		colorRoi.copyTo(foregrRoi,thrshRoi);
+
+		// SAVE IT IN THE STRUCTURE OF FOREGOUND IMAGES
+		allPeople[k].relativeLoc = cv::Point2f(center.x-(minX),center.y-(minY));
 		allPeople[k].borders.assign(4,0);
 		allPeople[k].borders[0] = minX;
 		allPeople[k].borders[1] = maxX;
 		allPeople[k].borders[2] = minY;
 		allPeople[k].borders[3] = maxY;
 		cv::Point2f rotBorders;
-		allPeople[k].pixels = this->rotateWrtCamera(head,center,colorRoi.clone(),\
+		allPeople[k].pixels = this->rotateWrtCamera(head,center,foregrRoi.clone(),\
 								rotBorders);
 		if(this->plotTracks){
 			cv::imshow("people", allPeople[k].pixels);
@@ -575,6 +586,7 @@ void featureDetector::allForegroundPixels(std::deque<featureDetector::people>\
 		}
 		colorRoi.release();
 		thrshRoi.release();
+		foregrRoi.release();
 	}
 	thrsh.release();
 }
@@ -698,10 +710,12 @@ void featureDetector::setSIFTDictionary(char* fileSIFT){
 //==============================================================================
 /** Keeps only the largest blob from the thresholded image.
  */
-void featureDetector::keepLargestBlob(cv::Mat &thresh,cv::Point2f center){
+void featureDetector::keepLargestBlob(cv::Mat &thresh,cv::Point2f center,\
+double tmplArea){
 	std::vector<std::vector<cv::Point> > contours;
 	cv::findContours(thresh,contours,CV_RETR_EXTERNAL,CV_CHAIN_APPROX_SIMPLE);
 	cv::drawContours(thresh,contours,-1,cv::Scalar(255,0,0));
+	cv::circle(thresh,center,3,cv::Scalar(0,255,0));
 	cv::imshow("pre_contours", thresh);
 
 	int contourIdx =-1;
@@ -715,8 +729,12 @@ void featureDetector::keepLargestBlob(cv::Mat &thresh,cv::Point2f center){
 			if(minY>=contours[i][j].y){minY = contours[i][j].y;}
 			if(maxY<contours[i][j].y){maxY = contours[i][j].y;}
 		}
-		double ptDist = dist(center,cv::Point2f((maxX-minX)/2,(maxY-minY)/2));
-		if(ptDist<minDist){
+		double ptDist = dist(center,cv::Point2f((maxX+minX)/2,(maxY+minY)/2));
+		double area   = (maxX-minX)*(maxY-minY);
+
+		std::cout<<"area:"<<area<<" tmplArea:"<<tmplArea<<std::endl;
+
+		if(ptDist<minDist & area>=tmplArea){
 			contourIdx = i;
 			minDist    = ptDist;
 		}
@@ -810,6 +828,7 @@ void featureDetector::extractDataRow(std::deque<unsigned> existing, IplImage *bg
 				if(this->tracking){
 					feature.at<double>(0,0) = this->fixAngle(center,\
 							cv::Point2f(camPosX,camPosY),feature.at<double>(0,0));
+
 					std::cout<<"flow wrt camera:"<<\
 						feature.at<double>(0,0)<<std::endl;
 				}
@@ -853,7 +872,10 @@ void featureDetector::extractDataRow(std::deque<unsigned> existing, IplImage *bg
 			this->prevImage.release();
 		}
 	}
-	image.copyTo(this->entirePrev);
+	if(this->tracking && (this->featureType==featureDetector::SIFT ||\
+	this->featureType==featureDetector::SURF)){
+		image.copyTo(this->entirePrev);
+	}
 
 	// FIX THE LABELS TO CORRESPOND TO THE PEOPLE DETECTED IN THE IMAGE
 	if(!this->targetAnno.empty()){
@@ -1543,6 +1565,150 @@ double featureDetector::motionVector(cv::Point2f center){
 	return angle;
 }
 //==============================================================================
+/*
+void featureDetector::offline(std::string labelsFile, std::string dataFile){
+	// LOAD THE ANNOTATIONS FROM FILE
+	binFile2mat(this->targetAnno,labelsFile.c_str());
+
+	// LOAD COMPLETE DATA MATRIX FROM FILE
+	cv::Mat completeFeatures;
+	binFile2mat(completeFeatures,dataFile.c_str());
+
+	// EACH ROW IN FEATURES MATRIX ARE ALL THE FEATURES EXTRACTED IN AN IMAGE
+
+	cv::Mat image(this->current->img);
+	cv::cvtColor(image, image, this->colorspaceCode);
+	cv::Mat entirePrev;
+	if(this->tracking && !this->entirePrev.empty()){
+		cv::cvtColor(this->entirePrev, this->entirePrev, this->colorspaceCode);
+	}
+
+	// REDUCE THE IMAGE TO ONLY THE INTERESTING AREA
+	std::deque<featureDetector::people> allPeople(existing.size(),\
+		featureDetector::people());
+	this->allForegroundPixels(allPeople, existing, bg, 7.0);
+	this->lastIndex = this->data.size();
+
+	// FOR EACH LOCATION IN THE IMAGE EXTRACT FEATURES, FILTER THEM AND RESHAPE
+	std::vector<cv::Point2f> allLocations;
+	for(std::size_t i=0; i<existing.size(); i++){
+		// READ THE TEMPLATE
+		cv::Point2f center = this->cvPoint(existing[i]);
+		allLocations.push_back(center);
+		std::vector<cv::Point2f> templ;
+		genTemplate2(center, persHeight, camHeight, templ);
+
+		cv::Point2f head((templ[12].x+templ[14].x)/2,(templ[12].y+templ[14].y)/2);
+		// GET THE AREA OF 100/100 AROUND THE TEAMPLATE
+		std::deque<unsigned> borders = allPeople[i].borders;
+		unsigned width  = allPeople[i].borders[1]-allPeople[i].borders[0];
+		unsigned height = allPeople[i].borders[3]-allPeople[i].borders[2];
+		cv::Mat imgRoi(image.clone(),cv::Rect(cv::Point2f(\
+			allPeople[i].borders[0],allPeople[i].borders[2]),\
+			cv::Size(width,height)));
+
+		//	ROTATE ROI, ROTATE TEMPLATE & ROATE PERSON PIXELS
+		cv::Point2f rotBorders;
+		cv::Mat tmp = this->rotateWrtCamera(head,center,imgRoi,rotBorders);
+		tmp.copyTo(imgRoi);
+		tmp.release();
+		templ = this->rotateTemplWrtCamera(head, center, templ, rotBorders,\
+				cv::Point2f(imgRoi.cols/2.0+allPeople[i].borders[0],\
+				imgRoi.rows/2.0+allPeople[i].borders[2]));
+		cv::Mat thresholded;
+		cv::inRange(allPeople[i].pixels,cv::Scalar(1,1,1),cv::Scalar(255,225,225),\
+			thresholded);
+		cv::dilate(thresholded,thresholded,cv::Mat());
+
+		// IF THE PART TO BE CONSIDERED IS ONLY FEET OR ONLY HEAD
+		if(this->featurePart != ' '){
+			this->onlyPart(thresholded,templ,allPeople[i].borders[0],\
+				allPeople[i].borders[2]);
+		}
+
+		// IF WE WANT TO COMPUTE OPTICAL FLOW WE NEED THE PREV. CORRESP. AREA
+		if(this->tracking && !this->entirePrev.empty()){
+			this->prevImage = cv::Mat(this->entirePrev.clone(),cv::Rect(cv::Point2f(\
+				allPeople[i].borders[0],allPeople[i].borders[2]),\
+				cv::Size(width,height)));
+			tmp = this->rotateWrtCamera(head,center,this->prevImage,rotBorders);
+			tmp.copyTo(this->prevImage);
+			tmp.release();
+		}
+
+		// EXTRACT FEATURES
+		cv::Mat feature;
+		switch(this->featureType){
+			case (featureDetector::IPOINTS):
+				this->interestPointsGrid(feature, imgRoi, templ,\
+					allPeople[i].borders[0],allPeople[i].borders[2],center);
+				break;
+			case featureDetector::EDGES:
+				this->getEdges(center, feature, imgRoi, 1, thresholded);
+				break;
+			case featureDetector::SURF:
+				this->getSURF(feature, imgRoi, allPeople[i].borders[0],\
+					allPeople[i].borders[2], templ, center);
+				if(this->tracking){
+					feature.at<double>(0,0) = this->fixAngle(center,\
+							cv::Point2f(camPosX,camPosY),feature.at<double>(0,0));
+
+					std::cout<<"flow wrt camera:"<<\
+						feature.at<double>(0,0)<<std::endl;
+				}
+				break;
+			case featureDetector::GABOR:
+				this->getGabor(feature, imgRoi, thresholded, center);
+				break;
+			case featureDetector::SIFT_DICT:
+				this->extractSIFT(feature, imgRoi, allPeople[i].borders[0],\
+					allPeople[i].borders[2], templ, center);
+				break;
+			case featureDetector::SIFT:
+				this->getSIFT(feature, imgRoi, allPeople[i].borders[0],\
+					allPeople[i].borders[2], templ, center);
+				if(this->tracking){
+					feature.at<double>(0,0) = this->fixAngle(center,\
+						cv::Point2f(camPosX,camPosY),feature.at<double>(0,0));
+				}
+				break;
+		}
+		feature.convertTo(feature, cv::DataType<double>::type);
+
+		if(this->tracking){
+			cv::Mat cloneFeature = cv::Mat::zeros(feature.rows,feature.cols+1,\
+									cv::DataType<double>::type);
+			cloneFeature.at<double>(0,0) = this->motionVector(center);
+			cv::Mat tmpClone = cloneFeature.colRange(1,cloneFeature.cols);
+			feature.copyTo(tmpClone);
+
+			cloneFeature.convertTo(cloneFeature, cv::DataType<double>::type);
+			this->data.push_back(cloneFeature);
+			cloneFeature.release();
+			tmpClone.release();
+		}else{
+			this->data.push_back(feature);
+		}
+		thresholded.release();
+		feature.release();
+		imgRoi.release();
+		if(!this->prevImage.empty()){
+			this->prevImage.release();
+		}
+	}
+	if(this->tracking && (this->featureType==featureDetector::SIFT ||\
+	this->featureType==featureDetector::SURF)){
+		image.copyTo(this->entirePrev);
+	}
+
+	// FIX THE LABELS TO CORRESPOND TO THE PEOPLE DETECTED IN THE IMAGE
+	if(!this->targetAnno.empty()){
+		this->fixLabels(allLocations);
+	}
+}
+*/
+//==============================================================================
+
 /*
 int main(int argc, char **argv){
 	featureDetector feature(argc,argv,true);
