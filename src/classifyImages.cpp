@@ -21,8 +21,9 @@ classifyImages::classifyImages(int argc, char **argv, classifyImages::USES use){
 	this->what             = use;
 
 	// READ THE COMMAND LINE ARGUMENTS
-	if(argc != 3 && argc != 4){
-		cerr<<"Usage: classifier datasetFolder/ [testsetFolder/] textOfImageName\n"<<\
+	if(argc != 3 && argc != 5){
+		cerr<<"Usage: classifier datasetFolder/ textOfImageName [testsetFolder/ "<<\
+			"textOfTestImageName] \n"<<\
 			"datasetFolder/ and testsetFolder -- contain: \n"<<\
 			"\t train: 'annotated_train/'\n "<<\
 			"\t train targets: 'annotated_train.txt'\n "<<\
@@ -30,53 +31,48 @@ classifyImages::classifyImages(int argc, char **argv, classifyImages::USES use){
 			"\t [test targets: 'annotated_test.txt']\n "<<\
 			"\t calibration: 'CALIB_textOfImageName.txt'\n "<<\
 			"\t prior: 'PRIOR_textOfImageName.txt'\n"<<\
-			"\t background: 'BG_textOfImageName.bin'"<<\
+			"\t background: 'BG_textOfImageName.bin'\n"<<\
 			"\t [SIFT data: 'annotated_SIFT/']\n"<<\
 			"\t [SIFT dictionary: 'SIFT_textOfImageName.bin']\n"<<std::endl;
 		exit(1);
 	}else{
-		std::string datasetPath,imgString,testsetPath;
-		if(argc == 3){
-			datasetPath = std::string(argv[1]);
-			imgString   = std::string(argv[2]);
-		}else if(argc == 4){
-			datasetPath = std::string(argv[1]);
-			testsetPath = std::string(argv[2]);
-			imgString   = std::string(argv[3]);
-			if(testsetPath[testsetPath.size()-1]!='/'){
-				testsetPath += '/';
-			}
+		this->trainDir       = std::string(argv[1]);
+		this->trainImgString = std::string(argv[2]);
+		if(this->trainDir[this->trainDir.size()-1]!='/'){
+			this->trainDir += '/';
 		}
-		if(datasetPath[datasetPath.size()-1]!='/'){
-			datasetPath += '/';
+		if(argc == 5){
+			this->testDir = std::string(argv[3]);
+			if(this->testDir[this->testDir.size()-1]!='/'){
+				this->testDir += '/';
+			}
+			this->testImgString = std::string(argv[4]);
 		}
 		switch(this->what){
 			case(classifyImages::TEST):
-				if(argc != 4){
-					std::cerr<<"4 Arguments are needed for the final test."<<std::endl;
+				if(argc != 5){
+					std::cerr<<"4 Arguments are needed for the final test: "<<\
+						"classifier datasetFolder/ textOfImageName [testsetFolder/ "<<\
+						"textOfImageNameTest]"<<std::endl;
 					exit(1);
 				}
 				// IF WE WANT TO TEST THE FINAL CLASIFIER'S PERFORMANCE
-				this->trainFolder      = datasetPath+"annotated_train/";
-				this->annotationsTrain = datasetPath+"annotated_train.txt";
-				this->testFolder       = testsetPath+"annotated_test/";
-				this->annotationsTest  = testsetPath+"annotated_test.txt";
+				this->trainFolder      = this->trainDir+"annotated_train/";
+				this->annotationsTrain = this->trainDir+"annotated_train.txt";
+				this->testFolder       = this->testDir+"annotated_test/";
+				this->annotationsTest  = this->testDir+"annotated_test.txt";
 				break;
 			case(classifyImages::EVALUATE):
 				// IF WE WANT TO EVALUATE WITH CORSSVALIDATION
-				this->trainFolder      = datasetPath+"annotated_train/";
-				this->annotationsTrain = datasetPath+"annotated_train.txt";
+				this->trainFolder      = this->trainDir+"annotated_train/";
+				this->annotationsTrain = this->trainDir+"annotated_train.txt";
 				break;
 			case(classifyImages::BUILD_DICTIONARY):
 				// IF WE WANT TO BUILD SIFT DICTIONARY
-				this->trainFolder = datasetPath+"annotated_SIFT/";
+				this->trainFolder = this->trainDir+"annotated_SIFT/";
 				break;
 		}
-
-		this->features = new featureDetector(argc,argv);
-		this->features->setSIFTDictionary(const_cast<char*>((datasetPath+"SIFT_"+\
-							imgString+".bin").c_str()));
-		this->modelName = datasetPath+"models/";
+		this->modelName = this->trainDir+"models/";
 	}
 }
 //==============================================================================
@@ -103,29 +99,28 @@ classifyImages::~classifyImages(){
  */
 void classifyImages::init(double theNoise, double theLength,\
 gaussianProcess::kernelFunction theKFunction, featureDetector::FEATURE theFeature,\
-int colorSp, bool fromFolder, bool store){
-	this->noise     = theNoise;
-	this->length    = theLength;
-	this->kFunction = theKFunction;
-	this->feature   = theFeature;
-	this->features->colorspaceCode = colorSp;
-	this->readFromFolder           = fromFolder;
-	this->storeData                = store;
+bool fromFolder, bool store){
+	this->noise          = theNoise;
+	this->length         = theLength;
+	this->kFunction      = theKFunction;
+	this->feature        = theFeature;
+	this->readFromFolder = fromFolder;
+	this->storeData      = store;
 	switch(this->feature){
 		case(featureDetector::IPOINTS):
-			this->modelName += "IPOINTS/";
+			this->modelName = this->trainDir+"models/"+"IPOINTS/";
 			break;
 		case(featureDetector::EDGES):
-			this->modelName += "EDGES/";
+			this->modelName = this->trainDir+"models/"+"EDGES/";
 			break;
 		case(featureDetector::SURF):
-			this->modelName += "SURF/";
+			this->modelName = this->trainDir+"models/"+"SURF/";
 			break;
 		case(featureDetector::GABOR):
-			this->modelName += "GABOR/";
+			this->modelName = this->trainDir+"models/"+"GABOR/";
 			break;
 		case(featureDetector::SIFT):
-			this->modelName += "SIFT/";
+			this->modelName = this->trainDir+"models/"+"SIFT/";
 			break;
 	}
 }
@@ -343,7 +338,10 @@ predictionsSin, gaussianProcess::prediction predictionsCos){
 //==============================================================================
 /** Build dictionary for vector quantization.
  */
-void classifyImages::buildDictionary(){
+void classifyImages::buildDictionary(int colorSp){
+	// SET THE CALIBRATION AND OTHER FEATURE SETTINGS
+	this->resetFeatures(this->trainDir, this->trainImgString, colorSp);
+
 	// EXTRACT THE SIFT FEATURES AND CONCATENATE THEM
 	this->features->setFeatureType(featureDetector::SIFT_DICT);
 	this->features->init(this->trainFolder,std::string(),this->readFromFolder);
@@ -377,7 +375,7 @@ void classifyImages::buildDictionary(){
 
 	// WRITE TO FILE THE MEANS
 	cv::Mat matrix(*centers);
-	mat2BinFile(matrix, this->features->dictFileName);
+	mat2BinFile(matrix, const_cast<char*>(this->features->dictFileName.c_str()));
 	centers->release();
 	matrix.release();
 	delete centers;
@@ -390,37 +388,40 @@ double theLength, gaussianProcess::kernelFunction theKFunction,\
 featureDetector::FEATURE theFeature,int colorSp, bool fromFolder,bool store){
 	double finalErrorLong=0.0, finalNormErrorLong=0.0;
 	double finalErrorLat=0.0, finalNormErrorLat=0.0;
+
+	// SET THE CALIBRATION ONLY ONCE (ALL IMAGES ARE READ FROM THE SAME DIR)
+	this->resetFeatures(this->trainDir, this->trainImgString,colorSp);
+	this->init(theNoise,theLength,theKFunction,theFeature,fromFolder,store);
 	for(unsigned i=0; i<k; i++){
 		// SPLIT TRAINING AND TESTING ACCORDING TO THE CURRENT FOLD
-		this->crossValidation(k,i);
-
-	  	//LONGITUDE TRAINING AND PREDICTING
-		this->init(theNoise,theLength,theKFunction,theFeature,colorSp,\
-			fromFolder,store);
-
-		// ADD THE NUMBER OF THE CURRENT FOLD & THEN REMOVE IT BACK
-		this->modelName += ("train/"+int2string(i));
-		this->trainGP(annotationsHandle::LONGITUDE);
-		this->modelName = this->modelName.substr(0,this->modelName.size()-7);
-
-		// ADD THE NUMBER OF THE CURRENT FOLD & THEN REMOVE IT BACK
-		this->modelName += ("eval/"+int2string(i));
 		std::deque<gaussianProcess::prediction> predictionsSin;
 		std::deque<gaussianProcess::prediction> predictionsCos;
-		this->predictGP(predictionsSin,predictionsCos,annotationsHandle::LONGITUDE);
-		this->modelName = this->modelName.substr(0,this->modelName.size()-6);
+		this->crossValidation(k,i);
+		//______________________________________________________________________
+	  	//LONGITUDE TRAINING AND PREDICTING
+		this->modelName += ("trainLong/"+int2string(i));
+		this->trainGP(annotationsHandle::LONGITUDE);
+		this->modelName = this->modelName.substr(0,this->modelName.size()-11);
 
+		// PREDICT ON THE REST OF THE IMAGES
+		this->modelName += ("evalLong/"+int2string(i));
+		this->predictGP(predictionsSin,predictionsCos,annotationsHandle::LONGITUDE);
+		this->modelName = this->modelName.substr(0,this->modelName.size()-10);
 		double errorLong, normErrorLong;
 		this->evaluate(predictionsSin, predictionsCos, errorLong, normErrorLong,\
 			annotationsHandle::LONGITUDE);
 		finalErrorLong += errorLong;
 		finalNormErrorLong += normErrorLong;
-
+		//______________________________________________________________________
 	  	//LATITUDE TRAINING AND PREDICTING
-		this->init(theNoise,theLength,theKFunction,theFeature,colorSp,\
-			fromFolder,store);
+		this->modelName += ("trainLat/"+int2string(i));
 		this->trainGP(annotationsHandle::LATITUDE);
+		this->modelName = this->modelName.substr(0,this->modelName.size()-10);
+
+		// PREDICT ON THE REST OF THE IMAGES
+		this->modelName += ("evalLat/"+int2string(i));
 		this->predictGP(predictionsSin,predictionsCos,annotationsHandle::LATITUDE);
+		this->modelName = this->modelName.substr(0,this->modelName.size()-9);
 		double errorLat, normErrorLat;
 		this->evaluate(predictionsSin, predictionsCos, errorLat, normErrorLat,\
 			annotationsHandle::LATITUDE);
@@ -467,7 +468,6 @@ void classifyImages::crossValidation(unsigned k, unsigned fold){
 			exit(1);
 		}
 	}
-
 	unsigned pos     = this->trainFolder.find_first_of("/\\");
 	std::string root = this->trainFolder.substr(0,pos+1);
 	this->trainFolder      = root+"trash/targets.txt";root+
@@ -475,6 +475,7 @@ void classifyImages::crossValidation(unsigned k, unsigned fold){
 	this->testFolder       = root+"trash/ttargets.txt";
 	this->annotationsTrain = root+"trash/annoTargets.txt";
 	this->annotationsTest  = root+"trash/annoTtargets.txt";
+
 	// WRITE THE IMAGE NAMES & ANNOTATIONS IN THE CORRESPONDING FILES
 	ofstream testOut, trainOut, annoTest, annoTrain;
 	testOut.open(this->testFolder.c_str(), ios::out);
@@ -510,55 +511,83 @@ void classifyImages::crossValidation(unsigned k, unsigned fold){
 	annoTrain.close();
 }
 //==============================================================================
+/** Reset the features object when the training and testing might have different
+ * calibration, background models...
+ */
+void classifyImages::resetFeatures(std::string dir,std::string imStr,int colorSp){
+	if(this->features){
+		delete this->features;
+		this->features = NULL;
+	}
+	char** args = new char*[3];
+	args[0] = const_cast<char*>("featureDetector");
+	args[1] = const_cast<char*>(dir.c_str());
+	args[2] = const_cast<char*>(imStr.c_str());
+	this->features = new featureDetector(3,args,false,false);
+	this->features->setSIFTDictionary(dir+"SIFT_"+imStr+".bin");
+	this->features->colorspaceCode = colorSp;
+	delete [] args;
+}
+//==============================================================================
 /** Runs the final evaluation (test).
  */
 void classifyImages::runTest(double theNoise, double theLength,\
 gaussianProcess::kernelFunction theKFunction, featureDetector::FEATURE theFeature,\
 int colorSp, bool fromFolder, bool store){
-  	//LONGITUDE TRAINING AND PREDICTING
-	this->init(theNoise,theLength,theKFunction,theFeature,colorSp,\
-		fromFolder,store);
-
-	// ADD THE NUMBER OF THE CURRENT FOLD & THEN REMOVE IT BACK
-	this->modelName += ("model/");
-	this->trainGP(annotationsHandle::LONGITUDE);
-	this->modelName = this->modelName.substr(0,this->modelName.size()-5);
-
-	this->modelName += ("test/");
 	std::deque<gaussianProcess::prediction> predictionsSin;
 	std::deque<gaussianProcess::prediction> predictionsCos;
-	this->predictGP(predictionsSin,predictionsCos,annotationsHandle::LONGITUDE);
-	this->modelName = this->modelName.substr(0,this->modelName.size()-4);
+	this->init(theNoise,theLength,theKFunction,theFeature,fromFolder,store);
 
+  	// LONGITUDE TRAINING AND PREDICTING
+	// BEFORE TRAINING CAMERA CALIBRATION AND OTHER SETTINGS MIGHT NEED TO BE RESET
+	this->resetFeatures(this->trainDir,this->trainImgString,colorSp);
+	this->modelName += ("modelLong/");
+	this->trainGP(annotationsHandle::LONGITUDE);
+	this->modelName = this->modelName.substr(0,this->modelName.size()-10);
+
+	// BEFORE TESTING CAMERA CALIBRATION AND OTHER SETTINGS MIGHT NEED TO BE RESET
+	this->resetFeatures(this->testDir,this->testImgString,colorSp);
+	this->modelName += ("testLong/");
+	this->predictGP(predictionsSin,predictionsCos,annotationsHandle::LONGITUDE);
+	this->modelName = this->modelName.substr(0,this->modelName.size()-9);
 	double errorLong, normErrorLong;
 	this->evaluate(predictionsSin, predictionsCos, errorLong, normErrorLong,\
 		annotationsHandle::LONGITUDE);
-
-  	//LATITUDE TRAINING AND PREDICTING
-	this->init(theNoise,theLength,theKFunction,theFeature,colorSp,\
-		fromFolder,store);
+	//__________________________________________________________________________
+  	// LATITUDE TRAINING AND PREDICTING
+	// BEFORE TRAINING CAMERA CALIBRATION AND OTHER SETTINGS MIGHT NEED TO BE RESET
+	this->resetFeatures(this->trainDir,this->trainImgString,colorSp);
+	this->modelName += ("modelLat/");
 	this->trainGP(annotationsHandle::LATITUDE);
+	this->modelName = this->modelName.substr(0,this->modelName.size()-9);
+
+	// BEFORE TESTING CAMERA CALIBRATION AND OTHER SETTINGS MIGHT NEED TO BE RESET
+	this->resetFeatures(this->testDir,this->testImgString,colorSp);
+	this->modelName += ("testLat/");
 	this->predictGP(predictionsSin,predictionsCos,annotationsHandle::LATITUDE);
+	this->modelName = this->modelName.substr(0,this->modelName.size()-8);
 	double errorLat, normErrorLat;
 	this->evaluate(predictionsSin, predictionsCos, errorLat, normErrorLat,\
 		annotationsHandle::LATITUDE);
 }
 //==============================================================================
 int main(int argc, char **argv){
-  	classifyImages classi(argc, argv, classifyImages::EVALUATE);
+	// test
+	classifyImages classi(argc, argv, classifyImages::TEST);
+ 	classi.runTest(1e-3,100.0,&gaussianProcess::sqexp,\
+ 		featureDetector::IPOINTS,CV_BGR2Lab,true,true);
+
+/*
+	// evaluate
+	classifyImages classi(argc, argv, classifyImages::EVALUATE);
+  	classi.runCrossValidation(2,1e-3,100.0,&gaussianProcess::sqexp,\
+ 		featureDetector::SIFT,CV_BGR2Lab,false,true);
+
 /*
 	// BUILD THE SIFT DICTIONARY
-	classi.buildDictionary();
-
-	// PERFORMANCE EVALUATION
-	classi.runTest(1e-3,100.0,&gaussianProcess::sqexp,featureDetector::SURF);
-
-  	// CROSS-VALIDATION
-  	classi.runCrossValidation(5,1e-3,100.0,&gaussianProcess::sqexp,\
-  		featureDetector::SURF);
+  	classifyImages classi(argc, argv, classifyImages::BUILD_DICTIONARY);
+	classi.buildDictionary(CV_BGR2Lab);
 */
-  	classi.runCrossValidation(2,1e-3,100.0,&gaussianProcess::sqexp,\
-  		featureDetector::SURF,CV_BGR2Lab,false,true);
 }
 
 

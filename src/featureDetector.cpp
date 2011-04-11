@@ -34,8 +34,8 @@ struct compareImg{
 void featureDetector::init(std::string dataFolder, std::string theAnnotationsFile,\
 bool readFromFolder){
 	this->initProducer(readFromFolder, const_cast<char*>(dataFolder.c_str()));
-	if(!this->entirePrev.empty()){
-		this->entirePrev.release();
+	if(!this->entireNext.empty()){
+		this->entireNext.release();
 	}
 
 	// CLEAR DATA AND TARGETS
@@ -150,7 +150,7 @@ const featureDetector::keyDescr k2){
 /** SURF descriptors (Speeded Up Robust Features).
  */
 cv::Mat featureDetector::getSURF(cv::Mat feature, std::vector<cv::Point2f> templ,\
-std::vector<cv::Point2f> &indices){
+std::vector<cv::Point2f> &indices, cv::Rect roi,cv::Mat test){
 	// KEEP THE TOP 10 DESCRIPTORS WITHIN THE BORDERS OF THE TEMPLATE
 	cv::Mat tmp = cv::Mat::zeros(cv::Size(10,feature.cols-2),\
 					cv::DataType<double>::type);
@@ -162,22 +162,22 @@ std::vector<cv::Point2f> &indices){
 		double ptX = feature.at<double>(y,feature.cols-2);
 		double ptY = feature.at<double>(y,feature.cols-1);
 		if(this->isInTemplate(ptX, ptY, templ)){
-			for(int x=0; x<feature.cols-2; x++){
-				tmp.at<double>(counter,x) = feature.at<double>(y,x);
-			}
-			indices.push_back(cv::Point2f(ptX,ptY));
+			cv::Mat dummy1 = tmp.row(counter);
+			cv::Mat dummy2 = feature.colRange(0,feature.cols-2);
+			dummy2.copyTo(dummy1);
+			dummy1.release();
+			dummy2.release();
+			indices.push_back(cv::Point2f(ptX-roi.x,ptY-roi.y));
 			counter++;
 		}
 	}
 
-	if(this->plotTracks){
-		cv::Mat toSee(this->current->img);
-		for(std::size_t i=0; i<indices.size(); i++){
-			cv::circle(toSee, indices[i], 3, cv::Scalar(0,0,255));
+	if(this->plotTracks && !test.empty()){
+		for(std::size_t l=0; l<indices.size(); l++){
+			cv::circle(test,indices[l],3,cv::Scalar(0,0,255));
 		}
-		cv::imshow("SURFS", toSee);
+		cv::imshow("SURF",test);
 		cv::waitKey(0);
-		toSee.release();
 	}
 
 	// COPY THE DESCRIPTORS IN THE FINAL MATRIX
@@ -218,8 +218,8 @@ std::vector<cv::Point2f> templ, int minX, int minY){
 //==============================================================================
 /** Creates a "histogram" of interest points + number of blobs.
  */
-cv::Mat featureDetector::getPointsGrid(cv::Mat feature,\
-std::vector<cv::Point2f> templ, std::deque<double> templExtremes){
+cv::Mat featureDetector::getPointsGrid(cv::Mat feature,cv::Rect roi,\
+std::vector<cv::Point2f> templ, std::deque<double> templExtremes,cv::Mat test){
 	// GET THE GRID SIZE FROM THE TEMPLATE SIZE
 	unsigned no     = 10;
 	cv::Mat rowData = cv::Mat::zeros(cv::Size(no*no+1,1),cv::DataType<double>::type);
@@ -236,14 +236,13 @@ std::vector<cv::Point2f> templ, std::deque<double> templExtremes){
 		}
 	}
 
-	if(this->plotTracks){
-		cv::Mat toSee(this->current->img);
-		for(std::size_t i=0; i<indices.size(); i++){
-			cv::circle(toSee,indices[i],3,cv::Scalar(255,0,0));
+	if(this->plotTracks && !test.empty()){
+		for(std::size_t l=0; l<indices.size(); l++){
+			cv::circle(test,cv::Point2f(indices[l].x-roi.x,indices[l].y-roi.y),\
+				3,cv::Scalar(0,0,255));
 		}
-		cv::imshow("IPOINTS", toSee);
+		cv::imshow("IPOINTS",test);
 		cv::waitKey(0);
-		toSee.release();
 	}
 
 	// FOR EACH GRID SLICE COUNT HOW MANY POINTS ARE IN IT
@@ -568,8 +567,8 @@ void featureDetector::setFeatureType(featureDetector::FEATURE type){
 //==============================================================================
 /** Set the name of the file where the SIFT dictionary is stored.
  */
-void featureDetector::setSIFTDictionary(char* fileSIFT){
-	this->dictFileName = const_cast<char*>(fileSIFT);
+void featureDetector::setSIFTDictionary(std::string fileSIFT){
+	this->dictFileName = fileSIFT;
 }
 //==============================================================================
 /** Keeps only the largest blob from the thresholded image.
@@ -598,9 +597,11 @@ double tmplArea){
 			minDist    = ptDist;
 		}
 	}
-	contours[contourIdx].clear();
-	contours.erase(contours.begin()+contourIdx);
-	cv::drawContours(thresh,contours,-1,cv::Scalar(0,0,0),CV_FILLED);
+	if(contourIdx!=-1){
+		contours[contourIdx].clear();
+		contours.erase(contours.begin()+contourIdx);
+		cv::drawContours(thresh,contours,-1,cv::Scalar(0,0,0),CV_FILLED);
+	}
 }
 //==============================================================================
 /** Creates on data row in the final data matrix by getting the feature
@@ -609,8 +610,14 @@ double tmplArea){
 void featureDetector::extractDataRow(std::deque<unsigned> existing, IplImage *bg){
 	cv::Mat image(this->current->img);
 	cv::cvtColor(image, image, this->colorspaceCode);
-	if(this->tracking && !this->entirePrev.empty()){
-		cv::cvtColor(this->entirePrev, this->entirePrev, this->colorspaceCode);
+	if(this->tracking && (this->featureType==featureDetector::SIFT ||\
+	this->featureType==featureDetector::SURF)){
+		std::cout<<this->current->index+1<<" "<<std::endl;
+		if(this->current->index+1<this->producer->filelist.size()){
+			this->entireNext = cv::imread(this->producer->filelist\
+								[this->current->index+1].c_str());
+			cv::cvtColor(this->entireNext, this->entireNext, this->colorspaceCode);
+		}
 	}
 
 	// REDUCE THE IMAGE TO ONLY THE INTERESTING AREA
@@ -648,6 +655,22 @@ void featureDetector::extractDataRow(std::deque<unsigned> existing, IplImage *bg
 		cv::Point2f absRotCenter(allPeople[i].pixels.cols/2.0+allPeople[i].borders[0],\
 			allPeople[i].pixels.rows/2.0+allPeople[i].borders[2]);
 		templ = this->rotatePoints2Zero(head,center,templ,rotBorders,absRotCenter);
+//------------------------------REMOVE-----------------------------------------------
+/*		std::vector<cv::Point2f> templ2;
+		for(int l=0; l<templ.size(); l++){
+			templ2[l].x = templ[l].x - allPeople[i].borders[0];
+			templ2[l].y = templ[l].y - allPeople[i].borders[0];
+		}
+		IplImage* frameu = new IplImage(allPeople[i].pixels);
+		plotTemplate2(frameu,\
+			cv::Point2f(center.x-allPeople[i].borders[0],\
+			center.y-allPeople[i].borders[2]),persHeight,camHeight,\
+			cv::Scalar(100,50,100),templ2);
+		cv::imshow("templ",allPeople[i].pixels);
+		cv::waitKey(0);
+		cvReleaseImage(&frameu);
+*/
+//------------------------------REMOVE-----------------------------------------------
 
 		// GET THE EXTREME POINTS OF THE TEMPLATE
 		std::deque<double> extremes = this->templateExtremes(templ);
@@ -668,7 +691,8 @@ void featureDetector::extractDataRow(std::deque<unsigned> existing, IplImage *bg
 				binFile2mat(feature, const_cast<char*>(toRead.c_str()));
 				feature.convertTo(feature,cv::DataType<double>::type);
 				this->rotateKeypts2Zero(head,center,feature,absRotCenter,rotBorders);
-				dataRow = this->getPointsGrid(feature,templ,extremes);
+				dataRow = this->getPointsGrid(feature,roi,templ,extremes,\
+							allPeople[i].pixels);
 				break;
 			case featureDetector::EDGES:
 				toRead = (this->featureFile+"EDGES/"+imgName+".bin");
@@ -680,10 +704,10 @@ void featureDetector::extractDataRow(std::deque<unsigned> existing, IplImage *bg
 				binFile2mat(feature, const_cast<char*>(toRead.c_str()));
 				feature.convertTo(feature,cv::DataType<double>::type);
 				this->rotateKeypts2Zero(head,center,feature,absRotCenter,rotBorders);
-				dataRow = this->getSURF(feature, templ, keys);
-				if(this->tracking && !this->entirePrev.empty()){
+				dataRow = this->getSURF(feature,templ,keys,roi,allPeople[i].pixels);
+				if(this->tracking && !this->entireNext.empty()){
 					double flow = this->opticalFlowFeature(feature,this->current->img,\
-									keys, false);
+									this->entireNext,keys,roi,head,center,false);
 					dataRow.at<double>(0,dataRow.cols-2) = \
 						this->fixAngle(center,head,flow);
 				}
@@ -695,17 +719,17 @@ void featureDetector::extractDataRow(std::deque<unsigned> existing, IplImage *bg
 					allPeople[i].pixels.size());
 				break;
 			case featureDetector::SIFT_DICT:
-				this->extractSIFT(image, templ);
+				dataRow = this->extractSIFT(image, templ);
 				break;
 			case featureDetector::SIFT:
 				toRead = (this->featureFile+"SIFT/"+imgName+".bin");
 				binFile2mat(feature, const_cast<char*>(toRead.c_str()));
 				feature.convertTo(feature,cv::DataType<double>::type);
 				this->rotateKeypts2Zero(head,center,feature,absRotCenter,rotBorders);
-				dataRow = this->getSIFT(feature, templ, keys);
-				if(this->tracking && !this->entirePrev.empty()){
+				dataRow = this->getSIFT(feature,templ,keys,roi,allPeople[i].pixels);
+				if(this->tracking && !this->entireNext.empty()){
 					double flow = this->opticalFlowFeature(feature,this->current->img,\
-									keys, false);
+									this->entireNext,keys,roi,head,center,false);
 					dataRow.at<double>(0,dataRow.cols-2) = \
 						this->fixAngle(center,head,flow);
 				}
@@ -720,11 +744,6 @@ void featureDetector::extractDataRow(std::deque<unsigned> existing, IplImage *bg
 		feature.release();
 		dataRow.release();
 	}
-	if(this->tracking && (this->featureType==featureDetector::SIFT ||\
-	this->featureType==featureDetector::SURF)){
-		image.copyTo(this->entirePrev);
-	}
-
 	// FIX THE LABELS TO CORRESPOND TO THE PEOPLE DETECTED IN THE IMAGE
 	if(!this->targetAnno.empty()){
 		this->fixLabels(allLocations);
@@ -734,21 +753,23 @@ void featureDetector::extractDataRow(std::deque<unsigned> existing, IplImage *bg
 /** Compute the dominant direction of the SIFT or SURF features.
  */
 double featureDetector::opticalFlowFeature(cv::Mat keys, cv::Mat currentImg,\
-std::vector<cv::Point2f> keyPts, bool maxOrAvg){
+cv::Mat nextImg,std::vector<cv::Point2f> keyPts,cv::Rect roi,cv::Point2f head,\
+cv::Point2f center,bool maxOrAvg){
+	// ROTATE THE IMAGES
+	cv::Point2f rotBorders;
+	cv::Mat tmp1(currentImg,roi), tmp2(nextImg,roi);
+	tmp1 = this->rotate2Zero(head,center,tmp1.clone(),rotBorders);
+	tmp2 = this->rotate2Zero(head,center,tmp2.clone(),rotBorders);
+
 	// GET THE OPTICAL FLOW MATRIX FROM THE FEATURES
 	double direction = -1;
-	cv::Mat currGray, prevGray;
-
-	cv::imshow("curr",currentImg);
-	cv::imshow("prev",this->entirePrev);
-	cv::waitKey(0);
-
-	cv::cvtColor(currentImg,currGray,CV_RGB2GRAY);
-	cv::cvtColor(this->entirePrev,prevGray,CV_RGB2GRAY);
+	cv::Mat currGray, nextGray;
+	cv::cvtColor(tmp1,currGray,CV_RGB2GRAY);
+	cv::cvtColor(tmp2,nextGray,CV_RGB2GRAY);
 	std::vector<cv::Point2f> flow;
 	std::vector<uchar> status;
 	std::vector<float> error;
-	cv::calcOpticalFlowPyrLK(prevGray,currGray,keyPts,flow,status,error,\
+	cv::calcOpticalFlowPyrLK(currGray,nextGray,keyPts,flow,status,error,\
 		cv::Size(15,15),3,cv::TermCriteria(cv::TermCriteria::COUNT+\
 		cv::TermCriteria::EPS,30,0.01),0.5,0);
 
@@ -769,9 +790,9 @@ std::vector<cv::Point2f> keyPts, bool maxOrAvg){
 			flowX += ix;flowY += iy;resFlowX += fx;resFlowY += fy;
 		}
 		if(this->plotTracks){
-			cv::line(currentImg,cv::Point2f(ix,iy),cv::Point2f(fx,fy),\
+			cv::line(tmp1,cv::Point2f(ix,iy),cv::Point2f(fx,fy),\
 				cv::Scalar(0,0,255),1,8,0);
-			cv::circle(currentImg,cv::Point2f(fx,fy),2,cv::Scalar(0,200,0),1,8,0);
+			cv::circle(tmp1,cv::Point2f(fx,fy),2,cv::Scalar(0,200,0),1,8,0);
 		}
 	}
 	//	IF WE WANT THE AVERAGE OPTICAL FLOW
@@ -781,25 +802,28 @@ std::vector<cv::Point2f> keyPts, bool maxOrAvg){
 	}
 
 	if(this->plotTracks){
-		cv::line(currentImg,cv::Point2f(flowX,flowY),cv::Point2f(resFlowX,resFlowY),\
+		cv::line(tmp1,cv::Point2f(flowX,flowY),cv::Point2f(resFlowX,resFlowY),\
 			cv::Scalar(255,0,0),1,8,0);
-		cv::circle(currentImg,cv::Point2f(resFlowX,resFlowY),2,cv::Scalar(0,200,0),\
+		cv::circle(tmp1,cv::Point2f(resFlowX,resFlowY),2,cv::Scalar(0,200,0),\
 			1,8,0);
-		this->showZoomedImage(currentImg, "optical");
+		cv::imshow("optical",tmp1);
+		cv::waitKey(0);
 	}
 
 	// DIRECTION OF THE AVERAGE FLOW
 	direction = std::atan2(resFlowY - flowY,resFlowX - flowX);
 	std::cout<<"flow direction: "<<direction*180/M_PI<<std::endl;
 	currGray.release();
-	prevGray.release();
+	nextGray.release();
+	tmp1.release();
+	tmp2.release();
 	return direction;
 }
 //==============================================================================
 /** Compute the features from the SIFT descriptors by doing vector quantization.
  */
 cv::Mat featureDetector::getSIFT(cv::Mat feature,std::vector<cv::Point2f> templ,
-std::vector<cv::Point2f> &indices){
+std::vector<cv::Point2f> &indices, cv::Rect roi, cv::Mat test){
 	// KEEP ONLY THE SIFT FEATURES THAT ARE WITHIN THE TEMPLATE
 	cv::Mat tmp = cv::Mat::zeros(cv::Size(feature.cols-2,feature.rows),\
 					cv::DataType<double>::type);
@@ -808,10 +832,12 @@ std::vector<cv::Point2f> &indices){
 		double ptX = feature.at<double>(y,feature.cols-2);
 		double ptY = feature.at<double>(y,feature.cols-1);
 		if(this->isInTemplate(ptX, ptY, templ)){
-			for(int x=0; x<feature.cols-2; x++){
-				tmp.at<double>(counter,x) = feature.at<double>(y,x);
-			}
-			indices.push_back(cv::Point2f(ptX,ptY));
+			cv::Mat dummy1 = tmp.row(counter);
+			cv::Mat dummy2 = feature.colRange(0,feature.cols-2);
+			dummy2.copyTo(dummy1);
+			dummy1.release();
+			dummy2.release();
+			indices.push_back(cv::Point2f(ptX-roi.x,ptY-roi.y));
 			counter++;
 		}
 	}
@@ -820,10 +846,11 @@ std::vector<cv::Point2f> &indices){
 	cv::Mat preFeature;
 	(tmp.rowRange(0,counter)).copyTo(preFeature);
 	tmp.release();
+	preFeature.convertTo(preFeature,cv::DataType<double>::type);
 
 	// ASSUME THAT THERE IS ALREADY A SIFT DICTIONARY AVAILABLE
 	if(this->dictionarySIFT.empty()){
-		binFile2mat(this->dictionarySIFT, this->dictFileName);
+		binFile2mat(this->dictionarySIFT, const_cast<char*>(this->dictFileName.c_str()));
 	}
 
 	// COMPUTE THE DISTANCES FROM EACH NEW FEATURE TO THE DICTIONARY ONES
@@ -851,15 +878,25 @@ std::vector<cv::Point2f> &indices){
 	// CREATE A HISTOGRAM(COUNT TO WHICH DICT FEATURE WAS ASSIGNED EACH NEW ONE)
 	cv::Mat sift = cv::Mat::zeros(cv::Size(this->dictionarySIFT.rows+2, 1),\
 					cv::DataType<double>::type);
+	std::cout<<"Size(SIFT): ["<<sift.cols<<","<<sift.rows<<"]"<<std::endl;
 	for(int i=0; i<minLabel.cols; i++){
 		int which = minLabel.at<double>(0,i);
 		sift.at<double>(0,which) += 1.0;
+		std::cout<<sift.at<double>(0,which)<<" ";
 	}
+	std::cout<<std::endl;
 
 	// NORMALIZE THE HOSTOGRAM
 	cv::Scalar scalar = cv::sum(sift);
 	sift /= static_cast<double>(scalar[0]);
 
+	if(this->plotTracks && !test.empty()){
+		for(std::size_t l=0; l<indices.size(); l++){
+			cv::circle(test,indices[l],3,cv::Scalar(0,0,255));
+		}
+		cv::imshow("SIFT",test);
+		cv::waitKey(0);
+	}
 	preFeature.release();
 	distances.release();
 	minDists.release();
@@ -1483,7 +1520,6 @@ cv::Mat featureDetector::extractSURF(cv::Mat image){
 		for(int j=0; j<aSURF.descriptorSize();j++){
 			surfs.at<double>(i,j) = kD[i].descr[j];
 		}
-
 	}
 
 	// PLOT THE KEYPOINTS TO SEE THEM
@@ -1586,6 +1622,15 @@ cv::Mat featureDetector::extractSIFT(cv::Mat image, std::vector<cv::Point2f> tem
 			}
 		}
 		aSIFT(gray, cv::Mat(), goodKP, sift, true);
+		if(this->plotTracks){
+			cv::Mat toSee(this->current->img);
+			for(std::size_t i=0; i<goodKP.size(); i++){
+				cv::circle(toSee,goodKP[i].pt,3,cv::Scalar(0,0,255));
+			}
+			cv::imshow("SIFT_DICT", toSee);
+			cv::waitKey(0);
+			toSee.release();
+		}
 
 	// IF WE ONLY WANT TO STORE THE SIFT FEATURE WE NEED TO ADD THE x-S AND y-S
 	}else{
@@ -1598,6 +1643,16 @@ cv::Mat featureDetector::extractSIFT(cv::Mat image, std::vector<cv::Point2f> tem
 		dummy2.copyTo(dummy1);
 		dummy1.release();
 		dummy2.release();
+		// PLOT THE KEYPOINTS TO SEE THEM
+		if(this->plotTracks){
+			cv::Mat toSee(this->current->img);
+			for(std::size_t i=0; i<keypoints.size();i++){
+				cv::circle(toSee, keypoints[i].pt,3,cv::Scalar(0,0,255));
+			}
+			cv::imshow("SIFT", toSee);
+			cv::waitKey(0);
+			toSee.release();
+		}
 	}
 
 	// NORMALIZE THE FEATURE
@@ -1614,26 +1669,14 @@ cv::Mat featureDetector::extractSIFT(cv::Mat image, std::vector<cv::Point2f> tem
 			sift.at<double>(i,aSIFT.descriptorSize()+1) = keypoints[i].pt.y;
 		}
 	}
-
-	// PLOT THE KEYPOINTS TO SEE THEM
-	if(this->plotTracks){
-		cv::Mat toSee(this->current->img);
-		for(std::size_t i=0; i<keypoints.size();i++){
-			cv::circle(toSee, cv::Point2f(keypoints[i].pt.x,keypoints[i].pt.y),\
-				3,cv::Scalar(0,0,255));
-		}
-		cv::imshow("SIFT", toSee);
-		cv::waitKey(0);
-		toSee.release();
-	}
 	gray.release();
 	return sift;
 }
 //==============================================================================
-/*
+
 int main(int argc, char **argv){
 	featureDetector feature(argc,argv,true,false);
-	feature.setFeatureType(featureDetector::GABOR);
+	feature.setFeatureType(featureDetector::EDGES);
 	feature.run();
 }
-*/
+

@@ -71,16 +71,15 @@ class featureDetector:public Tracker{
 				if(datasetPath[datasetPath.size()-1]!='/'){
 					datasetPath += '/';
 				}
-				this->plotTracks     = true;
+				this->plotTracks     = false;
 				this->featureType    = EDGES;
 				this->lastIndex      = 0;
 				this->producer       = NULL;
-				this->dictFileName   = const_cast<char*>((datasetPath+"SIFT_"+\
-											imgString+".bin").c_str());
+				this->dictFileName   = datasetPath+"SIFT_"+imgString+".bin";
 				this->noMeans        = 500;
 				this->meanSize       = 128;
 				this->colorspaceCode = CV_BGR2Lab;
-				this->featurePart    = 't';
+				this->featurePart    = ' ';
 				this->tracking 	      = 1;
 				this->printValues    = true;
 				this->featureFile    = datasetPath+"features/";
@@ -111,8 +110,8 @@ class featureDetector:public Tracker{
 			if(!this->targetAnno.empty()){
 				this->targetAnno.clear();
 			}
-			if(!this->entirePrev.empty()){
-				this->entirePrev.release();
+			if(!this->entireNext.empty()){
+				this->entireNext.release();
 			}
 		}
 
@@ -155,16 +154,16 @@ class featureDetector:public Tracker{
 		/** SURF descriptors (Speeded Up Robust Features).
 		 */
 		cv::Mat getSURF(cv::Mat feature, std::vector<cv::Point2f> templ,\
-			std::vector<cv::Point2f> &indices);
+			std::vector<cv::Point2f> &indices, cv::Rect roi, cv::Mat test=cv::Mat());
 		/** Compute the features from the SIFT descriptors by doing vector
 		 * quantization.
 		 */
 		cv::Mat getSIFT(cv::Mat feature,std::vector<cv::Point2f> templ,\
-			std::vector<cv::Point2f> &indices);
+			std::vector<cv::Point2f> &indices, cv::Rect roi, cv::Mat test=cv::Mat());
 		/** Creates a "histogram" of interest points + number of blobs.
 		 */
-		cv::Mat getPointsGrid(cv::Mat feature, std::vector<cv::Point2f> templ,\
-			std::deque<double> templExtremes);
+		cv::Mat getPointsGrid(cv::Mat feature,cv::Rect roi,std::vector<cv::Point2f>\
+			templ,std::deque<double> templExtremes, cv::Mat test=cv::Mat());
 		/** Just displaying an image a bit larger to visualize it better.
 		 */
 		void showZoomedImage(cv::Mat image, std::string title="zoomed");
@@ -214,7 +213,7 @@ class featureDetector:public Tracker{
 			cv::Mat toRotate, cv::Point2f &borders);
 		/** Set the name of the file where the SIFT dictionary is stored.
 		 */
-		void setSIFTDictionary(char* fileSIFT);
+		void setSIFTDictionary(std::string fileSIFT);
 		/** Rotate the points corresponding wrt to the camera location.
 		 */
 		std::vector<cv::Point2f> rotatePoints2Zero(cv::Point2f feetLocation,\
@@ -235,8 +234,9 @@ class featureDetector:public Tracker{
 		double motionVector(cv::Point2f center);
 		/** Compute the dominant direction of the SIFT or SURF features.
 		 */
-		double opticalFlowFeature(cv::Mat keys, cv::Mat currentImg,\
-			std::vector<cv::Point2f> keyPts, bool maxOrAvg = false);
+		double opticalFlowFeature(cv::Mat keys,cv::Mat currentImg,cv::Mat nextImg,\
+			std::vector<cv::Point2f> keyPts,cv::Rect roi,cv::Point2f head,\
+			cv::Point2f center,bool maxOrAvg = false);
 		/** Keeps only the largest blob from the thresholded image.
 		 */
 		void keepLargestBlob(cv::Mat &thresh, cv::Point2f center,\
@@ -244,7 +244,8 @@ class featureDetector:public Tracker{
 		/** Rotate the keypoints wrt to the camera location.
 		 */
 		void rotateKeypts2Zero(cv::Point2f feetLocation, cv::Point2f\
-			headLocation, cv::Mat &keys, cv::Point2f rotCenter,cv::Point2f rotBorders);
+			headLocation, cv::Mat &keys, cv::Point2f rotCenter,\
+			cv::Point2f rotBorders);
 		/** Creates a data matrix for each image and stores it locally.
 		 */
 		void extractFeatures();
@@ -298,7 +299,7 @@ class featureDetector:public Tracker{
 		/** @var dictionarySIFT
 		 * The SIFT dictionary used for vector quantization.
 		 */
-		char* dictFileName;
+		std::string dictFileName;
 		/** @var noMeans
 		 * The number of means used for kmeans.
 		 */
@@ -319,10 +320,10 @@ class featureDetector:public Tracker{
 		 * If the data is sequential motion information can be used.
 		 */
 		unsigned int tracking;
-		/** @var entirePrev
+		/** @var entireNext
 		 * The the previous image.
 		 */
-		cv::Mat entirePrev;
+		cv::Mat entireNext;
 		/** @var printValues
 		 * To print some feature values or not.
 		 */

@@ -31,7 +31,7 @@ class classifyImages {
 
 		/** Build dictionary for vector quantization.
 		 */
-		void buildDictionary();
+		void buildDictionary(int colorSp = CV_BGR2Lab);
 
 		/** Creates the training data (according to the options), the labels and
 		 * trains the a \c GaussianProcess on the data.
@@ -48,7 +48,7 @@ class classifyImages {
 		/** Initialize the options for the Gaussian Process regression.
 		 */
 		void init(double theNoise, double theLength, gaussianProcess::kernelFunction\
-			theKFunction, featureDetector::FEATURE theFeature, int colorSp = CV_BGR2Lab,\
+			theKFunction, featureDetector::FEATURE theFeature,\
 			bool fromFolder=true, bool store=true);
 
 		/** Evaluate one prediction versus its target.
@@ -79,6 +79,10 @@ class classifyImages {
 		 */
 		double optimizePrediction(gaussianProcess::prediction predictionsSin,\
 			gaussianProcess::prediction predictionsCos);
+		/** Reset the features object when the training and testing might have different
+		 * calibration, background models...
+		 */
+		void resetFeatures(std::string dir, std::string imStr, int colorSp);
 		//======================================================================
 	protected:
 		/** @var features
@@ -190,6 +194,23 @@ class classifyImages {
 		 * What should the class be used for.
 		 */
 		classifyImages::USES what;
+
+		/** @var testDir
+		 * Directory in which to look for the test images & other files.
+		 */
+		std::string testDir;
+		/** @var testImgString
+		 * The letters in the image names for the test data.
+		 */
+		std::string testImgString;
+		/** @var trainDir
+		 * Directory in which to look for the train images & other files.
+		 */
+		std::string trainDir;
+		/** @var trainImgString
+		 * The letters in the image names for the train data.
+		 */
+		std::string trainImgString;
 };
 
 #endif /* CLASSIFYIMAGES_H_ */
