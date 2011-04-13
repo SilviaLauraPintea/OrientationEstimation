@@ -208,7 +208,17 @@ annotationsHandle::POSE what){
 		this->features->init(this->testFolder, this->annotationsTest,this->readFromFolder);
 		this->features->run(this->readFromFolder);
 		this->features->data.copyTo(this->testData);
-		this->features->targets.copyTo(this->testTargets);
+
+		// GET ONLY THE ANGLES YOU NEED
+		if(what == annotationsHandle::LONGITUDE){
+			cv::Mat dum = this->features->targets.colRange(0,2);
+			dum.copyTo(this->testTargets);
+			dum.release();
+		}else if(what == annotationsHandle::LATITUDE){
+			cv::Mat dum = this->features->targets.colRange(2,4);
+			dum.copyTo(this->testTargets);
+			dum.release();
+		}
 		this->testData.convertTo(this->testData, cv::DataType<double>::type);
 		this->testTargets.convertTo(this->testTargets, cv::DataType<double>::type);
 		range1Mat(this->testData);
@@ -225,8 +235,19 @@ annotationsHandle::POSE what){
 		// WE JUST LOAD THE TEST DATA AND TEST
 		binFile2mat(this->testData,const_cast<char*>((this->modelName+\
 			"Data.bin").c_str()));
-		binFile2mat(this->testTargets,const_cast<char*>((this->modelName+\
+		cv::Mat tmp;
+		binFile2mat(tmp,const_cast<char*>((this->modelName+\
 			"Labels.bin").c_str()));
+		if(what == annotationsHandle::LONGITUDE){
+			cv::Mat dum = tmp.colRange(0,2);
+			dum.copyTo(this->testTargets);
+			dum.release();
+		}else if(what == annotationsHandle::LATITUDE){
+			cv::Mat dum = tmp.colRange(2,4);
+			dum.copyTo(this->testTargets);
+			dum.release();
+		}
+		tmp.release();
 	}
 
 	// FOR EACH ROW IN THE TEST MATRIX PREDICT
@@ -414,6 +435,7 @@ featureDetector::FEATURE theFeature,int colorSp, bool fromFolder,bool store){
 
 		//______________________________________________________________________
 	  	//LATITUDE TRAINING AND PREDICTING
+		/*
 		std::cout<<"Latitude >>> "<<i<<"____________________________________"<<\
 			"_____________________________________________________"<<std::endl;
 		this->modelName += ("trainLat/"+int2string(i));
@@ -430,6 +452,7 @@ featureDetector::FEATURE theFeature,int colorSp, bool fromFolder,bool store){
 		finalErrorLat += errorLat;
 		finalNormErrorLat += normErrorLat;
 		finalMeanDiffLat += meanDiffLat;
+		*/
 	}
 	finalErrorLong /= static_cast<double>(k);
 	finalNormErrorLong /= static_cast<double>(k);
@@ -594,7 +617,7 @@ int main(int argc, char **argv){
  	classi.runTest(1e-3,100.0,&gaussianProcess::sqexp,\
  		featureDetector::SIFT,CV_BGR2Lab,true,true);
 */
-
+/*
 	// evaluate
 	classifyImages classi(argc, argv, classifyImages::EVALUATE);
   	classi.runCrossValidation(5,1e-3,100.0,&gaussianProcess::sqexp,\
@@ -607,12 +630,12 @@ int main(int argc, char **argv){
  		featureDetector::SURF,CV_BGR2Lab,false,true);
   	classi.runCrossValidation(5,1e-3,100.0,&gaussianProcess::sqexp,\
  		featureDetector::SIFT,CV_BGR2Lab,false,true);
+*/
 
-/*
 	// BUILD THE SIFT DICTIONARY
   	classifyImages classi(argc, argv, classifyImages::BUILD_DICTIONARY);
 	classi.buildDictionary(CV_BGR2Lab);
-*/
+
 }
 
 
