@@ -48,6 +48,8 @@ classifyImages::classifyImages(int argc, char **argv, classifyImages::USES use){
 			}
 			this->testImgString = std::string(argv[4]);
 		}
+
+		std::vector<std::string> files2check;
 		switch(this->what){
 			case(classifyImages::TEST):
 				if(argc != 5){
@@ -61,18 +63,33 @@ classifyImages::classifyImages(int argc, char **argv, classifyImages::USES use){
 				this->annotationsTrain = this->trainDir+"annotated_train.txt";
 				this->testFolder       = this->testDir+"annotated_test/";
 				this->annotationsTest  = this->testDir+"annotated_test.txt";
+				files2check.push_back(this->trainFolder);
+				files2check.push_back(this->annotationsTrain);
+				files2check.push_back(this->testFolder);
+				files2check.push_back(this->annotationsTest);
 				break;
 			case(classifyImages::EVALUATE):
 				// IF WE WANT TO EVALUATE WITH CORSSVALIDATION
 				this->trainFolder      = this->trainDir+"annotated_train/";
 				this->annotationsTrain = this->trainDir+"annotated_train.txt";
+				files2check.push_back(this->trainFolder);
+				files2check.push_back(this->annotationsTrain);
 				break;
 			case(classifyImages::BUILD_DICTIONARY):
 				// IF WE WANT TO BUILD SIFT DICTIONARY
 				this->trainFolder = this->trainDir+"annotated_SIFT/";
+				files2check.push_back(this->trainFolder);
 				break;
 		}
+		for(std::size_t i=0; i<files2check.size();i++){
+			if(!file_exists(files2check[i].c_str())){
+				std::cerr<<"File/folder not found: "<<files2check[i]<<std::endl;
+				exit(1);
+			}
+		}
+
 		this->modelName = this->trainDir+"models/";
+		file_exists(this->modelName.c_str(), true);
 	}
 }
 //==============================================================================
@@ -109,18 +126,23 @@ bool fromFolder, bool store){
 	switch(this->feature){
 		case(featureDetector::IPOINTS):
 			this->modelName = this->trainDir+"models/"+"IPOINTS/";
+			file_exists(this->modelName.c_str(), true);
 			break;
 		case(featureDetector::EDGES):
 			this->modelName = this->trainDir+"models/"+"EDGES/";
+			file_exists(this->modelName.c_str(), true);
 			break;
 		case(featureDetector::SURF):
 			this->modelName = this->trainDir+"models/"+"SURF/";
+			file_exists(this->modelName.c_str(), true);
 			break;
 		case(featureDetector::GABOR):
 			this->modelName = this->trainDir+"models/"+"GABOR/";
+			file_exists(this->modelName.c_str(), true);
 			break;
 		case(featureDetector::SIFT):
 			this->modelName = this->trainDir+"models/"+"SIFT/";
+			file_exists(this->modelName.c_str(), true);
 			break;
 	}
 }
@@ -142,23 +164,11 @@ void classifyImages::trainGP(annotationsHandle::POSE what){
 
 		this->trainData.convertTo(this->trainData, cv::DataType<double>::type);
 		this->trainTargets.convertTo(this->trainTargets, cv::DataType<double>::type);
-
-		// IF WE WANT TO SEE SOME VALUES/IMAGES
-//--------------REMOVE----------------------------------------------------
-unsigned counter = 0;
-for(int i=0; i<this->trainData.cols,counter<10;i++){
-	if(this->trainData.at<double>(0,i)!=0){
-		std::cout<<this->trainData.at<double>(0,i)<<" ";
-		counter++;
-	}
-}
-std::cout<<"..."<<std::endl;
-//--------------REMOVE----------------------------------------------------
-
 		range1Mat(this->trainData);
 
 		//IF WE WANT TO STORE DATA, THEN WE STORE IT
 		if(!this->modelName.empty()){
+			file_exists(this->modelName.c_str(), true);
 			mat2BinFile(this->trainData,const_cast<char*>((this->modelName+\
 				"Data.bin").c_str()),false);
 			mat2BinFile(this->trainTargets,const_cast<char*>((this->modelName+\
@@ -205,6 +215,7 @@ annotationsHandle::POSE what){
 
 		//IF WE WANT TO STORE DATA, THEN WE STORE IT
 		if(!this->modelName.empty()){
+			file_exists(this->modelName.c_str(), true);
 			mat2BinFile(this->testData,const_cast<char*>((this->modelName+\
 				"Data.bin").c_str()),false);
 			mat2BinFile(this->testTargets,const_cast<char*>((this->modelName+\
@@ -248,8 +259,8 @@ double &error,double &normError,double &meanDiff,annotationsHandle::POSE what){
 		// GET THE PREDICTED ANGLE
 		double prediAngle = this->optimizePrediction(predictionsCos[y],\
 							predictionsSin[y]);
-		std::cout<<"Target: "<<(targetAngle*180.0/M_PI)<<\
-			" VS "<<(prediAngle*180.0/M_PI)<<std::endl;
+		std::cout<<"Target: "<<targetAngle<<"("<<(targetAngle*180.0/M_PI)<<\
+			") VS "<<prediAngle<<"("<<(prediAngle*180.0/M_PI)<<")"<<std::endl;
 		double absDiff = std::abs(targetAngle-prediAngle);
 		if (absDiff > M_PI)
 			absDiff = 2*M_PI - absDiff;
@@ -376,12 +387,16 @@ featureDetector::FEATURE theFeature,int colorSp, bool fromFolder,bool store){
 	this->resetFeatures(this->trainDir, this->trainImgString,colorSp);
 	this->init(theNoise,theLength,theKFunction,theFeature,fromFolder,store);
 	for(unsigned i=0; i<k; i++){
+		std::cout<<"Round "<<i<<"___________________________________________"<<\
+			"_____________________________________________________"<<std::endl;
 		// SPLIT TRAINING AND TESTING ACCORDING TO THE CURRENT FOLD
 		std::deque<gaussianProcess::prediction> predictionsSin;
 		std::deque<gaussianProcess::prediction> predictionsCos;
 		this->crossValidation(k,i);
 		//______________________________________________________________________
 	  	//LONGITUDE TRAINING AND PREDICTING
+		std::cout<<"Longitude >>> "<<i<<"___________________________________"<<\
+			"_____________________________________________________"<<std::endl;
 		this->modelName += ("trainLong/"+int2string(i));
 		this->trainGP(annotationsHandle::LONGITUDE);
 		this->modelName = this->modelName.substr(0,this->modelName.size()-11);
@@ -399,6 +414,8 @@ featureDetector::FEATURE theFeature,int colorSp, bool fromFolder,bool store){
 
 		//______________________________________________________________________
 	  	//LATITUDE TRAINING AND PREDICTING
+		std::cout<<"Latitude >>> "<<i<<"____________________________________"<<\
+			"_____________________________________________________"<<std::endl;
 		this->modelName += ("trainLat/"+int2string(i));
 		this->trainGP(annotationsHandle::LATITUDE);
 		this->modelName = this->modelName.substr(0,this->modelName.size()-10);
@@ -413,9 +430,6 @@ featureDetector::FEATURE theFeature,int colorSp, bool fromFolder,bool store){
 		finalErrorLat += errorLat;
 		finalNormErrorLat += normErrorLat;
 		finalMeanDiffLat += meanDiffLat;
-		std::cout<<"Round "<<i<<"___________________________________________"<<\
-			"_____________________________________________________"<<std::endl;
-		break;
 	}
 	finalErrorLong /= static_cast<double>(k);
 	finalNormErrorLong /= static_cast<double>(k);
@@ -461,9 +475,14 @@ void classifyImages::crossValidation(unsigned k, unsigned fold){
 			exit(1);
 		}
 	}
-	unsigned pos     = this->trainFolder.find_first_of("/\\");
-	std::string root = this->trainFolder.substr(0,pos+1);
-	this->trainFolder      = root+"trash/targets.txt";root+
+
+
+	// DEFINE THE FOLDERS WERE THE TEMPORARY FILES NEED TO BE STORED
+	unsigned pos       = this->trainFolder.find_first_of("/\\");
+	std::string root   = this->trainFolder.substr(0,pos+1);
+	std::string folder = root+"trash/";
+	file_exists(folder.c_str(), true);
+	this->trainFolder      = root+"trash/targets.txt";
 	this->trainFolder      = root+"trash/targets.txt";
 	this->testFolder       = root+"trash/ttargets.txt";
 	this->annotationsTrain = root+"trash/annoTargets.txt";
@@ -532,6 +551,8 @@ int colorSp, bool fromFolder, bool store){
 	this->init(theNoise,theLength,theKFunction,theFeature,fromFolder,store);
 
   	// LONGITUDE TRAINING AND PREDICTING
+	std::cout<<"Longitude >>> ______________________________________________"<<\
+		"_____________________________________________________"<<std::endl;
 	// BEFORE TRAINING CAMERA CALIBRATION AND OTHER SETTINGS MIGHT NEED TO BE RESET
 	this->resetFeatures(this->trainDir,this->trainImgString,colorSp);
 	this->modelName += ("modelLong/");
@@ -548,6 +569,8 @@ int colorSp, bool fromFolder, bool store){
 			meanDiffLong,annotationsHandle::LONGITUDE);
 	//__________________________________________________________________________
   	// LATITUDE TRAINING AND PREDICTING
+	std::cout<<"Latitude >>> _______________________________________________"<<\
+		"_____________________________________________________"<<std::endl;
 	// BEFORE TRAINING CAMERA CALIBRATION AND OTHER SETTINGS MIGHT NEED TO BE RESET
 	this->resetFeatures(this->trainDir,this->trainImgString,colorSp);
 	this->modelName += ("modelLat/");
@@ -574,18 +597,17 @@ int main(int argc, char **argv){
 
 	// evaluate
 	classifyImages classi(argc, argv, classifyImages::EVALUATE);
-//  	classi.runCrossValidation(5,1e-3,100.0,&gaussianProcess::sqexp,\
- 		featureDetector::EDGES,CV_BGR2Lab,false,true);
   	classi.runCrossValidation(5,1e-3,100.0,&gaussianProcess::sqexp,\
  		featureDetector::IPOINTS,CV_BGR2Lab,false,true);
-/*
+  	classi.runCrossValidation(5,1e-3,100.0,&gaussianProcess::sqexp,\
+ 		featureDetector::EDGES,CV_BGR2Lab,false,true);
   	classi.runCrossValidation(5,1e-3,100.0,&gaussianProcess::sqexp,\
  		featureDetector::GABOR,CV_BGR2Lab,false,true);
   	classi.runCrossValidation(5,1e-3,100.0,&gaussianProcess::sqexp,\
  		featureDetector::SURF,CV_BGR2Lab,false,true);
   	classi.runCrossValidation(5,1e-3,100.0,&gaussianProcess::sqexp,\
  		featureDetector::SIFT,CV_BGR2Lab,false,true);
-*/
+
 /*
 	// BUILD THE SIFT DICTIONARY
   	classifyImages classi(argc, argv, classifyImages::BUILD_DICTIONARY);

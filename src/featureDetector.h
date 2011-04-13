@@ -72,6 +72,7 @@ class featureDetector:public Tracker{
 					datasetPath += '/';
 				}
 				this->plotTracks     = false;
+				this->printValues    = false;
 				this->featureType    = EDGES;
 				this->lastIndex      = 0;
 				this->producer       = NULL;
@@ -81,7 +82,6 @@ class featureDetector:public Tracker{
 				this->colorspaceCode = CV_BGR2Lab;
 				this->featurePart    = ' ';
 				this->tracking 	      = 1;
-				this->printValues    = true;
 				this->featureFile    = datasetPath+"features/";
 				this->onlyExtract    = extract;
 			}

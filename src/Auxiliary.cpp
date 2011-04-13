@@ -149,6 +149,10 @@ void mat2BinFile(cv::Mat matrix, char* fileName, bool append){
 /* Reads a 2D-matrix from a binary file (first the dimension of the matrix).
  */
 void binFile2mat(cv::Mat &matrix, char* fileName){
+	if(!file_exists(fileName)){
+		std::cerr<<"Error opening the file: "<<fileName<<std::endl;
+		exit(1);
+	}
 	ifstream mxFile(fileName, ios::in | ios::binary);
 
 	if(mxFile.is_open()){

@@ -767,34 +767,10 @@ void featureDetector::extractDataRow(std::deque<unsigned> existing, IplImage *bg
 		dataRow.release();
 	}
 
-std::cout<<"DATA: ("<<this->data.cols<<","<<this->data.rows<<")"<<std::endl;
-if(!this->data.empty()){
-	unsigned counter = 0;
-	for(int x=0; x<this->data.cols,counter<10; x++){
-		if(this->data.at<double>(this->data.rows-1,x)!=0){
-			std::cout<<this->data.at<double>(this->data.rows-1,x)<<" ";
-			counter++;
-		}
-	}
-	std::cout<<std::endl;
-}
-
 	// FIX THE LABELS TO CORRESPOND TO THE PEOPLE DETECTED IN THE IMAGE
 	if(!this->targetAnno.empty()){
 		this->fixLabels(allLocations);
 	}
-
-if(!this->data.empty()){
-	std::cout<<"DATA: ("<<this->data.cols<<","<<this->data.rows<<")"<<std::endl;
-	unsigned counter = 0;
-	for(int x=0; x<this->data.cols,counter<10; x++){
-		if(this->data.at<double>(this->data.rows-1,x)!=0){
-			std::cout<<this->data.at<double>(this->data.rows-1,x)<<" ";
-			counter++;
-		}
-	}
-	std::cout<<std::endl;
-}
 }
 //==============================================================================
 /** Compute the dominant direction of the SIFT or SURF features.
@@ -994,8 +970,8 @@ std::vector<cv::Point2f> featureDetector::rotatePoints2Zero(cv::Point2f \
 headLocation, cv::Point2f feetLocation, std::vector<cv::Point2f> pts,\
 cv::Point2f rotBorders, cv::Point2f rotCenter){
 	// GET THE ANGLE WITH WHICH WE NEED TO ROTATE
-	double rotAngle = std::atan2((feetLocation.y-headLocation.y),\
-						(feetLocation.x-headLocation.x));
+	double rotAngle = std::atan2((headLocation.y-feetLocation.y),\
+						(headLocation.x-feetLocation.x));
 	rotAngle = (rotAngle+M_PI/2.0);
 	if(rotAngle>2.0*M_PI){
 		rotAngle -= 2.0*M_PI;
@@ -1035,8 +1011,8 @@ cv::Point2f rotBorders, cv::Point2f rotCenter){
 void featureDetector::rotateKeypts2Zero(cv::Point2f headLocation, cv::Point2f \
 feetLocation, cv::Mat &keys, cv::Point2f rotCenter, cv::Point2f rotBorders){
 	// GET THE ANGLE WITH WHICH WE NEED TO ROTATE
-	double rotAngle = std::atan2((feetLocation.y-headLocation.y),\
-						(feetLocation.x-headLocation.x));
+	double rotAngle = std::atan2((headLocation.y-feetLocation.y),\
+						(headLocation.x-feetLocation.x));
 	rotAngle = (rotAngle+M_PI/2.0);
 	if(rotAngle>2.0*M_PI){
 		rotAngle -= 2.0*M_PI;
@@ -1074,8 +1050,8 @@ feetLocation, cv::Mat &keys, cv::Point2f rotCenter, cv::Point2f rotBorders){
 cv::Mat featureDetector::rotate2Zero(cv::Point2f headLocation,\
 cv::Point2f feetLocation, cv::Mat toRotate, cv::Point2f &borders){
 	// GET THE ANGLE TO ROTATE WITH
-	double rotAngle = std::atan2((feetLocation.y-headLocation.y),\
-						(feetLocation.x-headLocation.x));
+	double rotAngle = std::atan2((headLocation.y-feetLocation.y),\
+						(headLocation.x-feetLocation.x));
 	rotAngle = (rotAngle+M_PI/2.0);
 	if(rotAngle>2.0*M_PI){
 		rotAngle -= 2.0*M_PI;
@@ -1109,8 +1085,8 @@ cv::Point2f feetLocation, cv::Mat toRotate, cv::Point2f &borders){
  */
 double featureDetector::fixAngle(cv::Point2f headLocation, cv::Point2f feetLocation,\
 double angle){
-	double cameraAngle = std::atan2((feetLocation.y-headLocation.y),\
-						(feetLocation.x-headLocation.x));
+	double cameraAngle = std::atan2((headLocation.y-feetLocation.y),\
+						(headLocation.x-feetLocation.x));
 	angle = angle-cameraAngle;
 	if(angle >= 2.0*M_PI){
 		angle -= 2.0*M_PI;
@@ -1458,7 +1434,6 @@ void featureDetector::extractFeatures(){
 	if(this->featureFile[this->featureFile.size()-1]!='/'){
 		this->featureFile = this->featureFile + '/';
 	}
-
 	std::cout<<"In extract features"<<std::endl;
 
 	// FOR EACH LOCATION IN THE IMAGE EXTRACT FEATURES AND STORE
@@ -1467,22 +1442,27 @@ void featureDetector::extractFeatures(){
 	switch(this->featureType){
 		case (featureDetector::IPOINTS):
 			toWrite += "IPOINTS/";
+			file_exists(toWrite.c_str(), true);
 			feature = this->extractPointsGrid(image);
 			break;
 		case featureDetector::EDGES:
 			toWrite += "EDGES/";
+			file_exists(toWrite.c_str(), true);
 			feature = this->extractEdges(image);
 			break;
 		case featureDetector::SURF:
 			toWrite += "SURF/";
+			file_exists(toWrite.c_str(), true);
 			feature = this->extractSURF(image);
 			break;
 		case featureDetector::GABOR:
 			toWrite += "GABOR/";
+			file_exists(toWrite.c_str(), true);
 			feature = this->extractGabor(image);
 			break;
 		case featureDetector::SIFT:
 			toWrite += "SIFT/";
+			file_exists(toWrite.c_str(), true);
 			feature = this->extractSIFT(image);
 			break;
 	}
