@@ -134,24 +134,27 @@ void classifyImages::trainGP(annotationsHandle::POSE what){
 		this->features->setFeatureType(this->feature);
 		this->features->init(this->trainFolder,this->annotationsTrain,this->readFromFolder);
 		this->features->run(this->readFromFolder);
-		this->trainData = cv::Mat::zeros(cv::Size(this->features->data[0].cols,\
-							this->features->data.size()),cv::DataType<double>::type);
-		this->trainTargets = cv::Mat::zeros(cv::Size(this->features->targets[0].cols,\
-							this->features->targets.size()),cv::DataType<double>::type);
+		this->features->data.copyTo(this->trainData);
+		this->features->targets.copyTo(this->trainTargets);
 
 		std::cout<<"SIZE: "<<this->trainData.cols<<" "<<this->trainData.rows<<std::endl;
 		std::cout<<"SIZE: "<<this->trainTargets.cols<<" "<<this->trainTargets.rows<<std::endl;
 
-		// CONVERT FROM VECTOR OF CV::MAT TO MAT
-		for(std::size_t i=0; i<this->features->data.size(); i++){
-			cv::Mat dummy1 = this->trainData.row(i);
-			this->features->data[i].copyTo(dummy1);
-
-			cv::Mat dummy2 = this->trainTargets.row(i);
-			this->features->targets[i].copyTo(dummy2);
-		}
 		this->trainData.convertTo(this->trainData, cv::DataType<double>::type);
 		this->trainTargets.convertTo(this->trainTargets, cv::DataType<double>::type);
+
+		// IF WE WANT TO SEE SOME VALUES/IMAGES
+//--------------REMOVE----------------------------------------------------
+unsigned counter = 0;
+for(int i=0; i<this->trainData.cols,counter<10;i++){
+	if(this->trainData.at<double>(0,i)!=0){
+		std::cout<<this->trainData.at<double>(0,i)<<" ";
+		counter++;
+	}
+}
+std::cout<<"..."<<std::endl;
+//--------------REMOVE----------------------------------------------------
+
 		range1Mat(this->trainData);
 
 		//IF WE WANT TO STORE DATA, THEN WE STORE IT
@@ -194,24 +197,8 @@ annotationsHandle::POSE what){
 		this->features->setFeatureType(this->feature);
 		this->features->init(this->testFolder, this->annotationsTest,this->readFromFolder);
 		this->features->run(this->readFromFolder);
-		this->testData = cv::Mat::zeros(cv::Size(this->features->data[0].cols,\
-						this->features->data.size()), cv::DataType<double>::type);
-		this->testTargets = cv::Mat::zeros(cv::Size(2,this->features->data.size()),\
-						cv::DataType<double>::type);
-
-		// CONVERT FROM VECTOR OF CV::MAT TO MAT
-		for(std::size_t i=0; i<this->features->data.size(); i++){
-			cv::Mat dummy1 = this->testData.row(i);
-			this->features->data[i].copyTo(dummy1);
-
-			cv::Mat dummy2;
-			dummy2 = this->testTargets.row(i);
-			if(what == annotationsHandle::LONGITUDE){
-				this->features->targets[i].colRange(0,2).copyTo(dummy2);
-			}else if(what == annotationsHandle::LATITUDE){
-				this->features->targets[i].colRange(2,4).copyTo(dummy2);
-			}
-		}
+		this->features->data.copyTo(this->testData);
+		this->features->targets.copyTo(this->testTargets);
 		this->testData.convertTo(this->testData, cv::DataType<double>::type);
 		this->testTargets.convertTo(this->testTargets, cv::DataType<double>::type);
 		range1Mat(this->testData);
@@ -250,9 +237,9 @@ annotationsHandle::POSE what){
  */
 void classifyImages::evaluate(std::deque<gaussianProcess::prediction>\
 predictionsSin, std::deque<gaussianProcess::prediction> predictionsCos,\
-double &error,double &normError, annotationsHandle::POSE what){
+double &error,double &normError,double &meanDiff,annotationsHandle::POSE what){
 	double normAccuracy = 0.0;
-	error = 0.0; normError = 0.0;
+	error = 0.0; normError = 0.0; meanDiff = 0.0;
 	for(int y=0; y<this->testTargets.rows; y++){
 		double targetAngle;
 		targetAngle = std::atan2(this->testTargets.at<double>(y,0),\
@@ -261,24 +248,25 @@ double &error,double &normError, annotationsHandle::POSE what){
 		// GET THE PREDICTED ANGLE
 		double prediAngle = this->optimizePrediction(predictionsCos[y],\
 							predictionsSin[y]);
-		std::cout<<"target: "<<(targetAngle*180.0/M_PI)<<\
+		std::cout<<"Target: "<<(targetAngle*180.0/M_PI)<<\
 			" VS "<<(prediAngle*180.0/M_PI)<<std::endl;
-
-		if(std::abs(targetAngle-prediAngle)>M_PI){
-			error += std::pow((2*M_PI-std::abs(targetAngle-prediAngle)),2);
-			normError += std::pow((2*M_PI-std::abs(targetAngle-prediAngle))/M_PI,2);
-		}else{
-			error += std::pow(std::abs(targetAngle-prediAngle),2);
-			normError += std::pow(std::abs(targetAngle-prediAngle)/M_PI,2);
-		}
+		double absDiff = std::abs(targetAngle-prediAngle);
+		if (absDiff > M_PI)
+			absDiff = 2*M_PI - absDiff;
+		std::cout<<"Difference: "<< absDiff <<std::endl;
+		error     += std::pow(absDiff,2);
+		normError += std::pow(absDiff/M_PI,2);
+		meanDiff  += absDiff;
 	}
-	error        = std::sqrt(error/this->testTargets.rows);
-	normError    = std::sqrt(normError/this->testTargets.rows);
+	error        = std::sqrt(error)/this->testTargets.rows;
+	normError    = std::sqrt(normError)/this->testTargets.rows;
+	meanDiff     = meanDiff/this->testTargets.rows;
 	normAccuracy = 1-normError;
 
-	std::cout<<"RMS-error normalized:"<<normError<<" RMS-accuracy normalized:"<<\
-		normAccuracy<<std::endl;
+	std::cout<<"RMS-error normalized: "<<normError<<std::endl;
+	std::cout<<"RMS-accuracy normalized: "<<normAccuracy<<std::endl;
 	std::cout<<"RMS-error: "<<error<<std::endl;
+	std::cout<<"Avg-Degree-Difference: "<<meanDiff<<std::endl;
 }
 //==============================================================================
 /** Try to optimize the prediction of the angle considering the variance of sin
@@ -286,6 +274,11 @@ double &error,double &normError, annotationsHandle::POSE what){
  */
 double classifyImages::optimizePrediction(gaussianProcess::prediction \
 predictionsSin, gaussianProcess::prediction predictionsCos){
+	double x     = predictionsSin.mean[0];
+	double y     = predictionsCos.mean[0];
+	return std::atan2(x,y);
+
+/*
 	double betaS = 1.0/(predictionsSin.variance[0]);
 	double betaC = 1.0/(predictionsCos.variance[0]);
 	double x     = predictionsSin.mean[0];
@@ -296,6 +289,7 @@ predictionsSin, gaussianProcess::prediction predictionsCos){
 	}else{
 		return std::atan2(x,y);
 	}
+*/
 	/*
 	double closeTo;
 	closeTo = std::atan2(predictionsSin.mean[0],predictionsCos.mean[0]);
@@ -346,20 +340,8 @@ void classifyImages::buildDictionary(int colorSp){
 	this->features->setFeatureType(featureDetector::SIFT_DICT);
 	this->features->init(this->trainFolder,std::string(),this->readFromFolder);
 	this->features->run(this->readFromFolder);
-	int rows = 0;
-	for(std::size_t i=0; i<this->features->data.size(); i++){
-		rows += this->features->data[i].rows;
-	}
-	cv::Mat dictData = cv::Mat::zeros(cv::Size(this->features->data[0].cols,\
-						rows), cv::DataType<double>::type);
-
-	// CONVERT FROM VECTOR OF CV::MAT TO MAT
-	int contor = 0;
-	for(std::size_t i=0; i<this->features->data.size(); i++){
-		cv::Mat dummy = dictData.rowRange(contor,contor+this->features->data[i].rows);
-		this->features->data[i].copyTo(dummy);
-		contor += this->features->data[i].rows;
-	}
+	cv::Mat dictData;
+	this->features->data.copyTo(dictData);
 
 	// DO K-means IN ORDER TO RETRIEVE BACK THE CLUSTER MEANS
 	cv::Mat labels = cv::Mat::zeros(cv::Size(1,dictData.rows),\
@@ -388,6 +370,7 @@ double theLength, gaussianProcess::kernelFunction theKFunction,\
 featureDetector::FEATURE theFeature,int colorSp, bool fromFolder,bool store){
 	double finalErrorLong=0.0, finalNormErrorLong=0.0;
 	double finalErrorLat=0.0, finalNormErrorLat=0.0;
+	double finalMeanDiffLat=0.0, finalMeanDiffLong=0.0;
 
 	// SET THE CALIBRATION ONLY ONCE (ALL IMAGES ARE READ FROM THE SAME DIR)
 	this->resetFeatures(this->trainDir, this->trainImgString,colorSp);
@@ -407,11 +390,13 @@ featureDetector::FEATURE theFeature,int colorSp, bool fromFolder,bool store){
 		this->modelName += ("evalLong/"+int2string(i));
 		this->predictGP(predictionsSin,predictionsCos,annotationsHandle::LONGITUDE);
 		this->modelName = this->modelName.substr(0,this->modelName.size()-10);
-		double errorLong, normErrorLong;
+		double errorLong, normErrorLong, meanDiffLong;
 		this->evaluate(predictionsSin, predictionsCos, errorLong, normErrorLong,\
-			annotationsHandle::LONGITUDE);
+				meanDiffLong, annotationsHandle::LONGITUDE);
 		finalErrorLong += errorLong;
 		finalNormErrorLong += normErrorLong;
+		finalMeanDiffLong += meanDiffLong;
+
 		//______________________________________________________________________
 	  	//LATITUDE TRAINING AND PREDICTING
 		this->modelName += ("trainLat/"+int2string(i));
@@ -422,21 +407,29 @@ featureDetector::FEATURE theFeature,int colorSp, bool fromFolder,bool store){
 		this->modelName += ("evalLat/"+int2string(i));
 		this->predictGP(predictionsSin,predictionsCos,annotationsHandle::LATITUDE);
 		this->modelName = this->modelName.substr(0,this->modelName.size()-9);
-		double errorLat, normErrorLat;
+		double errorLat, normErrorLat, meanDiffLat;
 		this->evaluate(predictionsSin, predictionsCos, errorLat, normErrorLat,\
-			annotationsHandle::LATITUDE);
+			meanDiffLat, annotationsHandle::LATITUDE);
 		finalErrorLat += errorLat;
 		finalNormErrorLat += normErrorLat;
+		finalMeanDiffLat += meanDiffLat;
+		std::cout<<"Round "<<i<<"___________________________________________"<<\
+			"_____________________________________________________"<<std::endl;
+		break;
 	}
 	finalErrorLong /= static_cast<double>(k);
 	finalNormErrorLong /= static_cast<double>(k);
-	std::cout<<"LONGITUDE>>> final-RMS-error:"<<finalErrorLong<<\
-		" final-RMS-normalized-error:"<<finalNormErrorLong<<std::endl;
+	finalMeanDiffLong /= static_cast<double>(k);
+	std::cout<<"LONGITUDE>>> final-RMS-error:"<<finalErrorLong<<std::endl;
+	std::cout<<"LONGITUDE>>> final-RMS-normalized-error:"<<finalNormErrorLong<<std::endl;
+	std::cout<<"LONGITUDE>>> final-avg-difference:"<<finalMeanDiffLong<<std::endl;
 
 	finalErrorLat /= static_cast<double>(k);
 	finalNormErrorLat /= static_cast<double>(k);
-	std::cout<<"LATITUDE>>> final-RMS-error:"<<finalErrorLat<<\
-		" final-RMS-normalized-error:"<<finalNormErrorLat<<std::endl;
+	finalMeanDiffLat /= static_cast<double>(k);
+	std::cout<<"LATITUDE>>> final-RMS-error:"<<finalErrorLat<<std::endl;
+	std::cout<<"LATITUDE>>> final-RMS-normalized-error:"<<finalNormErrorLat<<std::endl;
+	std::cout<<"LATITUDE>>> final-avg-difference:"<<finalMeanDiffLat<<std::endl;
 }
 //==============================================================================
 /** Do k-fold cross-validation by splitting the training folder into training-set
@@ -523,7 +516,7 @@ void classifyImages::resetFeatures(std::string dir,std::string imStr,int colorSp
 	args[0] = const_cast<char*>("featureDetector");
 	args[1] = const_cast<char*>(dir.c_str());
 	args[2] = const_cast<char*>(imStr.c_str());
-	this->features = new featureDetector(3,args,false,false);
+	this->features = new featureDetector(3,args,false,true);
 	this->features->setSIFTDictionary(dir+"SIFT_"+imStr+".bin");
 	this->features->colorspaceCode = colorSp;
 	delete [] args;
@@ -550,9 +543,9 @@ int colorSp, bool fromFolder, bool store){
 	this->modelName += ("testLong/");
 	this->predictGP(predictionsSin,predictionsCos,annotationsHandle::LONGITUDE);
 	this->modelName = this->modelName.substr(0,this->modelName.size()-9);
-	double errorLong, normErrorLong;
+	double errorLong, normErrorLong, meanDiffLong;
 	this->evaluate(predictionsSin, predictionsCos, errorLong, normErrorLong,\
-		annotationsHandle::LONGITUDE);
+			meanDiffLong,annotationsHandle::LONGITUDE);
 	//__________________________________________________________________________
   	// LATITUDE TRAINING AND PREDICTING
 	// BEFORE TRAINING CAMERA CALIBRATION AND OTHER SETTINGS MIGHT NEED TO BE RESET
@@ -566,23 +559,33 @@ int colorSp, bool fromFolder, bool store){
 	this->modelName += ("testLat/");
 	this->predictGP(predictionsSin,predictionsCos,annotationsHandle::LATITUDE);
 	this->modelName = this->modelName.substr(0,this->modelName.size()-8);
-	double errorLat, normErrorLat;
+	double errorLat, normErrorLat,meanDiffLat;
 	this->evaluate(predictionsSin, predictionsCos, errorLat, normErrorLat,\
-		annotationsHandle::LATITUDE);
+		meanDiffLat,annotationsHandle::LATITUDE);
 }
 //==============================================================================
 int main(int argc, char **argv){
+/*
 	// test
 	classifyImages classi(argc, argv, classifyImages::TEST);
  	classi.runTest(1e-3,100.0,&gaussianProcess::sqexp,\
- 		featureDetector::IPOINTS,CV_BGR2Lab,true,true);
+ 		featureDetector::SIFT,CV_BGR2Lab,true,true);
+*/
 
-/*
 	// evaluate
 	classifyImages classi(argc, argv, classifyImages::EVALUATE);
-  	classi.runCrossValidation(2,1e-3,100.0,&gaussianProcess::sqexp,\
+//  	classi.runCrossValidation(5,1e-3,100.0,&gaussianProcess::sqexp,\
+ 		featureDetector::EDGES,CV_BGR2Lab,false,true);
+  	classi.runCrossValidation(5,1e-3,100.0,&gaussianProcess::sqexp,\
+ 		featureDetector::IPOINTS,CV_BGR2Lab,false,true);
+/*
+  	classi.runCrossValidation(5,1e-3,100.0,&gaussianProcess::sqexp,\
+ 		featureDetector::GABOR,CV_BGR2Lab,false,true);
+  	classi.runCrossValidation(5,1e-3,100.0,&gaussianProcess::sqexp,\
+ 		featureDetector::SURF,CV_BGR2Lab,false,true);
+  	classi.runCrossValidation(5,1e-3,100.0,&gaussianProcess::sqexp,\
  		featureDetector::SIFT,CV_BGR2Lab,false,true);
-
+*/
 /*
 	// BUILD THE SIFT DICTIONARY
   	classifyImages classi(argc, argv, classifyImages::BUILD_DICTIONARY);

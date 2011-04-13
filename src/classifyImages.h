@@ -55,7 +55,8 @@ class classifyImages {
 		 */
 		void evaluate(std::deque<gaussianProcess::prediction> predictionsSin,\
 			std::deque<gaussianProcess::prediction> predictionsCos,\
-			double &error, double &normError,  annotationsHandle::POSE what);
+			double &error, double &normError, double &meanDiff,\
+			annotationsHandle::POSE what);
 
 		/** Do k-fold cross-validation by splitting the training folder into
 		 * training-set and validation-set.

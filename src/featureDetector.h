@@ -94,16 +94,10 @@ class featureDetector:public Tracker{
 			}
 			// CLEAR DATA AND TARGETS
 			if(!this->targets.empty()){
-				for(std::size_t i=0; i<this->targets.size(); i++){
-					this->targets[i].release();
-				}
-				this->targets.clear();
+				this->targets.release();
 			}
 			if(!this->data.empty()){
-				for(std::size_t i=0; i<this->data.size(); i++){
-					this->data[i].release();
-				}
-				this->data.clear();
+				this->data.release();
 			}
 
 			// CLEAR THE ANNOTATIONS
@@ -185,7 +179,7 @@ class featureDetector:public Tracker{
 		/** For each row added in the data matrix (each person detected for which we
 		 * have extracted some features) find the corresponding label.
 		 */
-		void fixLabels(std::vector<cv::Point2f> feetPos);
+		void fixLabels(std::vector< std::vector<cv::Point2f> > points);
 		/** Returns the size of a window around a template centered in a given point.
 		 */
 		void templateWindow(cv::Size imgSize, int &minX, int &maxX, int &minY,\
@@ -231,7 +225,7 @@ class featureDetector:public Tracker{
 			double offsetX, double offsetY);
 		/** Computes the motion vector for the current image given the tracks so far.
 		 */
-		double motionVector(cv::Point2f center);
+		double motionVector(cv::Point2f head, cv::Point2f center);
 		/** Compute the dominant direction of the SIFT or SURF features.
 		 */
 		double opticalFlowFeature(cv::Mat keys,cv::Mat currentImg,cv::Mat nextImg,\
@@ -279,11 +273,11 @@ class featureDetector:public Tracker{
 		/** @var data
 		 * The training data obtained from the feature descriptors.
 		 */
-		std::deque<cv::Mat> data;
+		cv::Mat data;
 		/** @var data
 		 * The targets/labels of the data.
 		 */
-		std::deque<cv::Mat> targets;
+		cv::Mat targets;
 		/** @var annotations
 		 * Loaded annotations for the read images.
 		 */
