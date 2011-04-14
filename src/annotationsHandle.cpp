@@ -809,9 +809,8 @@ boost::mutex annotationsHandle::trackbarMutex;
 IplImage *annotationsHandle::image;
 std::deque<annotationsHandle::ANNOTATION> annotationsHandle::annotations;
 //==============================================================================
-/*
+
 int main(int argc, char **argv){
 	annotationsHandle::runAnn(argc,argv,1,"_train",0);
 	//annotationsHandle::runEvaluation(argc,argv);
 }
-*/

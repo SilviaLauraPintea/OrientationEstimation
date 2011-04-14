@@ -152,7 +152,11 @@ bool fromFolder, bool store){
  */
 void classifyImages::trainGP(annotationsHandle::POSE what){
 	// WE ASSUME THAT IF WE DO NOT WANT TO STORE DATA THEN WE WANT TO LOAD DATA
-	if(this->storeData){
+	std::string modelNameData   = this->modelName+"Data.bin";
+	std::string modelNameLabels = this->modelName+"Labels.bin";
+
+	if(this->storeData || !file_exists(modelNameData.c_str()) || \
+	!file_exists(modelNameLabels.c_str())){
 		this->features->setFeatureType(this->feature);
 		this->features->init(this->trainFolder,this->annotationsTrain,this->readFromFolder);
 		this->features->run(this->readFromFolder);
@@ -203,7 +207,11 @@ void classifyImages::predictGP(std::deque<gaussianProcess::prediction> &predicti
 std::deque<gaussianProcess::prediction> &predictionsCos,\
 annotationsHandle::POSE what){
 	// WE ASSUME THAT IF WE DO NOT WANT TO STORE DATA THEN WE WANT TO LOAD DATA
-	if(this->storeData){
+	std::string modelNameData   = this->modelName+"Data.bin";
+	std::string modelNameLabels = this->modelName+"Labels.bin";
+
+	if(this->storeData || !file_exists(modelNameData.c_str()) || \
+	!file_exists(modelNameLabels.c_str())){
 		this->features->setFeatureType(this->feature);
 		this->features->init(this->testFolder, this->annotationsTest,this->readFromFolder);
 		this->features->run(this->readFromFolder);
@@ -617,6 +625,8 @@ int main(int argc, char **argv){
  	classi.runTest(1e-3,100.0,&gaussianProcess::sqexp,\
  		featureDetector::SIFT,CV_BGR2Lab,true,true);
 */
+
+
 /*
 	// evaluate
 	classifyImages classi(argc, argv, classifyImages::EVALUATE);
@@ -631,6 +641,7 @@ int main(int argc, char **argv){
   	classi.runCrossValidation(5,1e-3,100.0,&gaussianProcess::sqexp,\
  		featureDetector::SIFT,CV_BGR2Lab,false,true);
 */
+
 
 	// BUILD THE SIFT DICTIONARY
   	classifyImages classi(argc, argv, classifyImages::BUILD_DICTIONARY);

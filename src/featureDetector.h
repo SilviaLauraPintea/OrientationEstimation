@@ -71,7 +71,7 @@ class featureDetector:public Tracker{
 				if(datasetPath[datasetPath.size()-1]!='/'){
 					datasetPath += '/';
 				}
-				this->plotTracks     = false;
+				this->plotTracks     = true;
 				this->printValues    = false;
 				this->featureType    = EDGES;
 				this->lastIndex      = 0;
