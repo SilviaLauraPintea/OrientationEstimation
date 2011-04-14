@@ -71,8 +71,9 @@ class featureDetector:public Tracker{
 				if(datasetPath[datasetPath.size()-1]!='/'){
 					datasetPath += '/';
 				}
-				this->plotTracks     = true;
+				this->plotTracks     = false;
 				this->printValues    = false;
+				this->useGT          = false;
 				this->featureType    = EDGES;
 				this->lastIndex      = 0;
 				this->producer       = NULL;
@@ -261,6 +262,13 @@ class featureDetector:public Tracker{
 		 * matrix.
 		 */
 		cv::Mat extractSURF(cv::Mat image);
+		/** Reads the locations at which there are people in the current frame (for the
+		 * case in which we do not want to use the tracker or build a bgModel).
+		 */
+		std::deque<unsigned> readLocations();
+		/** Starts running something (either the tracker or just mimics it).
+		 */
+		void start(bool readFromFolder, bool toUseGT);
 	public:
 		/** @var plotTracks
 		 * If it is true it displays the tracks of the people in the images.
@@ -330,5 +338,9 @@ class featureDetector:public Tracker{
 		 * If only the features need to be extracted or the data.
 		 */
 		bool onlyExtract;
+		/** @var useGT
+		 * Use ground truth to detect the people instead.
+		 */
+		bool useGT;
 };
 #endif /* FESTUREDETECTOR_H_ */

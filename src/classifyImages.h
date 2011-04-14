@@ -31,7 +31,7 @@ class classifyImages {
 
 		/** Build dictionary for vector quantization.
 		 */
-		void buildDictionary(int colorSp = CV_BGR2Lab);
+		void buildDictionary(int colorSp = CV_BGR2Lab, bool toUseGT = true);
 
 		/** Creates the training data (according to the options), the labels and
 		 * trains the a \c GaussianProcess on the data.
@@ -47,16 +47,16 @@ class classifyImages {
 
 		/** Initialize the options for the Gaussian Process regression.
 		 */
-		void init(double theNoise, double theLength, gaussianProcess::kernelFunction\
-			theKFunction, featureDetector::FEATURE theFeature,\
-			bool fromFolder=true, bool store=true);
+		void init(double theNoise, double theLength, featureDetector::FEATURE \
+			theFeature, gaussianProcess::kernelFunction theKFunction = \
+			&gaussianProcess::sqexp, bool fromFolder=true, bool store=true,\
+			bool toUseGT = false);
 
 		/** Evaluate one prediction versus its target.
 		 */
 		void evaluate(std::deque<gaussianProcess::prediction> predictionsSin,\
 			std::deque<gaussianProcess::prediction> predictionsCos,\
-			double &error, double &normError, double &meanDiff,\
-			annotationsHandle::POSE what);
+			double &error, double &normError, double &meanDiff);
 
 		/** Do k-fold cross-validation by splitting the training folder into
 		 * training-set and validation-set.
@@ -65,15 +65,11 @@ class classifyImages {
 
 		/** Does the cross-validation and computes the average error over all folds.
 		 */
-		void runCrossValidation(unsigned k,double theNoise,double theLength,\
-			gaussianProcess::kernelFunction theKFunction,featureDetector::FEATURE\
-			theFeature,int colorSp = CV_BGR2Lab,bool fromFolder=false,bool store=true);
+		void runCrossValidation(unsigned k, int colorSp = CV_BGR2Lab);
 
 		/** Runs the final evaluation (test).
 		 */
-		void runTest(double theNoise, double theLength,\
-		gaussianProcess::kernelFunction theKFunction, featureDetector::FEATURE\
-		theFeature, int colorSp = CV_BGR2Lab, bool fromFolder=false, bool store=true);
+		void runTest(int colorSp = CV_BGR2Lab);
 
 		/** Try to optimize the prediction of the angle considering the variance of sin
 		 * and cos.
@@ -212,6 +208,10 @@ class classifyImages {
 		 * The letters in the image names for the train data.
 		 */
 		std::string trainImgString;
+		/** @var useGT
+		 * Use the annotations' positions or use the tracker.
+		 */
+		bool useGT;
 };
 
 #endif /* CLASSIFYIMAGES_H_ */

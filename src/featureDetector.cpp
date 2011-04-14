@@ -396,10 +396,13 @@ int &minY, int &maxY, std::vector<cv::Point2f> &templ, int tplBorder){
 void featureDetector::allForegroundPixels(std::deque<featureDetector::people>\
 &allPeople, std::deque<unsigned> existing, IplImage *bg, double threshold){
 	// INITIALIZING STUFF
-	cv::Mat thsh(bg);
-	cv::Mat thrsh(thsh.rows, thsh.cols, CV_8UC1);
-	cv::cvtColor(thsh, thrsh, CV_BGR2GRAY);
-	cv::threshold(thrsh, thrsh, threshold, 255, cv::THRESH_BINARY);
+	cv::Mat thsh, thrsh;
+	if(bg){
+		thsh  = cv::Mat(bg);
+		thrsh = cv::Mat(thsh.rows, thsh.cols, CV_8UC1);
+		cv::cvtColor(thsh, thrsh, CV_BGR2GRAY);
+		cv::threshold(thrsh, thrsh, threshold, 255, cv::THRESH_BINARY);
+	}
 	cv::Mat foregr(this->current->img);
 
 	// FOR EACH EXISTING TEMPLATE LOOK ON AN AREA OF 100 PIXELS AROUND IT
@@ -414,7 +417,7 @@ void featureDetector::allForegroundPixels(std::deque<featureDetector::people>\
 		double tmplArea   = tmplHeight*dist(templ[0],templ[1]);
 
 		// GET THE 100X100 WINDOW ON THE TEMPLATE
-		int minY=thrsh.rows, maxY=0, minX=thrsh.cols, maxX=0;
+		int minY=foregr.rows, maxY=0, minX=foregr.cols, maxX=0;
 		this->templateWindow(cv::Size(foregr.cols,foregr.rows),minX, maxX,\
 			minY, maxY, templ);
 		int width  = maxX-minX;
@@ -422,11 +425,26 @@ void featureDetector::allForegroundPixels(std::deque<featureDetector::people>\
 		cv::Mat colorRoi = cv::Mat(foregr.clone(),cv::Rect(cv::Point2f(minX,minY),\
 							cv::Size(width,height)));
 
+		//IF THERE IS NO BACKGROUND THEN JUST COPY THE ROI
+		if(!bg){
+			colorRoi.copyTo(allPeople[k].pixels);
+			allPeople[k].relativeLoc = cv::Point2f(center.x-(minX),center.y-(minY));
+			allPeople[k].borders.assign(4,0);
+			allPeople[k].borders[0] = minX;
+			allPeople[k].borders[1] = maxX;
+			allPeople[k].borders[2] = minY;
+			allPeople[k].borders[3] = maxY;
+			colorRoi.release();
+			if(this->plotTracks){
+				cv::imshow("people", allPeople[k].pixels);
+				cv::waitKey(0);
+			}
+			continue;
+		}
 		// LOOP OVER THE AREA OF OUR TEMPLATE AND THERESHOLD ONLY THOSE PIXELS
 		for(unsigned x=0; x<maxX-minX; x++){
 			for(unsigned y=0; y<maxY-minY; y++){
 				if((int)(thrsh.at<uchar>((int)(y+minY),(int)(x+minX)))>0){
-
 					// IF THE PIXEL IS NOT INSIDE OF THE TEMPLATE
 					if(!this->isInTemplate((x+minX),(y+minY),templ) &&\
 					existing.size()>1){
@@ -660,8 +678,8 @@ void featureDetector::extractDataRow(std::deque<unsigned> existing, IplImage *bg
 	std::string imgName = (this->current->sourceName).substr(pos1+1);
 	unsigned pos2       = imgName.find_last_of(".");
 	imgName             = imgName.substr(0,pos2);
-	// FOR EACH LOCATION IN THE IMAGE EXTRACT FEATURES, FILTER THEM AND RESHAPE
 
+	// FOR EACH LOCATION IN THE IMAGE EXTRACT FEATURES, FILTER THEM AND RESHAPE
 	std::vector< std::vector<cv::Point2f> > allLocations;
 	for(std::size_t i=0; i<existing.size(); i++){
 		cv::Point2f center = this->cvPoint(existing[i]);
@@ -683,9 +701,11 @@ void featureDetector::extractDataRow(std::deque<unsigned> existing, IplImage *bg
 		cv::Mat thresholded, dummy;
 		cv::Point2f rotBorders;
 		allPeople[i].pixels = this->rotate2Zero(head,center,allPeople[i].pixels,rotBorders);
-		cv::inRange(allPeople[i].pixels,cv::Scalar(1,1,1),cv::Scalar(255,225,225),\
-			thresholded);
-		cv::dilate(thresholded,thresholded,cv::Mat());
+		if(bg){
+			cv::inRange(allPeople[i].pixels,cv::Scalar(1,1,1),cv::Scalar(255,225,225),\
+					thresholded);
+			cv::dilate(thresholded,thresholded,cv::Mat());
+		}
 		cv::Point2f absRotCenter(allPeople[i].pixels.cols/2.0+allPeople[i].borders[0],\
 			allPeople[i].pixels.rows/2.0+allPeople[i].borders[2]);
 		templ = this->rotatePoints2Zero(head,center,templ,rotBorders,absRotCenter);
@@ -694,7 +714,7 @@ void featureDetector::extractDataRow(std::deque<unsigned> existing, IplImage *bg
 		std::deque<double> extremes = this->templateExtremes(templ);
 
 		// IF THE PART TO BE CONSIDERED IS ONLY FEET OR ONLY HEAD
-		if(this->featurePart != ' '){
+		if(this->featurePart != ' ' && bg){
 			this->onlyPart(thresholded,templ,allPeople[i].borders[0],\
 				allPeople[i].borders[2]);
 		}
@@ -768,7 +788,7 @@ void featureDetector::extractDataRow(std::deque<unsigned> existing, IplImage *bg
 	}
 
 	// FIX THE LABELS TO CORRESPOND TO THE PEOPLE DETECTED IN THE IMAGE
-	if(!this->targetAnno.empty()){
+	if(!this->targetAnno.empty() && !this->useGT){
 		this->fixLabels(allLocations);
 	}
 }
@@ -1104,6 +1124,11 @@ void featureDetector::fixLabels(std::vector< std::vector<cv::Point2f> > points){
 	std::deque<annotationsHandle::FULL_ANNOTATIONS>::iterator index = \
 		std::find_if (this->targetAnno.begin(), this->targetAnno.end(),\
 		compareImg(this->current->sourceName));
+	if(index == this->targetAnno.end()){
+		std::cerr<<"The image: "<<this->current->sourceName<<\
+			" was not annotated"<<std::endl;
+		exit(1);
+	}
 
 	// LOOP OVER ALL ANNOTATIONS FOR THE CURRENT IMAGE AND FIND THE CLOSEST ONES
 	std::deque<int> assignments((*index).annos.size(),-1);
@@ -1751,10 +1776,87 @@ cv::Mat featureDetector::extractSIFT(cv::Mat image, std::vector<cv::Point2f> tem
 	return sift;
 }
 //==============================================================================
-/*
+/** Starts running something (either the tracker or just mimics it).
+ */
+void featureDetector::start(bool readFromFolder, bool toUseGT){
+	this->useGT = toUseGT;
+	// ((useGT & !GABOR & !EDGES) | EXTRACT) & ANNOS
+	if(!this->targetAnno.empty() && (this->onlyExtract ||
+	(this->useGT && this->featureType != featureDetector::EDGES &&\
+	this->featureType != featureDetector::GABOR))){
+		// READ THE FRAMES ONE BY ONE
+		if(!this->producer){
+			this->initProducer(readFromFolder);
+		}
+		IplImage *img = this->producer->getFrame();
+		width         = img->width;
+		height        = img->height;
+		depth         = img->depth;
+		channels      = img->nChannels;
+		halfresX      = width/2;
+		halfresY      = height/2;
+		this->producer->backward(1);
+		this->current = new Image_t();
+
+		unsigned index = 0;
+		while((this->current->img = this->producer->getFrame())){
+			this->current->sourceName = this->producer->getSource(-1);
+			this->current->index      = index;
+			if(this->onlyExtract){
+				this->extractFeatures();
+			}else{
+				// READ THE LOCATION AT WICH THERE ARE PEOPLE
+				std::deque<unsigned> existing = this->readLocations();
+				this->extractDataRow(existing,NULL);
+			}
+			index++;
+		}
+		if(this->current->img){cvReleaseImage(&this->current->img);}
+		cvReleaseImage(&img);
+		delete this->current;
+	}else{
+		// FOR THE EDGES AND GABOR I NEED A BACKGROUND MODEL EVEN IF I ONLY EXTRACT
+		this->run(readFromFolder);
+	}
+}
+//==============================================================================
+/** Reads the locations at which there are people in the current frame (for the
+ * case in which we do not want to use the tracker or build a bgModel).
+ */
+std::deque<unsigned> featureDetector::readLocations(){
+	// FIND	THE INDEX FOR THE CURRENT IMAGE
+	if(this->targetAnno.empty()){
+		std::cerr<<"Annotations were not loaded."<<std::endl;
+		exit(1);
+	}
+	std::deque<annotationsHandle::FULL_ANNOTATIONS>::iterator index = \
+		std::find_if (this->targetAnno.begin(), this->targetAnno.end(),\
+		compareImg(this->current->sourceName));
+
+	if(index == this->targetAnno.end()){
+		std::cerr<<"The image: "<<this->current->sourceName<<\
+			" was not annotated"<<std::endl;
+		exit(1);
+	}
+	// TRANSFORM THE LOCATION INTO UNSIGNED AND THEN PUSH IT IN THE VECTOR
+	std::deque<unsigned> locations;
+	for(std::size_t l=0; l<(*index).annos.size(); l++){
+		// point.x + width*point.y
+		unsigned location = (*index).annos[l].location.x + width*\
+							(*index).annos[l].location.y;
+		locations.push_back(location);
+	}
+	// UPDATE THE TRACKS IN THE CASE WE WANT TO USE TRACKING
+	this->updateTracks(this->current->index, locations);
+	return locations;
+}
+//==============================================================================
+
 int main(int argc, char **argv){
 	featureDetector feature(argc,argv,true,false);
-	feature.setFeatureType(featureDetector::SIFT);
-	feature.run();
+	feature.setFeatureType(featureDetector::SURF);
+	feature.init(std::string(argv[1])+"annotated_train",\
+		std::string(argv[1])+"annotated_train.txt",true);
+	feature.start(true, true);
 }
-*/
+

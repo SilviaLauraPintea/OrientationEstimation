@@ -49,12 +49,13 @@ void annotationsHandle::mouseHandlerAnn(int event, int x, int y, int flags, void
 				choice = ' ';
 				down = false;
 				annotationsHandle::ANNOTATION temp;
-				temp.location = cv::Point2d(x, y);
+				temp.location = cv::Point2f(x,y);
+				std::cout<<"Saved location: "<<temp.location<<std::endl;
 				temp.id       = annotations.size();
 				temp.poses.assign(poseSize, 0);
 				temp.poses[(int)LATITUDE] = 90;
 				annotations.push_back(temp);
-				showMenu(cv::Point2d(x,y));
+				showMenu(cv::Point2f(x,y));
 				for(unsigned i=0;i!=annotations.size(); ++i){
 					Annotate::plotArea(image, (float)annotations[i].location.x, \
 						(float)annotations[i].location.y);
@@ -809,8 +810,9 @@ boost::mutex annotationsHandle::trackbarMutex;
 IplImage *annotationsHandle::image;
 std::deque<annotationsHandle::ANNOTATION> annotationsHandle::annotations;
 //==============================================================================
-
+/*
 int main(int argc, char **argv){
 	annotationsHandle::runAnn(argc,argv,1,"_train",0);
 	//annotationsHandle::runEvaluation(argc,argv);
 }
+*/
