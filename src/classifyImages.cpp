@@ -297,15 +297,18 @@ double &error,double &normError,double &meanDiff){
 		std::cout<<"Target: "<<targetAngle<<"("<<(targetAngle*180.0/M_PI)<<\
 			") VS "<<prediAngle<<"("<<(prediAngle*180.0/M_PI)<<")"<<std::endl;
 		double absDiff = std::abs(targetAngle-prediAngle);
-		if (absDiff > M_PI)
+		if(absDiff > M_PI){
 			absDiff = 2*M_PI - absDiff;
+		}
 		std::cout<<"Difference: "<< absDiff <<std::endl;
-		error     += std::pow(absDiff,2);
-		normError += std::pow(absDiff/M_PI,2);
+		error     += absDiff*absDiff;
+		normError += (absDiff*absDiff)/(M_PI*M_PI);
 		meanDiff  += absDiff;
 	}
-	error        = std::sqrt(error)/this->testTargets.rows;
-	normError    = std::sqrt(normError)/this->testTargets.rows;
+
+	std::cout<<"Number of images: "<<this->testTargets.rows<<std::endl;
+	error        = std::sqrt(error/this->testTargets.rows);
+	normError    = std::sqrt(normError/this->testTargets.rows);
 	meanDiff     = meanDiff/this->testTargets.rows;
 	normAccuracy = 1-normError;
 
@@ -320,11 +323,12 @@ double &error,double &normError,double &meanDiff){
  */
 double classifyImages::optimizePrediction(gaussianProcess::prediction \
 predictionsSin, gaussianProcess::prediction predictionsCos){
+/*
 	double x     = predictionsSin.mean[0];
 	double y     = predictionsCos.mean[0];
 	return std::atan2(x,y);
+*/
 
-/*
 	double betaS = 1.0/(predictionsSin.variance[0]);
 	double betaC = 1.0/(predictionsCos.variance[0]);
 	double x     = predictionsSin.mean[0];
@@ -335,7 +339,7 @@ predictionsSin, gaussianProcess::prediction predictionsCos){
 	}else{
 		return std::atan2(x,y);
 	}
-*/
+
 	/*
 	double closeTo;
 	closeTo = std::atan2(predictionsSin.mean[0],predictionsCos.mean[0]);
@@ -418,7 +422,7 @@ void classifyImages::runCrossValidation(unsigned k, int colorSp){
 
 	// SET THE CALIBRATION ONLY ONCE (ALL IMAGES ARE READ FROM THE SAME DIR)
 	this->resetFeatures(this->trainDir, this->trainImgString,colorSp);
-	for(unsigned i=0; i<k; i++){
+	for(unsigned i=1; i<k; i++){
 		std::cout<<"Round "<<i<<"___________________________________________"<<\
 			"_____________________________________________________"<<std::endl;
 		// SPLIT TRAINING AND TESTING ACCORDING TO THE CURRENT FOLD
@@ -629,10 +633,9 @@ int main(int argc, char **argv){
 
 	// evaluate
 	classifyImages classi(argc, argv, classifyImages::EVALUATE);
-	classi.init(1e-3,100.0,featureDetector::IPOINTS,&gaussianProcess::sqexp,\
+	classi.init(1e-3,100.0,featureDetector::EDGES,&gaussianProcess::sqexp,\
 			false, true, true);
   	classi.runCrossValidation(5,CV_BGR2Luv);
-
 
 /*
 	// BUILD THE SIFT DICTIONARY

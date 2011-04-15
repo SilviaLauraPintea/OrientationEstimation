@@ -81,7 +81,7 @@ class featureDetector:public Tracker{
 				this->noMeans        = 500;
 				this->meanSize       = 128;
 				this->colorspaceCode = CV_BGR2Lab;
-				this->featurePart    = ' ';
+				this->featurePart    = 'b'; // 't' or 'b'
 				this->tracking 	      = 1;
 				this->featureFile    = datasetPath+"features/";
 				this->onlyExtract    = extract;

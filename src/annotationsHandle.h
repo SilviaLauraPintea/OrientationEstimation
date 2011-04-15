@@ -179,8 +179,8 @@ class annotationsHandle {
 		static void drawLatitude(cv::Point2f head, cv::Point2f feet,\
 			unsigned int orient, annotationsHandle::POSE pose);
 
-		static cv::Mat rotateWrtCamera(cv::Point2f feetLocation,\
-			cv::Point2f cameraLocation, cv::Mat toRotate, cv::Point2f &borders);
+		static cv::Mat rotateWrtCamera(cv::Point2f headLocation,\
+			cv::Point2f feetLocation, cv::Mat toRotate, cv::Point2f &borders);
 
 		/** Writes a given FULL_ANNOTATIONS structure into a given file.
 		 */

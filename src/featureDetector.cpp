@@ -127,6 +127,7 @@ cv::Rect roi, cv::Point2f head, cv::Point2f center){
 	cv::Mat dummy = edge.colRange(0,tmpEdge.cols*tmpEdge.rows);
 	tmpEdge = (tmpEdge).reshape(0,1);
 	tmpEdge.convertTo(tmpEdge,cv::DataType<double>::type);
+
 	tmpEdge.copyTo(dummy);
 	dummy.release();
 	tmpFeat.release();
@@ -698,7 +699,7 @@ void featureDetector::extractDataRow(std::deque<unsigned> existing, IplImage *bg
 			allPeople[i].borders[3]-allPeople[i].borders[2]);
 
 		// ROTATE THE FOREGROUND PIXELS, THREHSOLD AND THE TEMPLATE
-		cv::Mat thresholded, dummy;
+		cv::Mat thresholded;
 		cv::Point2f rotBorders;
 		allPeople[i].pixels = this->rotate2Zero(head,center,allPeople[i].pixels,rotBorders);
 		if(bg){
@@ -993,9 +994,14 @@ cv::Point2f rotBorders, cv::Point2f rotCenter){
 	double rotAngle = std::atan2((headLocation.y-feetLocation.y),\
 						(headLocation.x-feetLocation.x));
 	rotAngle = (rotAngle+M_PI/2.0);
-	if(rotAngle>2.0*M_PI){
+	while(rotAngle>2.0*M_PI){
 		rotAngle -= 2.0*M_PI;
 	}
+	if(rotAngle < 0.0){
+		rotAngle += 2.0*M_PI;
+	}
+
+	// THE ROTATION ANGLE NEEDS TO BE IN DEGREES
 	rotAngle *= (180.0/M_PI);
 
 	// GET THE ROTATION MATRIX WITH RESPECT TO THE GIVEN CENTER
@@ -1034,9 +1040,14 @@ feetLocation, cv::Mat &keys, cv::Point2f rotCenter, cv::Point2f rotBorders){
 	double rotAngle = std::atan2((headLocation.y-feetLocation.y),\
 						(headLocation.x-feetLocation.x));
 	rotAngle = (rotAngle+M_PI/2.0);
-	if(rotAngle>2.0*M_PI){
+	while(rotAngle>2.0*M_PI){
 		rotAngle -= 2.0*M_PI;
 	}
+	if(rotAngle < 0.0){
+		rotAngle += 2.0*M_PI;
+	}
+
+	// THE ROTATION ANGLE NEEDS TO BE IN DEGREES
 	rotAngle *= (180.0/M_PI);
 
 	// GET THE ROTATION MATRIX WITH RESPECT TO THE GIVEN CENTER
@@ -1073,9 +1084,14 @@ cv::Point2f feetLocation, cv::Mat toRotate, cv::Point2f &borders){
 	double rotAngle = std::atan2((headLocation.y-feetLocation.y),\
 						(headLocation.x-feetLocation.x));
 	rotAngle = (rotAngle+M_PI/2.0);
-	if(rotAngle>2.0*M_PI){
+	while(rotAngle>2.0*M_PI){
 		rotAngle -= 2.0*M_PI;
 	}
+	if(rotAngle < 0.0){
+		rotAngle += 2.0*M_PI;
+	}
+
+	// THE ANGLE NEEDS TO BE IN DEGREES TO ROTATE WITH IT
 	rotAngle *= (180.0/M_PI);
 
 	// ADD A BLACK BORDER TO THE ORIGINAL IMAGE
@@ -1105,15 +1121,28 @@ cv::Point2f feetLocation, cv::Mat toRotate, cv::Point2f &borders){
  */
 double featureDetector::fixAngle(cv::Point2f headLocation, cv::Point2f feetLocation,\
 double angle){
+	// THE ANGLE IS IN RADIANDS
 	double cameraAngle = std::atan2((headLocation.y-feetLocation.y),\
 						(headLocation.x-feetLocation.x));
-	angle = angle-cameraAngle;
-	if(angle >= 2.0*M_PI){
-		angle -= 2.0*M_PI;
-	}else if(angle < 0){
-		angle += 2.0*M_PI;
+
+	cameraAngle = cameraAngle + M_PI/2.0; // TO BE LIKE FOR THE FEATURES
+	while(cameraAngle>2.0*M_PI){
+		cameraAngle -= 2.0*M_PI;
 	}
-	return angle;
+	if(cameraAngle < 0.0){
+		cameraAngle += 2.0*M_PI;
+	}
+
+	double newAngle;
+	newAngle = angle-cameraAngle; // "ROATATE" THE ANGLE WRT TO CAMERA
+	std::cout<<"Angle>>> "<<(newAngle*180/M_PI)<<std::endl;
+	if(newAngle >= 2.0*M_PI){
+		newAngle -= 2.0*M_PI;
+	}else if(newAngle < 0.0){
+		newAngle += 2.0*M_PI;
+	}
+	std::cout<<"Angle [0,180]>>> "<<(newAngle*180/M_PI)<<std::endl;
+	return newAngle;
 }
 //==============================================================================
 /** For each row added in the data matrix (each person detected for which we
@@ -1188,8 +1217,8 @@ void featureDetector::fixLabels(std::vector< std::vector<cv::Point2f> > points){
 				((*index).annos[i].poses[annotationsHandle::LONGITUDE]);
 			std::cout<<"Longitude: "<<angle<<std::endl;
 			angle = angle*M_PI/180.0;
-			angle = this->fixAngle((*index).annos[i].location,\
-					points[assignments[i]][1],angle);
+			angle = this->fixAngle(points[assignments[i]][1],\
+					(*index).annos[i].location,angle);
 			tmp.at<double>(0,0) = std::sin(angle);
 			tmp.at<double>(0,1) = std::cos(angle);
 
@@ -1198,8 +1227,6 @@ void featureDetector::fixLabels(std::vector< std::vector<cv::Point2f> > points){
 				((*index).annos[i].poses[annotationsHandle::LATITUDE]);
 			std::cout<<"Latitude: "<<angle<<std::endl;
 			angle = angle*M_PI/180.0;
-			angle = this->fixAngle((*index).annos[i].location,\
-					points[assignments[i]][1],angle);
 			tmp.at<double>(0,2) = std::sin(angle);
 			tmp.at<double>(0,3) = std::cos(angle);
 
@@ -1442,11 +1469,11 @@ double featureDetector::motionVector(cv::Point2f head, cv::Point2f center){
 			cv::imshow("tracks",tmp);
 		}
 		angle = std::atan2(center.y-prev.y,center.x-prev.x);
-		std::cout<<"Motion angle>>> "<<(angle*180/M_PI)<<std::endl;
 	}
 
 	// FIX ANGLE WRT CAMERA
 	angle = this->fixAngle(head,center,angle);
+	std::cout<<"Motion angle>>> "<<(angle*180/M_PI)<<std::endl;
 	return angle;
 }
 //==============================================================================
@@ -1763,6 +1790,7 @@ cv::Mat featureDetector::extractSIFT(cv::Mat image, std::vector<cv::Point2f> tem
 	for(int i=0; i<sift.rows; i++){
 		cv::Mat rowsI = sift.row(i);
 		rowsI         = rowsI/cv::norm(rowsI);
+		rowsI.release();
 	}
 
 	// IF WE WANT TO STORE THE SIFT FEATURES THEN WE NEED TO STORE x AND y
@@ -1845,13 +1873,46 @@ std::deque<unsigned> featureDetector::readLocations(){
 		unsigned location = (*index).annos[l].location.x + width*\
 							(*index).annos[l].location.y;
 		locations.push_back(location);
+
+		// FIND THE HEAD IN THE TEMPLATE
+		std::vector<cv::Point2f> templ;
+		genTemplate2((*index).annos[l].location, persHeight, camHeight, templ);
+		cv::Point2f head((templ[12].x+templ[14].x)/2,(templ[12].y+templ[14].y)/2);
+
+		// STORE THE LABELS FOR ALL THE LOCATIONS
+		cv::Mat tmp = cv::Mat::zeros(1,4,cv::DataType<double>::type);
+		// READ THE TARGET ANGLE FOR LONGITUDINAL ANGLE
+		double angle = static_cast<double>\
+			((*index).annos[l].poses[annotationsHandle::LONGITUDE]);
+		std::cout<<"Longitude: "<<angle<<std::endl;
+		angle = angle*M_PI/180.0;
+		angle = this->fixAngle(head,(*index).annos[l].location,angle);
+		tmp.at<double>(0,0) = std::sin(angle);
+		tmp.at<double>(0,1) = std::cos(angle);
+
+		// READ THE TARGET ANGLE FOR LATITUDINAL ANGLE
+		angle = static_cast<double>\
+			((*index).annos[l].poses[annotationsHandle::LATITUDE]);
+		std::cout<<"Latitude: "<<angle<<std::endl;
+		angle = angle*M_PI/180.0;
+		tmp.at<double>(0,2) = std::sin(angle);
+		tmp.at<double>(0,3) = std::cos(angle);
+
+		// STORE THE LABELS IN THE TARGETS ON THE RIGHT POSITION
+		if(this->targets.empty()){
+			tmp.copyTo(this->targets);
+		}else{
+			this->targets.push_back(tmp);
+		}
+		tmp.release();
 	}
+
 	// UPDATE THE TRACKS IN THE CASE WE WANT TO USE TRACKING
 	this->updateTracks(this->current->index, locations);
 	return locations;
 }
 //==============================================================================
-
+/*
 int main(int argc, char **argv){
 	featureDetector feature(argc,argv,true,false);
 	feature.setFeatureType(featureDetector::SURF);
@@ -1859,4 +1920,4 @@ int main(int argc, char **argv){
 		std::string(argv[1])+"annotated_train.txt",true);
 	feature.start(true, true);
 }
-
+*/

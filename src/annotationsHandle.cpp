@@ -67,15 +67,20 @@ void annotationsHandle::mouseHandlerAnn(int event, int x, int y, int flags, void
 //==============================================================================
 /** Rotate matrix wrt to the camera location.
  */
-cv::Mat annotationsHandle::rotateWrtCamera(cv::Point2f feetLocation,\
-cv::Point2f cameraLocation, cv::Mat toRotate, cv::Point2f &borders){
+cv::Mat annotationsHandle::rotateWrtCamera(cv::Point2f headLocation,\
+cv::Point2f feetLocation, cv::Mat toRotate, cv::Point2f &borders){
 	// GET THE ANGLE TO ROTATE WITH
-	double cameraAngle = std::atan2((feetLocation.y-cameraLocation.y),\
-						(feetLocation.x-cameraLocation.x));
+	double cameraAngle = std::atan2((headLocation.y-feetLocation.y),\
+						(headLocation.x-feetLocation.x));
 	cameraAngle = (cameraAngle+M_PI/2.0);
-	if(cameraAngle>2.0*M_PI){
+	while(cameraAngle>2.0*M_PI){
 		cameraAngle -= 2.0*M_PI;
 	}
+	if(cameraAngle < 0){
+		cameraAngle += 2.0*M_PI;
+	}
+
+	// THE ROTATION ANGLE NEEDS TO BE IN DEGREES
 	cameraAngle *= (180.0/M_PI);
 
 	// ADD A BLACK BORDER TO THE ORIGINAL IMAGE
@@ -105,7 +110,6 @@ cv::Point2f cameraLocation, cv::Mat toRotate, cv::Point2f &borders){
  */
 void annotationsHandle::drawLatitude(cv::Point2f head, cv::Point2f feet,\
 unsigned int orient, annotationsHandle::POSE pose){
-	cv::namedWindow("Latitude");
 	unsigned int length = 80;
 	double angle = (M_PI * orient)/180;
 
@@ -131,7 +135,6 @@ unsigned int orient, annotationsHandle::POSE pose){
 	cv::Mat tmpImg = rotateWrtCamera(head, feet, tmpImage, stupid);
 	cv::Mat large;
 	cv::resize(tmpImg,large,cv::Size(0,0),1.5,1.5, cv::INTER_CUBIC);
-	cv::namedWindow("Latitude");
 
 	// DRAW THE LINE ON WHICH THE ARROW SITS
 	cv::Point2f center(large.cols*1/4,large.rows/2);
@@ -183,8 +186,8 @@ annotationsHandle::POSE pose){
 	cv::Size imgSize(image->width,image->height);
 	cv::clipLine(imgSize,point1,point2);
 
-	IplImage *img = cvCloneImage(image);
-	cv::Mat tmpImage(img);
+	cv::Mat tmpImage1(image);
+	cv::Mat tmpImage(tmpImage1.clone());
 	cv::line(tmpImage,point1,point2,cv::Scalar(100,255,0),2,8,0);
 
 	cv::Point2f point3, point4, point5;
@@ -205,7 +208,7 @@ annotationsHandle::POSE pose){
 	cv::circle(tmpImage,center,1,cv::Scalar(255,50,0),1,8,0);
 	cv::imshow("image", tmpImage);
 	tmpImage.release();
-	cvReleaseImage(&img);
+	tmpImage1.release();
 }
 //==============================================================================
 /** Draws the "menu" of possible poses for the current position.
@@ -216,9 +219,10 @@ void annotationsHandle::showMenu(cv::Point2f center){
 	int pose2 = 0;
 	int pose3 = 0;
 	int pose4 = 90;
-	cv::namedWindow("Poses",CV_WINDOW_AUTOSIZE);
-	IplImage *tmpImg = cvCreateImage(cv::Size(400,1),8,1);
+	cvNamedWindow("Latitude",CV_WINDOW_AUTOSIZE);
+	cvNamedWindow("Poses",CV_WINDOW_AUTOSIZE);
 
+	IplImage *tmpImg = cvCreateImage(cv::Size(400,1),8,1);
 	POSE sit = SITTING, stand = STANDING, bend = BENDING, longi = LONGITUDE,
 		lat = LATITUDE;
 	for(POSE p=SITTING; p<=LATITUDE;p++){
@@ -254,15 +258,15 @@ void annotationsHandle::showMenu(cv::Point2f center){
 				break;
 		}
 	}
-	cv::imshow("Poses", tmpImg);
+	cvShowImage("Poses", tmpImg);
 
 	cout<<"Press 'c' once the annotation for poses is done."<<endl;
 	while(choice != 'c' && choice != 'C'){
 		choice = (char)(cv::waitKey(0));
 	}
 	cvReleaseImage(&tmpImg);
-	cv::destroyWindow("Poses");
-	cv::destroyWindow("Latitude");
+	cvDestroyWindow("Poses");
+	cvDestroyWindow("Latitude");
 }
 //==============================================================================
 /** A function that starts a new thread which handles the track-bar event.
@@ -378,9 +382,9 @@ usedImages, int imgIndex){
 	image = cvLoadImage(imgs[index].c_str());
 	plotHull(image, priorHull);
 
-	cv::namedWindow("image");
+	cvNamedWindow("image");
 	cvSetMouseCallback("image", mouseHandlerAnn, NULL);
-	cv::imshow("image", image);
+	cvShowImage("image", image);
 
 	// used to write the output stream to a file given in <<argv[3]>>
 	ofstream annoOut;
@@ -446,7 +450,7 @@ usedImages, int imgIndex){
 
 			image = cvLoadImage(imgs[index].c_str());
 			plotHull(image, priorHull);
-			cv::imshow("image", image);
+			cvShowImage("image", image);
 		}else if((char)key == 'n'){
 			cout<<"Annotations for image: "<<\
 				imgs[index].substr(imgs[index].rfind("/")+1)\
@@ -469,7 +473,7 @@ usedImages, int imgIndex){
 			}
 			image = cvLoadImage(imgs[index].c_str());
 			plotHull(image, priorHull);
-			cv::imshow("image", image);
+			cvShowImage("image", image);
 		}else if(isalpha(key)){
 			cout<<"key pressed >>> "<<(char)key<<"["<<key<<"]"<<endl;
 		}
@@ -812,7 +816,7 @@ std::deque<annotationsHandle::ANNOTATION> annotationsHandle::annotations;
 //==============================================================================
 /*
 int main(int argc, char **argv){
-	annotationsHandle::runAnn(argc,argv,1,"_train",0);
+	annotationsHandle::runAnn(argc,argv,1,"_test",-1);
 	//annotationsHandle::runEvaluation(argc,argv);
 }
 */
