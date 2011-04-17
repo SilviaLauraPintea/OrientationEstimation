@@ -65,3 +65,6 @@ ADD_LIBRARY(helpers
 
 ADD_EXECUTABLE(classifyImages ${MT_SRC}/classifyImages.cpp)
 TARGET_LINK_LIBRARIES(classifyImages helpers opencv_core opencv_imgproc opencv_video opencv_highgui opencv_features2d cmn tools iberty vnl_algo vnl v3p_netlib boost_filesystem boost_date_time-mt boost_thread-mt ${XML2_LDFLAGS})
+
+
+

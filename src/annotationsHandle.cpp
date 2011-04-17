@@ -73,12 +73,7 @@ cv::Point2f feetLocation, cv::Mat toRotate, cv::Point2f &borders){
 	double cameraAngle = std::atan2((headLocation.y-feetLocation.y),\
 						(headLocation.x-feetLocation.x));
 	cameraAngle = (cameraAngle+M_PI/2.0);
-	while(cameraAngle>2.0*M_PI){
-		cameraAngle -= 2.0*M_PI;
-	}
-	if(cameraAngle < 0){
-		cameraAngle += 2.0*M_PI;
-	}
+	angle0to360(cameraAngle);
 
 	// THE ROTATION ANGLE NEEDS TO BE IN DEGREES
 	cameraAngle *= (180.0/M_PI);

@@ -106,6 +106,10 @@ class gaussianProcess {
 
 		// Matern25 kernel function.
 		double matern25(cv::Mat x1, cv::Mat x2, double l=1.0);
+		/** Initializes or re-initializes a Gaussian Process.
+		 */
+		void init(gaussianProcess::kernelFunction theKFunction =\
+			&gaussianProcess::sqexp);
 		//======================================================================
 	protected:
 		/** @var chlsky

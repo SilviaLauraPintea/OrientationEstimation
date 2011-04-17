@@ -72,7 +72,7 @@ class featureDetector:public Tracker{
 					datasetPath += '/';
 				}
 				this->plotTracks     = false;
-				this->printValues    = false;
+				this->printValues    = true;
 				this->useGT          = false;
 				this->featureType    = EDGES;
 				this->lastIndex      = 0;
@@ -81,8 +81,8 @@ class featureDetector:public Tracker{
 				this->noMeans        = 500;
 				this->meanSize       = 128;
 				this->colorspaceCode = CV_BGR2Lab;
-				this->featurePart    = 'b'; // 't' or 'b'
-				this->tracking 	      = 1;
+				this->featurePart    = ' '; // 't' or 'b'
+				this->tracking 	      = 0;
 				this->featureFile    = datasetPath+"features/";
 				this->onlyExtract    = extract;
 			}
@@ -176,11 +176,11 @@ class featureDetector:public Tracker{
 		/** Creates on data row in the final data matrix by getting the feature
 		 * descriptors.
 		 */
-		void extractDataRow(std::deque<unsigned> existing, IplImage *bg);
+		void extractDataRow(std::deque<unsigned> &existing, IplImage *bg);
 		/** For each row added in the data matrix (each person detected for which we
 		 * have extracted some features) find the corresponding label.
 		 */
-		void fixLabels(std::vector< std::vector<cv::Point2f> > points);
+		std::deque<unsigned> fixLabels(std::deque<unsigned> existing);
 		/** Returns the size of a window around a template centered in a given point.
 		 */
 		void templateWindow(cv::Size imgSize, int &minX, int &maxX, int &minY,\
@@ -257,7 +257,7 @@ class featureDetector:public Tracker{
 		/** Extracts SIFT features from the image and stores them in a matrix.
 		 */
 		cv::Mat extractSIFT(cv::Mat image, std::vector<cv::Point2f> templ =\
-			std::vector<cv::Point2f>());
+			std::vector<cv::Point2f>(), cv::Rect roi = cv::Rect());
 		/** Extracts all the surf descriptors from the whole image and writes them in a
 		 * matrix.
 		 */
@@ -269,6 +269,10 @@ class featureDetector:public Tracker{
 		/** Starts running something (either the tracker or just mimics it).
 		 */
 		void start(bool readFromFolder, bool toUseGT);
+		/** Gets the location of the head given the feet location.
+		 */
+		cv::Point2f headLocation(cv::Point2f center);
+		//======================================================================
 	public:
 		/** @var plotTracks
 		 * If it is true it displays the tracks of the people in the images.

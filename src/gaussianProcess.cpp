@@ -4,6 +4,25 @@
  */
 #include "gaussianProcess.h"
 //==============================================================================
+/** Initializes or re-initializes a Gaussian Process.
+ */
+void gaussianProcess::init(gaussianProcess::kernelFunction theKFunction){
+	this->chlsky.init();
+	this->_norm_fast = false;
+	this->_norm_max  = RAND_MAX/2.0;
+	this->_norm_next = 0.0;
+	this->rand_x     = 0;
+	this->rand_y     = 1;
+	this->N          = 0;
+	this->kFunction  = theKFunction;
+	if(!this->alpha.empty()){
+		this->alpha.release();
+	}
+	if(!this->data.empty()){
+		this->data.release();
+	}
+}
+//==============================================================================
 /** Generates a selected distribution of the functions given the parameters (the
  * mean: mu, the covariance: cov, the data x).
  */

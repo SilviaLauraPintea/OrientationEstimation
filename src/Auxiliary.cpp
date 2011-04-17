@@ -182,3 +182,14 @@ std::string int2string(int i){
 	return out.str();
 }
 //==============================================================================
+/** Changes a given angle in RADIANS to be positive and between [0,2*M_PI).
+ */
+void angle0to360(double &angle){
+	while(angle >= 2.0*M_PI){
+		angle -= 2.0*M_PI;
+	}
+	if(angle < 0.0){
+		angle += 2.0*M_PI;
+	}
+}
+//==============================================================================

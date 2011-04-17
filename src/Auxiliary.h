@@ -56,4 +56,7 @@ void binFile2mat(cv::Mat &matrix, char* fileName);
 /** Convert int to string.
  */
 std::string int2string(int i);
+/** Changes a given angle in RADIANS to be positive and between [0,2*M_PI).
+ */
+void angle0to360(double &angle);
 #endif /* AUXILIARY_H_ */

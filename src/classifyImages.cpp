@@ -157,6 +157,15 @@ bool fromFolder, bool store, bool toUseGT){
  * trains the a \c GaussianProcess on the data.
  */
 void classifyImages::trainGP(annotationsHandle::POSE what){
+	if(!this->trainData.empty()){
+		this->trainData.release();
+	}
+	if(!this->trainTargets.empty()){
+		this->trainTargets.release();
+	}
+	this->gpSin.init(this->kFunction);
+	this->gpCos.init(this->kFunction);
+
 	// WE ASSUME THAT IF WE DO NOT WANT TO STORE DATA THEN WE WANT TO LOAD DATA
 	std::string modelNameData   = this->modelName+"Data.bin";
 	std::string modelNameLabels = this->modelName+"Labels.bin";
@@ -174,7 +183,7 @@ void classifyImages::trainGP(annotationsHandle::POSE what){
 
 		this->trainData.convertTo(this->trainData, cv::DataType<double>::type);
 		this->trainTargets.convertTo(this->trainTargets, cv::DataType<double>::type);
-		range1Mat(this->trainData);
+		normalizeMat(this->trainData);
 
 		//IF WE WANT TO STORE DATA, THEN WE STORE IT
 		if(!this->modelName.empty()){
@@ -191,6 +200,7 @@ void classifyImages::trainGP(annotationsHandle::POSE what){
 		binFile2mat(this->trainTargets,const_cast<char*>((this->modelName+\
 			"Labels.bin").c_str()));
 	}
+
 	// TRAIN THE SIN AND COS SEPARETELY FOR LONGITUDE || LATITUDe
 	if(what == annotationsHandle::LONGITUDE){
 		this->gpSin.train(this->trainData,this->trainTargets.col(0),\
@@ -212,6 +222,13 @@ void classifyImages::trainGP(annotationsHandle::POSE what){
 void classifyImages::predictGP(std::deque<gaussianProcess::prediction> &predictionsSin,\
 std::deque<gaussianProcess::prediction> &predictionsCos,\
 annotationsHandle::POSE what){
+	if(!this->testData.empty()){
+		this->testData.release();
+	}
+	if(!this->testTargets.empty()){
+		this->testTargets.release();
+	}
+
 	// WE ASSUME THAT IF WE DO NOT WANT TO STORE DATA THEN WE WANT TO LOAD DATA
 	std::string modelNameData   = this->modelName+"Data.bin";
 	std::string modelNameLabels = this->modelName+"Labels.bin";
@@ -235,7 +252,7 @@ annotationsHandle::POSE what){
 		}
 		this->testData.convertTo(this->testData, cv::DataType<double>::type);
 		this->testTargets.convertTo(this->testTargets, cv::DataType<double>::type);
-		range1Mat(this->testData);
+		normalizeMat(this->testData);
 
 		//IF WE WANT TO STORE DATA, THEN WE STORE IT
 		if(!this->modelName.empty()){
@@ -284,7 +301,6 @@ annotationsHandle::POSE what){
 void classifyImages::evaluate(std::deque<gaussianProcess::prediction>\
 predictionsSin, std::deque<gaussianProcess::prediction> predictionsCos,\
 double &error,double &normError,double &meanDiff){
-	double normAccuracy = 0.0;
 	error = 0.0; normError = 0.0; meanDiff = 0.0;
 	for(int y=0; y<this->testTargets.rows; y++){
 		double targetAngle;
@@ -292,8 +308,11 @@ double &error,double &normError,double &meanDiff){
 						this->testTargets.at<double>(y,1));
 
 		// GET THE PREDICTED ANGLE
-		double prediAngle = this->optimizePrediction(predictionsCos[y],\
-							predictionsSin[y]);
+		double prediAngle = this->optimizePrediction(predictionsSin[y],\
+							predictionsCos[y]);
+		angle0to360(targetAngle);
+		angle0to360(prediAngle);
+
 		std::cout<<"Target: "<<targetAngle<<"("<<(targetAngle*180.0/M_PI)<<\
 			") VS "<<prediAngle<<"("<<(prediAngle*180.0/M_PI)<<")"<<std::endl;
 		double absDiff = std::abs(targetAngle-prediAngle);
@@ -307,15 +326,14 @@ double &error,double &normError,double &meanDiff){
 	}
 
 	std::cout<<"Number of images: "<<this->testTargets.rows<<std::endl;
-	error        = std::sqrt(error/this->testTargets.rows);
-	normError    = std::sqrt(normError/this->testTargets.rows);
-	meanDiff     = meanDiff/this->testTargets.rows;
-	normAccuracy = 1-normError;
+	error     = std::sqrt(error/this->testTargets.rows);
+	normError = std::sqrt(normError/this->testTargets.rows);
+	meanDiff  = meanDiff/this->testTargets.rows;
 
 	std::cout<<"RMS-error normalized: "<<normError<<std::endl;
-	std::cout<<"RMS-accuracy normalized: "<<normAccuracy<<std::endl;
+	std::cout<<"RMS-accuracy normalized: "<<(1-normError)<<std::endl;
 	std::cout<<"RMS-error: "<<error<<std::endl;
-	std::cout<<"Avg-Degree-Difference: "<<meanDiff<<std::endl;
+	std::cout<<"Avg-Radians-Difference: "<<meanDiff<<std::endl;
 }
 //==============================================================================
 /** Try to optimize the prediction of the angle considering the variance of sin
@@ -324,20 +342,20 @@ double &error,double &normError,double &meanDiff){
 double classifyImages::optimizePrediction(gaussianProcess::prediction \
 predictionsSin, gaussianProcess::prediction predictionsCos){
 /*
-	double x     = predictionsSin.mean[0];
-	double y     = predictionsCos.mean[0];
-	return std::atan2(x,y);
+	double y = predictionsSin.mean[0];
+	double x = predictionsCos.mean[0];
+	return std::atan2(y,x);
 */
 
 	double betaS = 1.0/(predictionsSin.variance[0]);
 	double betaC = 1.0/(predictionsCos.variance[0]);
-	double x     = predictionsSin.mean[0];
-	double y     = predictionsCos.mean[0];
+	double y     = predictionsSin.mean[0];
+	double x     = predictionsCos.mean[0];
 
 	if(betaS == betaC){
-		return std::atan2(betaS*x,betaC*y);
+		return std::atan2(betaS*y,betaC*x);
 	}else{
-		return std::atan2(x,y);
+		return std::atan2(y,x);
 	}
 
 	/*
@@ -421,8 +439,8 @@ void classifyImages::runCrossValidation(unsigned k, int colorSp){
 	double finalMeanDiffLat=0.0, finalMeanDiffLong=0.0;
 
 	// SET THE CALIBRATION ONLY ONCE (ALL IMAGES ARE READ FROM THE SAME DIR)
-	this->resetFeatures(this->trainDir, this->trainImgString,colorSp);
-	for(unsigned i=1; i<k; i++){
+	this->resetFeatures(this->trainDir, this->trainImgString, colorSp);
+	for(unsigned i=0; i<k; i++){
 		std::cout<<"Round "<<i<<"___________________________________________"<<\
 			"_____________________________________________________"<<std::endl;
 		// SPLIT TRAINING AND TESTING ACCORDING TO THE CURRENT FOLD
@@ -447,6 +465,8 @@ void classifyImages::runCrossValidation(unsigned k, int colorSp){
 		finalErrorLong += errorLong;
 		finalNormErrorLong += normErrorLong;
 		finalMeanDiffLong += meanDiffLong;
+		predictionsSin.clear();
+		predictionsCos.clear();
 
 		//______________________________________________________________________
 	  	//LATITUDE TRAINING AND PREDICTING
@@ -467,6 +487,8 @@ void classifyImages::runCrossValidation(unsigned k, int colorSp){
 		finalErrorLat += errorLat;
 		finalNormErrorLat += normErrorLat;
 		finalMeanDiffLat += meanDiffLat;
+		predictionsSin.clear();
+		predictionsCos.clear();
 		*/
 	}
 	finalErrorLong /= static_cast<double>(k);
@@ -513,7 +535,6 @@ void classifyImages::crossValidation(unsigned k, unsigned fold){
 			exit(1);
 		}
 	}
-
 
 	// DEFINE THE FOLDERS WERE THE TEMPORARY FILES NEED TO BE STORED
 	unsigned pos       = this->trainFolder.find_first_of("/\\");
@@ -602,6 +623,9 @@ void classifyImages::runTest(int colorSp){
 	double errorLong, normErrorLong, meanDiffLong;
 	this->evaluate(predictionsSin, predictionsCos, errorLong, normErrorLong,\
 			meanDiffLong);
+	predictionsSin.clear();
+	predictionsCos.clear();
+
 	//__________________________________________________________________________
   	// LATITUDE TRAINING AND PREDICTING
 	std::cout<<"Latitude >>> _______________________________________________"<<\
@@ -630,11 +654,11 @@ int main(int argc, char **argv){
 			true, true, true);
  	classi.runTest(CV_BGR2Luv);
 */
+	classifyImages classi(argc, argv, classifyImages::EVALUATE);
 
 	// evaluate
-	classifyImages classi(argc, argv, classifyImages::EVALUATE);
-	classi.init(1e-3,100.0,featureDetector::EDGES,&gaussianProcess::sqexp,\
-			false, true, true);
+	classi.init(1e-3,100.0,featureDetector::IPOINTS,&gaussianProcess::sqexp,\
+		false, true, true);
   	classi.runCrossValidation(5,CV_BGR2Luv);
 
 /*

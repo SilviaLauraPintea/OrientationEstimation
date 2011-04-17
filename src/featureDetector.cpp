@@ -655,7 +655,13 @@ double tmplArea){
 /** Creates on data row in the final data matrix by getting the feature
  * descriptors.
  */
-void featureDetector::extractDataRow(std::deque<unsigned> existing, IplImage *bg){
+void featureDetector::extractDataRow(std::deque<unsigned> &existing, IplImage *bg){
+	// FIX THE LABELS TO CORRESPOND TO THE PEOPLE DETECTED IN THE IMAGE
+	if(!this->targetAnno.empty() && !this->useGT){
+		existing = this->fixLabels(existing);
+	}
+
+	// PROCESS THE REST OF THE IMAGES
 	this->lastIndex = this->data.rows;
 	cv::Mat image(this->current->img);
 	cv::cvtColor(image, image, this->colorspaceCode);
@@ -681,17 +687,12 @@ void featureDetector::extractDataRow(std::deque<unsigned> existing, IplImage *bg
 	imgName             = imgName.substr(0,pos2);
 
 	// FOR EACH LOCATION IN THE IMAGE EXTRACT FEATURES, FILTER THEM AND RESHAPE
-	std::vector< std::vector<cv::Point2f> > allLocations;
 	for(std::size_t i=0; i<existing.size(); i++){
 		cv::Point2f center = this->cvPoint(existing[i]);
 		std::vector<cv::Point2f> templ;
 		std::vector<cv::Point2f> templPoints;
 		genTemplate2(center, persHeight, camHeight, templ);
 		cv::Point2f head((templ[12].x+templ[14].x)/2,(templ[12].y+templ[14].y)/2);
-		templPoints.push_back(center);
-		templPoints.push_back(head);
-		allLocations.push_back(templPoints);
-		templPoints.clear();
 
 		// DEFINE THE IMAGE ROI OF THE SAME SIZE AS THE FOREGROUND
 		cv::Rect roi(allPeople[i].borders[0],allPeople[i].borders[2],\
@@ -723,6 +724,7 @@ void featureDetector::extractDataRow(std::deque<unsigned> existing, IplImage *bg
 		// ANF FINALLY EXTRACT THE DATA ROW
 		cv::Mat dataRow, feature;
 		std::string toRead;
+		cv::Mat dictImage;
 		cv::vector<cv::Point2f> keys;
 		switch(this->featureType){
 			case (featureDetector::IPOINTS):
@@ -758,7 +760,9 @@ void featureDetector::extractDataRow(std::deque<unsigned> existing, IplImage *bg
 					allPeople[i].pixels.size());
 				break;
 			case featureDetector::SIFT_DICT:
-				dataRow = this->extractSIFT(image, templ);
+				dictImage = cv::Mat(image, roi);
+				dictImage = this->rotate2Zero(head,center,dictImage,rotBorders);
+				dataRow   = this->extractSIFT(dictImage, templ, roi);
 				break;
 			case featureDetector::SIFT:
 				toRead = (this->featureFile+"SIFT/"+imgName+".bin");
@@ -774,6 +778,7 @@ void featureDetector::extractDataRow(std::deque<unsigned> existing, IplImage *bg
 				}
 				break;
 		}
+		dictImage.release();
 		dataRow.convertTo(dataRow, cv::DataType<double>::type);
 		if(this->tracking && this->featureType!=featureDetector::SIFT_DICT){
 			dataRow.at<double>(0,dataRow.cols-1) = this->motionVector(head,center);
@@ -786,11 +791,6 @@ void featureDetector::extractDataRow(std::deque<unsigned> existing, IplImage *bg
 		thresholded.release();
 		feature.release();
 		dataRow.release();
-	}
-
-	// FIX THE LABELS TO CORRESPOND TO THE PEOPLE DETECTED IN THE IMAGE
-	if(!this->targetAnno.empty() && !this->useGT){
-		this->fixLabels(allLocations);
 	}
 }
 //==============================================================================
@@ -994,12 +994,7 @@ cv::Point2f rotBorders, cv::Point2f rotCenter){
 	double rotAngle = std::atan2((headLocation.y-feetLocation.y),\
 						(headLocation.x-feetLocation.x));
 	rotAngle = (rotAngle+M_PI/2.0);
-	while(rotAngle>2.0*M_PI){
-		rotAngle -= 2.0*M_PI;
-	}
-	if(rotAngle < 0.0){
-		rotAngle += 2.0*M_PI;
-	}
+	angle0to360(rotAngle);
 
 	// THE ROTATION ANGLE NEEDS TO BE IN DEGREES
 	rotAngle *= (180.0/M_PI);
@@ -1040,12 +1035,7 @@ feetLocation, cv::Mat &keys, cv::Point2f rotCenter, cv::Point2f rotBorders){
 	double rotAngle = std::atan2((headLocation.y-feetLocation.y),\
 						(headLocation.x-feetLocation.x));
 	rotAngle = (rotAngle+M_PI/2.0);
-	while(rotAngle>2.0*M_PI){
-		rotAngle -= 2.0*M_PI;
-	}
-	if(rotAngle < 0.0){
-		rotAngle += 2.0*M_PI;
-	}
+	angle0to360(rotAngle);
 
 	// THE ROTATION ANGLE NEEDS TO BE IN DEGREES
 	rotAngle *= (180.0/M_PI);
@@ -1084,12 +1074,7 @@ cv::Point2f feetLocation, cv::Mat toRotate, cv::Point2f &borders){
 	double rotAngle = std::atan2((headLocation.y-feetLocation.y),\
 						(headLocation.x-feetLocation.x));
 	rotAngle = (rotAngle+M_PI/2.0);
-	while(rotAngle>2.0*M_PI){
-		rotAngle -= 2.0*M_PI;
-	}
-	if(rotAngle < 0.0){
-		rotAngle += 2.0*M_PI;
-	}
+	angle0to360(rotAngle);
 
 	// THE ANGLE NEEDS TO BE IN DEGREES TO ROTATE WITH IT
 	rotAngle *= (180.0/M_PI);
@@ -1125,30 +1110,24 @@ double angle){
 	double cameraAngle = std::atan2((headLocation.y-feetLocation.y),\
 						(headLocation.x-feetLocation.x));
 
-	cameraAngle = cameraAngle + M_PI/2.0; // TO BE LIKE FOR THE FEATURES
-	while(cameraAngle>2.0*M_PI){
-		cameraAngle -= 2.0*M_PI;
-	}
-	if(cameraAngle < 0.0){
-		cameraAngle += 2.0*M_PI;
-	}
-
 	double newAngle;
 	newAngle = angle-cameraAngle; // "ROATATE" THE ANGLE WRT TO CAMERA
-	std::cout<<"Angle>>> "<<(newAngle*180/M_PI)<<std::endl;
-	if(newAngle >= 2.0*M_PI){
-		newAngle -= 2.0*M_PI;
-	}else if(newAngle < 0.0){
-		newAngle += 2.0*M_PI;
-	}
-	std::cout<<"Angle [0,180]>>> "<<(newAngle*180/M_PI)<<std::endl;
+	angle0to360(newAngle);
 	return newAngle;
+}
+//==============================================================================
+/** Gets the location of the head given the feet location.
+ */
+cv::Point2f featureDetector::headLocation(cv::Point2f center){
+	std::vector<cv::Point2f> templ;
+	genTemplate2(center, persHeight, camHeight, templ);
+	return cv::Point2f((templ[12].x+templ[14].x)/2,(templ[12].y+templ[14].y)/2);
 }
 //==============================================================================
 /** For each row added in the data matrix (each person detected for which we
  * have extracted some features) find the corresponding label.
  */
-void featureDetector::fixLabels(std::vector< std::vector<cv::Point2f> > points){
+std::deque<unsigned> featureDetector::fixLabels(std::deque<unsigned> existing){
 	// FIND	THE INDEX FOR THE CURRENT IMAGE
 	std::deque<annotationsHandle::FULL_ANNOTATIONS>::iterator index = \
 		std::find_if (this->targetAnno.begin(), this->targetAnno.end(),\
@@ -1159,11 +1138,17 @@ void featureDetector::fixLabels(std::vector< std::vector<cv::Point2f> > points){
 		exit(1);
 	}
 
+	//GET THE EXTREMES OF THE DETECTED LOCATIONS
+	std::vector<cv::Point2f> points;
+	for(std::size_t i=0; i<existing.size(); i++){
+		cv::Point2f center = this->cvPoint(existing[i]);
+		points.push_back(center);
+	}
+
 	// LOOP OVER ALL ANNOTATIONS FOR THE CURRENT IMAGE AND FIND THE CLOSEST ONES
 	std::deque<int> assignments((*index).annos.size(),-1);
 	std::deque<double> minDistances((*index).annos.size(),(double)INFINITY);
 	unsigned canAssign = 1;
-
 	while(canAssign){
 		canAssign = 0;
 		for(std::size_t l=0; l<(*index).annos.size(); l++){
@@ -1171,7 +1156,7 @@ void featureDetector::fixLabels(std::vector< std::vector<cv::Point2f> > points){
 			double distance    = (double)INFINITY;
 			unsigned annoIndex = -1;
 			for(std::size_t k=0; k<points.size(); k++){
-				double dstnc = dist((*index).annos[l].location,points[k][0]);
+				double dstnc = dist((*index).annos[l].location,points[k]);
 				if(distance>dstnc && this->canBeAssigned(l,minDistances,k,dstnc,\
 				assignments)){
 					distance  = dstnc;
@@ -1183,96 +1168,49 @@ void featureDetector::fixLabels(std::vector< std::vector<cv::Point2f> > points){
 		}
 	}
 
-	// DELETE DETECTED LOCATIONS THAT ARE NOT LABELLED
-	unsigned extra = 0;
-	std::deque<unsigned> unlabelled;
+	// DELETE DETECTED LOCATIONS THAT ARE NOT LABELLED ARE IGNORED
+	std::deque<unsigned> finExisting;
 	for(std::size_t k=0; k<points.size(); k++){
-		if(std::find(assignments.begin(),assignments.end(),k) == assignments.end()){
-			unlabelled.push_back(k);
-		}
-	}
-	// UNDETECTED LOCATIONS THAT ARE LABELLED
-	for(std::size_t i=0; i<assignments.size(); i++){
-		if(assignments[i] != -1){
-			extra++;
-		}
-	}
-	extra += unlabelled.size();
+		// SEARCH FOR A DETECTED POSITION IN ASSIGNMENTS
+		std::deque<int>::iterator targetPos = \
+			std::find(assignments.begin(),assignments.end(),k);
 
+		// IF THE POSITION IS FOUND READ THE LABEL AND SAVE IT
+		if(targetPos != assignments.end()){
+			finExisting.push_back(existing[k]);
+			int position = targetPos-assignments.begin();
+			cv::Point2f feet = (*index).annos[position].location;
+			cv::Point2f head = this->headLocation(feet);
 
-	// STORE THE LABELS FOR ALL THE DETECTED LOCATIONS (+UNLABELLED ONES)
-	if(this->targets.empty()){
-		this->targets = cv::Mat::zeros(1,4,cv::DataType<double>::type);
-	}
-	for(unsigned i=this->targets.rows; i<this->lastIndex+extra; i++){
-		cv::Mat tmp = cv::Mat::zeros(1,4,cv::DataType<double>::type);
-		this->targets.push_back(tmp);
-		tmp.release();
-	}
-	for(std::size_t i=0; i<assignments.size(); i++){
-		if(assignments[i] != -1){
+			// SAVE THE TARGET LABEL
 			cv::Mat tmp = cv::Mat::zeros(1,4,cv::DataType<double>::type);
 			// READ THE TARGET ANGLE FOR LONGITUDINAL ANGLE
-			double angle = static_cast<double>\
-				((*index).annos[i].poses[annotationsHandle::LONGITUDE]);
-			std::cout<<"Longitude: "<<angle<<std::endl;
+			double angle = static_cast<double>((*index).annos[position].\
+							poses[annotationsHandle::LONGITUDE]);
 			angle = angle*M_PI/180.0;
-			angle = this->fixAngle(points[assignments[i]][1],\
-					(*index).annos[i].location,angle);
+			angle = this->fixAngle(head,feet,angle);
+			std::cout<<"Longitude: "<<angle*(180/M_PI)<<std::endl;
 			tmp.at<double>(0,0) = std::sin(angle);
 			tmp.at<double>(0,1) = std::cos(angle);
 
 			// READ THE TARGET ANGLE FOR LATITUDINAL ANGLE
-			angle = static_cast<double>\
-				((*index).annos[i].poses[annotationsHandle::LATITUDE]);
+			angle = static_cast<double>((*index).annos[position].\
+					poses[annotationsHandle::LATITUDE]);
 			std::cout<<"Latitude: "<<angle<<std::endl;
 			angle = angle*M_PI/180.0;
 			tmp.at<double>(0,2) = std::sin(angle);
 			tmp.at<double>(0,3) = std::cos(angle);
 
 			// STORE THE LABELS IN THE TARGETS ON THE RIGHT POSITION
-			cv::Mat tmp2 = this->targets.row(this->lastIndex+assignments[i]);
-			tmp.copyTo(tmp2);
-			tmp.release();
-			tmp2.release();
-		}
-	}
-
-	// REMOVE THE DETECTED, UNLABELLED POSITIONS FROM TARGETS AND TRAIN DATA
-	if(!unlabelled.empty()){
-		double dataDiff    = this->data.rows-unlabelled.size();
-		double targetsDiff = this->targets.rows-unlabelled.size();
-		cv::Mat tmpData = cv::Mat::zeros(cv::Size(this->data.cols,\
-							dataDiff),cv::DataType<double>::type);
-		cv::Mat tmpTargets = cv::Mat::zeros(cv::Size(this->targets.cols,\
-							targetsDiff),cv::DataType<double>::type);
-		// COPY THE MATRIXES IN 2 TEMPORARY MATRIXES
-		if(this->lastIndex>0){
-			cv::Mat tmp1 = this->data.rowRange(0,this->lastIndex);
-			cv::Mat tmp2 = this->targets.rowRange(0,this->lastIndex);
-			tmp1.copyTo(tmpData); tmp1.release();
-			tmp2.copyTo(tmpTargets); tmp2.release();
-		}
-		// ADD ONLY THE LABELLED ROWS OVER ON TOP
-		for(std::size_t k=0; k<points.size(); k++){
-			if(std::find(unlabelled.begin(),unlabelled.end(),k) == unlabelled.end()){
-				cv::Mat dummy1 = this->data.row(this->lastIndex+k);
-				tmpData.push_back(dummy1);
-				dummy1.release();
-
-				cv::Mat dummy2 = this->targets.row(this->lastIndex+k);
-				tmpTargets.push_back(dummy2);
-				dummy2.release();
+			if(this->targets.empty()){
+				tmp.copyTo(this->targets);
+			}else{
+				this->targets.push_back(tmp);
 			}
+			tmp.release();
 		}
-		// COPY FROM THE TEMPORARY MATRIXES TO THE ACTUAL MATRIXES
-		this->data.release();
-		tmpData.copyTo(this->data);
-		this->targets.release();
-		tmpTargets.copyTo(this->targets);
-		tmpData.release();
-		tmpTargets.release();
 	}
+	return finExisting;
 }
 //==============================================================================
 /** Overwrites the \c doFindPeople function from the \c Tracker class to make it
@@ -1725,7 +1663,8 @@ cv::Mat featureDetector::extractGabor(cv::Mat image){
 //==============================================================================
 /** Extracts SIFT features from the image and stores them in a matrix.
  */
-cv::Mat featureDetector::extractSIFT(cv::Mat image, std::vector<cv::Point2f> templ){
+cv::Mat featureDetector::extractSIFT(cv::Mat image, std::vector<cv::Point2f> templ,\
+cv::Rect roi){
 	// DEFINE THE SURF KEYPOINTS AND THE DESCRIPTORS
 	std::vector<cv::KeyPoint> keypoints;
 	cv::SIFT::DetectorParams detectP  = cv::SIFT::DetectorParams(0.0001,10.0);
@@ -1747,19 +1686,17 @@ cv::Mat featureDetector::extractSIFT(cv::Mat image, std::vector<cv::Point2f> tem
 				cv::DataType<double>::type);
 		std::vector<cv::KeyPoint> goodKP;
 		for(std::size_t i=0; i<keypoints.size();i++){
-			if(this->isInTemplate(keypoints[i].pt.x,keypoints[i].pt.y,templ)){
+			if(this->isInTemplate(keypoints[i].pt.x+roi.x,keypoints[i].pt.y+roi.y,templ)){
 				goodKP.push_back(keypoints[i]);
 			}
 		}
 		aSIFT(gray, cv::Mat(), goodKP, sift, true);
 		if(this->plotTracks){
-			cv::Mat toSee(this->current->img);
 			for(std::size_t i=0; i<goodKP.size(); i++){
-				cv::circle(toSee,goodKP[i].pt,3,cv::Scalar(0,0,255));
+				cv::circle(image,goodKP[i].pt,3,cv::Scalar(0,0,255));
 			}
-			cv::imshow("SIFT_DICT", toSee);
+			cv::imshow("SIFT_DICT", image);
 			cv::waitKey(0);
-			toSee.release();
 		}
 
 	// IF WE ONLY WANT TO STORE THE SIFT FEATURE WE NEED TO ADD THE x-S AND y-S
@@ -1775,13 +1712,11 @@ cv::Mat featureDetector::extractSIFT(cv::Mat image, std::vector<cv::Point2f> tem
 		dummy2.release();
 		// PLOT THE KEYPOINTS TO SEE THEM
 		if(this->plotTracks){
-			cv::Mat toSee(this->current->img);
 			for(std::size_t i=0; i<keypoints.size();i++){
-				cv::circle(toSee, keypoints[i].pt,3,cv::Scalar(0,0,255));
+				cv::circle(image, keypoints[i].pt,3,cv::Scalar(0,0,255));
 			}
-			cv::imshow("SIFT", toSee);
+			cv::imshow("SIFT", image);
 			cv::waitKey(0);
-			toSee.release();
 		}
 	}
 
@@ -1830,6 +1765,7 @@ void featureDetector::start(bool readFromFolder, bool toUseGT){
 		while((this->current->img = this->producer->getFrame())){
 			this->current->sourceName = this->producer->getSource(-1);
 			this->current->index      = index;
+			std::cout<<index<<") Image... "<<this->current->sourceName<<std::endl;
 			if(this->onlyExtract){
 				this->extractFeatures();
 			}else{
@@ -1839,9 +1775,6 @@ void featureDetector::start(bool readFromFolder, bool toUseGT){
 			}
 			index++;
 		}
-		if(this->current->img){cvReleaseImage(&this->current->img);}
-		cvReleaseImage(&img);
-		delete this->current;
 	}else{
 		// FOR THE EDGES AND GABOR I NEED A BACKGROUND MODEL EVEN IF I ONLY EXTRACT
 		this->run(readFromFolder);
@@ -1870,29 +1803,25 @@ std::deque<unsigned> featureDetector::readLocations(){
 	std::deque<unsigned> locations;
 	for(std::size_t l=0; l<(*index).annos.size(); l++){
 		// point.x + width*point.y
-		unsigned location = (*index).annos[l].location.x + width*\
-							(*index).annos[l].location.y;
+		cv::Point2f feet = (*index).annos[l].location;
+		cv::Point2f head = this->headLocation(feet);
+		unsigned location = feet.x + width*feet.y;
 		locations.push_back(location);
-
-		// FIND THE HEAD IN THE TEMPLATE
-		std::vector<cv::Point2f> templ;
-		genTemplate2((*index).annos[l].location, persHeight, camHeight, templ);
-		cv::Point2f head((templ[12].x+templ[14].x)/2,(templ[12].y+templ[14].y)/2);
 
 		// STORE THE LABELS FOR ALL THE LOCATIONS
 		cv::Mat tmp = cv::Mat::zeros(1,4,cv::DataType<double>::type);
 		// READ THE TARGET ANGLE FOR LONGITUDINAL ANGLE
-		double angle = static_cast<double>\
-			((*index).annos[l].poses[annotationsHandle::LONGITUDE]);
-		std::cout<<"Longitude: "<<angle<<std::endl;
+		double angle = static_cast<double>((*index).annos[l].\
+						poses[annotationsHandle::LONGITUDE]);
 		angle = angle*M_PI/180.0;
-		angle = this->fixAngle(head,(*index).annos[l].location,angle);
+		angle = this->fixAngle(head,feet,angle);
+		std::cout<<"Longitude: "<<(angle*180/M_PI)<<std::endl;
 		tmp.at<double>(0,0) = std::sin(angle);
 		tmp.at<double>(0,1) = std::cos(angle);
 
 		// READ THE TARGET ANGLE FOR LATITUDINAL ANGLE
-		angle = static_cast<double>\
-			((*index).annos[l].poses[annotationsHandle::LATITUDE]);
+		angle = static_cast<double>((*index).annos[l].\
+					poses[annotationsHandle::LATITUDE]);
 		std::cout<<"Latitude: "<<angle<<std::endl;
 		angle = angle*M_PI/180.0;
 		tmp.at<double>(0,2) = std::sin(angle);
