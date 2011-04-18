@@ -129,6 +129,7 @@ void gaussianProcess::train(cv::Mat X,cv::Mat y,double (gaussianProcess::*fFunct
 	}
 	X.convertTo(X, cv::DataType<double>::type);
 	y.convertTo(y, cv::DataType<double>::type);
+
 	this->chlsky.init();
 	this->kFunction = fFunction;
 	this->N         = X.rows; // NUMBER OF TRAINING DATA POINTS!
@@ -136,15 +137,15 @@ void gaussianProcess::train(cv::Mat X,cv::Mat y,double (gaussianProcess::*fFunct
 
 	// BUILD THE KERNEL MARIX K: K(i,j) = k(x[i],x[j])
 	cv::Mat K = cv::Mat::zeros(cv::Size(this->N,this->N), cv::DataType<double>::type);
-	for(unsigned indy=0; indy<this->N; indy++){
-		for(unsigned indx=0; indx<this->N; indx++){
+	for(int indy=0; indy<this->N; indy++){
+		for(int indx=0; indx<this->N; indx++){
 			K.at<double>(indy,indx) = (this->*kFunction)(X.row(indy),\
 										X.row(indx), length);
 		}
 	}
 
 	// ADD sigma^2 TO THE KERNEL MATRIX, K
-	for(unsigned indy=0; indy<this->N; indy++){
+	for(int indy=0; indy<this->N; indy++){
 		K.at<double>(indy,indy) += sigmasq;
 	}
 
@@ -157,7 +158,6 @@ void gaussianProcess::train(cv::Mat X,cv::Mat y,double (gaussianProcess::*fFunct
 	std::cout<<"N: ("<<this->N<<")"<<std::endl;
 	std::cout<<"size of alpha: ("<<this->alpha.cols<<","<<this->alpha.rows<<")"<<std::endl;
 	std::cout<<"size of data: ("<<this->data.cols<<","<<this->data.rows<<")"<<std::endl;
-
 	K.release();
 }
 //==============================================================================
@@ -166,10 +166,10 @@ void gaussianProcess::train(cv::Mat X,cv::Mat y,double (gaussianProcess::*fFunct
 void gaussianProcess::predict(cv::Mat x, gaussianProcess::prediction &predi,\
 double length){
 	cv::Mat kstar(this->data.rows, 1, cv::DataType<double>::type);
-	for(unsigned indy=0; indy<this->N; indy++){
+	for(int indy=0; indy<this->N; indy++){
 		kstar.at<double>(indy,0) = (this->*kFunction)(this->data.row(indy),x,length);
 	}
-	for(unsigned i=0; i<this->alpha.cols; i++){
+	for(int i=0; i<this->alpha.cols; i++){
 		predi.mean.push_back(kstar.dot(this->alpha.col(i)));
 	}
 	cv::Mat v;
@@ -185,12 +185,12 @@ void gaussianProcess::sample(cv::Mat inputs, cv::Mat &smpl){
 	cv::Mat Kxstarx(this->N, inputs.cols, cv::DataType<double>::type);
 	cv::Mat Kxstarxstar(inputs.cols, inputs.cols, cv::DataType<double>::type);
 
-	for(unsigned indy=0; indy<inputs.cols; indy++){
-		for(unsigned indx=0; indx<this->N; indx++){
+	for(int indy=0; indy<inputs.cols; indy++){
+		for(int indx=0; indx<this->N; indx++){
 			Kxstarx.at<double>(indy,indx) = (this->*kFunction)(inputs.row(indy),\
 											this->data.row(indx),1.0);
 		}
-		for(unsigned indx=0; indx<inputs.cols; indx++){
+		for(int indx=0; indx<inputs.cols; indx++){
 			Kxstarxstar.at<double>(indy,indx) = (this->*kFunction)(inputs.row(indy),\
 												inputs.row(indx),1.0);
 		}
@@ -202,7 +202,7 @@ void gaussianProcess::sample(cv::Mat inputs, cv::Mat &smpl){
 	this->chlsky.inverse(inv);
 	cv::Mat cov     = Kxstarxstar-(Kxstarx*inv)*Kxxstar;
 
-	for(unsigned indy=0; indy<cov.cols; indy++){
+	for(int indy=0; indy<cov.cols; indy++){
 		cov.at<double>(indy,indy) += 1.0e-6;
 	}
 	this->sampleGaussND(mu, cov, smpl);
@@ -222,7 +222,7 @@ void gaussianProcess::sampleGaussND(cv::Mat mu, cv::Mat cov, cv::Mat &smpl){
 		this->chlsky.decomposeCov(cov);
 	}
 
-	for(unsigned indy=0; indy<mu.cols; indy++){
+	for(int indy=0; indy<mu.cols; indy++){
 		smpl.at<double>(indy,0) = this->rand_normal();
 	}
 
@@ -259,15 +259,15 @@ cv::Mat, double), cv::Mat inputs, cv::Mat &smpl){
 	cv::Mat mu;
 	cv::Mat cov;
 
-	for(unsigned indy=0; indy<inputs.cols; indy++){
+	for(int indy=0; indy<inputs.cols; indy++){
 		mu.at<double>(indy,0) = 0.0;
-		for(unsigned indx=0; indx<inputs.cols; indx++){
+		for(int indx=0; indx<inputs.cols; indx++){
 			cov.at<double>(indy,indx) = (this->*kFunction)(inputs.row(indy),\
 										inputs.row(indx),1.0);
 		}
 	}
 
-	for(unsigned indy=0; indy<inputs.cols; indy++){
+	for(int indy=0; indy<inputs.cols; indy++){
 		cov.at<double>(indy,indy) += 1.0e-6;
 	}
 	this->sampleGaussND(mu, cov, smpl);
@@ -278,6 +278,7 @@ cv::Mat, double), cv::Mat inputs, cv::Mat &smpl){
 // Squared exponential kernel function.
 double gaussianProcess::sqexp(cv::Mat x1, cv::Mat x2, double l){
 	cv::Mat diff  = x1-x2;
+	diff.convertTo(diff,cv::DataType<double>::type);
 	double result = std::exp(-1.0 * diff.dot(diff)/(2.0*l));
 	diff.release();
 	return result;
@@ -286,6 +287,7 @@ double gaussianProcess::sqexp(cv::Mat x1, cv::Mat x2, double l){
 // Matern05 kernel function.
 double gaussianProcess::matern05(cv::Mat x1, cv::Mat x2, double l){
 	cv::Mat diff  = x1-x2;
+	diff.convertTo(diff,cv::DataType<double>::type);
 	double result = std::sqrt(diff.dot(diff));
 	diff.release();
 	return std::exp(-1.0 * result/l);
@@ -294,6 +296,7 @@ double gaussianProcess::matern05(cv::Mat x1, cv::Mat x2, double l){
 // Exponential Covariance kernel function.
 double gaussianProcess::expCovar(cv::Mat x1, cv::Mat x2, double l){
 	cv::Mat diff  = x1-x2;
+	diff.convertTo(diff,cv::DataType<double>::type);
 	double result = std::sqrt(diff.dot(diff));
 	diff.release();
 	return std::exp(-1.0 * result/l);
@@ -302,6 +305,7 @@ double gaussianProcess::expCovar(cv::Mat x1, cv::Mat x2, double l){
 // Matern15 kernel function.
 double gaussianProcess::matern15(cv::Mat x1, cv::Mat x2, double l){
 	cv::Mat diff  = x1-x2;
+	diff.convertTo(diff,cv::DataType<double>::type);
 	double result = std::sqrt(diff.dot(diff));
 	diff.release();
 	return (1.0 + std::sqrt(3.0)*result/l) * std::exp(-1.0 * std::sqrt(3.0)*result/l);
@@ -310,6 +314,7 @@ double gaussianProcess::matern15(cv::Mat x1, cv::Mat x2, double l){
 // Matern25 kernel function.
 double gaussianProcess::matern25(cv::Mat x1, cv::Mat x2, double l){
 	cv::Mat diff  = x1-x2;
+	diff.convertTo(diff,cv::DataType<double>::type);
 	double result = std::sqrt(diff.dot(diff));
 	diff.release();
 	return (1.0 + std::sqrt(5.0)*result/l + (5.0*result*result)/(3.0*l*l))*\

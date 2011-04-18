@@ -72,7 +72,7 @@ class featureDetector:public Tracker{
 					datasetPath += '/';
 				}
 				this->plotTracks     = false;
-				this->printValues    = true;
+				this->printValues    = false;
 				this->useGT          = false;
 				this->featureType    = EDGES;
 				this->lastIndex      = 0;
@@ -184,7 +184,7 @@ class featureDetector:public Tracker{
 		/** Returns the size of a window around a template centered in a given point.
 		 */
 		void templateWindow(cv::Size imgSize, int &minX, int &maxX, int &minY,\
-			int &maxY, std::vector<cv::Point2f> &templ, int tplBorder = 100);
+			int &maxY, std::vector<cv::Point2f> &templ, int tplBorder = 200);
 		/** Initializes the parameters of the tracker.
 		 */
 		void init(std::string dataFolder, std::string theAnnotationsFile,\
@@ -239,8 +239,8 @@ class featureDetector:public Tracker{
 		/** Rotate the keypoints wrt to the camera location.
 		 */
 		void rotateKeypts2Zero(cv::Point2f feetLocation, cv::Point2f\
-			headLocation, cv::Mat &keys, cv::Point2f rotCenter,\
-			cv::Point2f rotBorders);
+			headLocation, cv::Mat &keys, cv::Point2f rotBorders,\
+			cv::Point2f rotCenter);
 		/** Creates a data matrix for each image and stores it locally.
 		 */
 		void extractFeatures();

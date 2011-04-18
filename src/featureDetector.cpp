@@ -114,25 +114,38 @@ cv::Rect roi, cv::Point2f head, cv::Point2f center){
 	// PICK OUT ONLY THE THRESHOLDED ARES RESHAPE IT AND RETURN IT
 	cv::Mat tmpEdge;
 	tmpFeat.copyTo(tmpEdge,thresholded);
+	std::vector<std::vector<cv::Point> > contours;
+	cv::findContours(thresholded,contours,CV_RETR_EXTERNAL,CV_CHAIN_APPROX_SIMPLE);
 
 	// IF WE WANT TO SEE HOW THE EXTRACTED EDGES LOOK LIKE
 	if(this->plotTracks){
+		cv::drawContours(tmpEdge,contours,-1,cv::Scalar(255,0,0));
 		cv::imshow("Edges", tmpEdge);
 		cv::waitKey(0);
 	}
 
 	// WRITE IT ON ONE ROW
-	cv::Mat edge = cv::Mat::zeros(cv::Size(tmpEdge.cols*tmpEdge.rows+1,1),\
+	cv::Mat edge = cv::Mat::zeros(cv::Size(2*(tmpEdge.cols*tmpEdge.rows)+1,1),\
 					cv::DataType<double>::type);
-	cv::Mat dummy = edge.colRange(0,tmpEdge.cols*tmpEdge.rows);
+
+	// ADD THE CINTOURS ALSO
+	cv::drawContours(thresholded,contours,-1,cv::Scalar(255,255,255));
+	thresholded = (thresholded).reshape(0,1);
+	thresholded.convertTo(thresholded,cv::DataType<double>::type);
+	cv::Mat dummy1 = edge.colRange(0, tmpEdge.cols*tmpEdge.rows);
+	thresholded.copyTo(dummy1);
+	dummy1.release();
+
+	// ADD THE EDGES
+	cv::Mat dummy2 = edge.colRange(tmpEdge.cols*tmpEdge.rows, 2*\
+						(tmpEdge.cols*tmpEdge.rows));
 	tmpEdge = (tmpEdge).reshape(0,1);
 	tmpEdge.convertTo(tmpEdge,cv::DataType<double>::type);
+	tmpEdge.copyTo(dummy2);
+	dummy2.release();
 
-	tmpEdge.copyTo(dummy);
-	dummy.release();
 	tmpFeat.release();
 	tmpEdge.release();
-
 	if(this->printValues){
 		std::cout<<"Size(EDGES): ("<<edge.cols<<","<<edge.rows<<")"<<std::endl;
 		unsigned counter = 0;
@@ -159,11 +172,12 @@ const featureDetector::keyDescr k2){
 cv::Mat featureDetector::getSURF(cv::Mat feature, std::vector<cv::Point2f> templ,\
 std::vector<cv::Point2f> &indices, cv::Rect roi,cv::Mat test){
 	// KEEP THE TOP 10 DESCRIPTORS WITHIN THE BORDERS OF THE TEMPLATE
-	cv::Mat tmp = cv::Mat::zeros(cv::Size(feature.cols-2,10),\
+	unsigned number = 10;
+	cv::Mat tmp = cv::Mat::zeros(cv::Size(feature.cols-2,number),\
 					cv::DataType<double>::type);
 	unsigned counter = 0;
 	for(int y=0; y<feature.rows; y++){
-		if(counter == 10){
+		if(counter == number){
 			break;
 		}
 		double ptX = feature.at<double>(y,feature.cols-2);
@@ -201,8 +215,8 @@ std::vector<cv::Point2f> &indices, cv::Rect roi,cv::Mat test){
 	surf.convertTo(surf,cv::DataType<double>::type);
 
 	// IF WE WANT TO SEE SOME VALUES/IMAGES
-	std::cout<<"Size(SURF): ("<<surf.rows<<","<<surf.cols<<")"<<std::endl;
 	if(this->printValues){
+		std::cout<<"Size(SURF): ("<<surf.rows<<","<<surf.cols<<")"<<std::endl;
 		for(int i=0; i<std::min(10,surf.cols);i++){
 			std::cout<<surf.at<double>(0,i)<<" ";
 		}
@@ -235,7 +249,7 @@ std::vector<cv::Point2f> templ, int minX, int minY){
 cv::Mat featureDetector::getPointsGrid(cv::Mat feature,cv::Rect roi,\
 std::vector<cv::Point2f> templ, std::deque<double> templExtremes,cv::Mat test){
 	// GET THE GRID SIZE FROM THE TEMPLATE SIZE
-	unsigned no     = 10;
+	unsigned no     = 100;
 	cv::Mat rowData = cv::Mat::zeros(cv::Size(no*no+1,1),cv::DataType<double>::type);
 	double rateX    = (templExtremes[1]-templExtremes[0])/static_cast<double>(no);
 	double rateY    = (templExtremes[3]-templExtremes[2])/static_cast<double>(no);
@@ -667,7 +681,6 @@ void featureDetector::extractDataRow(std::deque<unsigned> &existing, IplImage *b
 	cv::cvtColor(image, image, this->colorspaceCode);
 	if(this->tracking && (this->featureType==featureDetector::SIFT ||\
 	this->featureType==featureDetector::SURF)){
-		std::cout<<this->current->index+1<<" "<<std::endl;
 		if(this->current->index+1<this->producer->filelist.size()){
 			this->entireNext = cv::imread(this->producer->filelist\
 								[this->current->index+1].c_str());
@@ -690,7 +703,6 @@ void featureDetector::extractDataRow(std::deque<unsigned> &existing, IplImage *b
 	for(std::size_t i=0; i<existing.size(); i++){
 		cv::Point2f center = this->cvPoint(existing[i]);
 		std::vector<cv::Point2f> templ;
-		std::vector<cv::Point2f> templPoints;
 		genTemplate2(center, persHeight, camHeight, templ);
 		cv::Point2f head((templ[12].x+templ[14].x)/2,(templ[12].y+templ[14].y)/2);
 
@@ -712,14 +724,14 @@ void featureDetector::extractDataRow(std::deque<unsigned> &existing, IplImage *b
 			allPeople[i].pixels.rows/2.0+allPeople[i].borders[2]);
 		templ = this->rotatePoints2Zero(head,center,templ,rotBorders,absRotCenter);
 
-		// GET THE EXTREME POINTS OF THE TEMPLATE
-		std::deque<double> extremes = this->templateExtremes(templ);
-
 		// IF THE PART TO BE CONSIDERED IS ONLY FEET OR ONLY HEAD
 		if(this->featurePart != ' ' && bg){
 			this->onlyPart(thresholded,templ,allPeople[i].borders[0],\
 				allPeople[i].borders[2]);
 		}
+
+		// GET THE EXTREME POINTS OF THE TEMPLATE
+		std::deque<double> extremes = this->templateExtremes(templ);
 
 		// ANF FINALLY EXTRACT THE DATA ROW
 		cv::Mat dataRow, feature;
@@ -731,7 +743,7 @@ void featureDetector::extractDataRow(std::deque<unsigned> &existing, IplImage *b
 				toRead = (this->featureFile+"IPOINTS/"+imgName+".bin");
 				binFile2mat(feature, const_cast<char*>(toRead.c_str()));
 				feature.convertTo(feature,cv::DataType<double>::type);
-				this->rotateKeypts2Zero(head,center,feature,absRotCenter,rotBorders);
+				this->rotateKeypts2Zero(head,center,feature,rotBorders,absRotCenter);
 				dataRow = this->getPointsGrid(feature,roi,templ,extremes,\
 							allPeople[i].pixels);
 				break;
@@ -744,7 +756,7 @@ void featureDetector::extractDataRow(std::deque<unsigned> &existing, IplImage *b
 				toRead = (this->featureFile+"SURF/"+imgName+".bin");
 				binFile2mat(feature, const_cast<char*>(toRead.c_str()));
 				feature.convertTo(feature,cv::DataType<double>::type);
-				this->rotateKeypts2Zero(head,center,feature,absRotCenter,rotBorders);
+				this->rotateKeypts2Zero(head,center,feature,rotBorders,absRotCenter);
 				dataRow = this->getSURF(feature,templ,keys,roi,allPeople[i].pixels);
 				if(this->tracking && !this->entireNext.empty()){
 					double flow = this->opticalFlowFeature(feature,this->current->img,\
@@ -763,12 +775,13 @@ void featureDetector::extractDataRow(std::deque<unsigned> &existing, IplImage *b
 				dictImage = cv::Mat(image, roi);
 				dictImage = this->rotate2Zero(head,center,dictImage,rotBorders);
 				dataRow   = this->extractSIFT(dictImage, templ, roi);
+				dictImage.release();
 				break;
 			case featureDetector::SIFT:
 				toRead = (this->featureFile+"SIFT/"+imgName+".bin");
 				binFile2mat(feature, const_cast<char*>(toRead.c_str()));
 				feature.convertTo(feature,cv::DataType<double>::type);
-				this->rotateKeypts2Zero(head,center,feature,absRotCenter,rotBorders);
+				this->rotateKeypts2Zero(head,center,feature,rotBorders,absRotCenter);
 				dataRow = this->getSIFT(feature,templ,keys,roi,allPeople[i].pixels);
 				if(this->tracking && !this->entireNext.empty()){
 					double flow = this->opticalFlowFeature(feature,this->current->img,\
@@ -778,11 +791,12 @@ void featureDetector::extractDataRow(std::deque<unsigned> &existing, IplImage *b
 				}
 				break;
 		}
-		dictImage.release();
-		dataRow.convertTo(dataRow, cv::DataType<double>::type);
 		if(this->tracking && this->featureType!=featureDetector::SIFT_DICT){
 			dataRow.at<double>(0,dataRow.cols-1) = this->motionVector(head,center);
 		}
+		dataRow.convertTo(dataRow, cv::DataType<double>::type);
+		range1Mat(dataRow);
+
 		if(this->data.empty()){
 			dataRow.copyTo(this->data);
 		}else{
@@ -993,7 +1007,7 @@ cv::Point2f rotBorders, cv::Point2f rotCenter){
 	// GET THE ANGLE WITH WHICH WE NEED TO ROTATE
 	double rotAngle = std::atan2((headLocation.y-feetLocation.y),\
 						(headLocation.x-feetLocation.x));
-	rotAngle = (rotAngle+M_PI/2.0);
+	rotAngle -= M_PI;
 	angle0to360(rotAngle);
 
 	// THE ROTATION ANGLE NEEDS TO BE IN DEGREES
@@ -1030,11 +1044,11 @@ cv::Point2f rotBorders, cv::Point2f rotCenter){
 /** Rotate the keypoints wrt to the camera location.
  */
 void featureDetector::rotateKeypts2Zero(cv::Point2f headLocation, cv::Point2f \
-feetLocation, cv::Mat &keys, cv::Point2f rotCenter, cv::Point2f rotBorders){
+feetLocation, cv::Mat &keys, cv::Point2f rotBorders, cv::Point2f rotCenter){
 	// GET THE ANGLE WITH WHICH WE NEED TO ROTATE
 	double rotAngle = std::atan2((headLocation.y-feetLocation.y),\
 						(headLocation.x-feetLocation.x));
-	rotAngle = (rotAngle+M_PI/2.0);
+	rotAngle -= M_PI;
 	angle0to360(rotAngle);
 
 	// THE ROTATION ANGLE NEEDS TO BE IN DEGREES
@@ -1073,7 +1087,7 @@ cv::Point2f feetLocation, cv::Mat toRotate, cv::Point2f &borders){
 	// GET THE ANGLE TO ROTATE WITH
 	double rotAngle = std::atan2((headLocation.y-feetLocation.y),\
 						(headLocation.x-feetLocation.x));
-	rotAngle = (rotAngle+M_PI/2.0);
+	rotAngle -= M_PI;
 	angle0to360(rotAngle);
 
 	// THE ANGLE NEEDS TO BE IN DEGREES TO ROTATE WITH IT
@@ -1106,12 +1120,13 @@ cv::Point2f feetLocation, cv::Mat toRotate, cv::Point2f &borders){
  */
 double featureDetector::fixAngle(cv::Point2f headLocation, cv::Point2f feetLocation,\
 double angle){
-	// THE ANGLE IS IN RADIANDS
-	double cameraAngle = std::atan2((headLocation.y-feetLocation.y),\
-						(headLocation.x-feetLocation.x));
+	// GET THE CAMERA ANGLE IN RADIANDS IN [-pi,pi)
+	double cameraAngle = std::atan2((headLocation.y - feetLocation.y),\
+						(headLocation.x - feetLocation.x));
+	cameraAngle -= M_PI;
 
 	double newAngle;
-	newAngle = angle-cameraAngle; // "ROATATE" THE ANGLE WRT TO CAMERA
+	newAngle = angle + cameraAngle;
 	angle0to360(newAngle);
 	return newAngle;
 }
@@ -1418,6 +1433,12 @@ double featureDetector::motionVector(cv::Point2f head, cv::Point2f center){
 /** Creates a data matrix for each image and stores it locally.
  */
 void featureDetector::extractFeatures(){
+
+cvShowImage("AnnotatedLocations", this->current->img);
+IplImage *imgtmp = cvLoadImage(this->current->sourceName.c_str());
+cvShowImage("check", imgtmp);
+cvWaitKey(0);
+
 	cv::Mat image(this->current->img);
 	cv::cvtColor(image, image, this->colorspaceCode);
 
@@ -1809,7 +1830,7 @@ std::deque<unsigned> featureDetector::readLocations(){
 		locations.push_back(location);
 
 		// STORE THE LABELS FOR ALL THE LOCATIONS
-		cv::Mat tmp = cv::Mat::zeros(1,4,cv::DataType<double>::type);
+		cv::Mat tmp = cv::Mat::zeros(cv::Size(4,1),cv::DataType<double>::type);
 		// READ THE TARGET ANGLE FOR LONGITUDINAL ANGLE
 		double angle = static_cast<double>((*index).annos[l].\
 						poses[annotationsHandle::LONGITUDE]);
@@ -1834,6 +1855,18 @@ std::deque<unsigned> featureDetector::readLocations(){
 			this->targets.push_back(tmp);
 		}
 		tmp.release();
+	}
+
+	// SEE THE ANNOTATED LOCATIONS IN THE IMAGE
+	if(this->plotTracks){
+		for(std::size_t i=0; i<locations.size(); i++){
+			cv::Point2f center = this->cvPoint(locations[i]);
+			std::vector<cv::Point2f> templ;
+			plotTemplate2(this->current->img, center, persHeight,\
+				camHeight, cv::Scalar(255,0,0),templ);
+		}
+		cvShowImage("AnnotatedLocations", this->current->img);
+		cvWaitKey(0);
 	}
 
 	// UPDATE THE TRACKS IN THE CASE WE WANT TO USE TRACKING
