@@ -2,6 +2,14 @@
  * Original code: Dr Gwenn Englebienne
  * Modified by: Silvia-Laura Pintea
  */
+#include <iostream>
+#include <fstream>
+#include <string>
+#include <cmath>
+#include <exception>
+#include <deque>
+#include <opencv2/opencv.hpp>
+#include "cholesky.h"
 #include "gaussianProcess.h"
 //==============================================================================
 /** Initializes or re-initializes a Gaussian Process.
@@ -333,16 +341,15 @@ int main(){
 		cv::Mat stupid = train.row(i);
 		cv::add(stupid, cv::Scalar(i), stupid);
 		targets.at<double>(i,0) = i;
-		//targets.at<double>(i,0) = std::sin(i*M_PI/180.0);
-		//targets.at<double>(i,1) = std::cos(i*M_PI/180.0);
 		if(i<10){
 			cv::Mat stupid2 = test.row(i);
 			cv::add(stupid2, cv::Scalar(i*2.5), stupid2);
 			ttargets.at<double>(i,0) = i*2.5;
-			//ttargets.at<double>(i,0) = std::sin((99.0-(i*10.0))*M_PI/180.0);
-			//ttargets.at<double>(i,1) = std::cos((99.0-(i*10.0))*M_PI/180.0);
 		}
 	}
+
+	std::cout<<"test: "<<test<<std::endl;
+	std::cout<<"ttargets: "<<ttargets<<std::endl;
 
 	gaussianProcess gp;
 	gp.train(train, targets, &gaussianProcess::sqexp, 0.1);
@@ -353,10 +360,6 @@ int main(){
 		gp.predict(test.row(i), predi);
 		std::cout<<"label: "<<ttargets.at<double>(i,0)<<"\t"<<\
 			predi.mean[0]<<" variance:"<<predi.variance[0]<<std::endl;
-		//std::cout<<"label: "<<ttargets.at<double>(i,0)<<" "<<\
-				ttargets.at<double>(i,1)<<" "<<\
-			" mean:"<<predi.mean[0]<<" "<<predi.mean[1]<<" variance:"<<\
-			predi.variance[0]<<std::endl;
 	}
 }
 */

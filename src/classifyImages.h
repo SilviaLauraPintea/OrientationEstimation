@@ -3,17 +3,6 @@
  */
 #ifndef CLASSIFYIMAGES_H_
 #define CLASSIFYIMAGES_H_
-#include <iostream>
-#include <fstream>
-#include <string>
-#include <cmath>
-#include <exception>
-#include <opencv2/opencv.hpp>
-#include "eigenbackground/src/Tracker.hh"
-#include "eigenbackground/src/Helpers.hh"
-#include "eigenbackground/src/defines.hh"
-#include "featureDetector.h"
-#include "gaussianProcess.h"
 
 /** Class used for classifying the training data.
  */
@@ -61,11 +50,12 @@ class classifyImages {
 		/** Do k-fold cross-validation by splitting the training folder into
 		 * training-set and validation-set.
 		 */
-		void crossValidation(unsigned k, unsigned fold);
+		void crossValidation(unsigned k, unsigned fold, bool onTrain = false);
 
 		/** Does the cross-validation and computes the average error over all folds.
 		 */
-		void runCrossValidation(unsigned k, int colorSp = CV_BGR2Lab);
+		double runCrossValidation(unsigned k, int colorSp = CV_BGR2Lab,\
+			bool onTrain = false);
 
 		/** Runs the final evaluation (test).
 		 */

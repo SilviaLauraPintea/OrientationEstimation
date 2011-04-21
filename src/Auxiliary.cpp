@@ -2,6 +2,22 @@
  * Author: Silvia-Laura Pintea
  */
 #include "Auxiliary.h"
+#include <vector>
+#include <string>
+#include <sstream>
+#include <set>
+#include <cstdlib>
+#include <stdio.h>
+#include <dirent.h>
+#include <iostream>
+#include <fstream>
+#include <opencv2/opencv.hpp>
+#include <data/XmlFile.hh>
+#include <boost/date_time/posix_time/ptime.hpp>
+#include <boost/date_time/posix_time/time_parsers.hpp>
+#include <boost/date_time/posix_time/time_formatters.hpp>
+#include "eigenbackground/src/Helpers.hh"
+#include "eigenbackground/src/defines.hh"
 //==============================================================================
 /** Converts a pointer to an IplImage to an OpenCV Mat.
  */
@@ -205,3 +221,40 @@ void angle180to180(double &angle){
 	angle = angle - M_PI;
 }
 //==============================================================================
+/** Checks to see if a point is on the same side of a line like another given point.
+ */
+bool sameSubplane(cv::Point2f test, cv::Point2f point, double m, double b){
+	if(isnan(m)){
+		return (point.x*test.x)>=0.0;
+	}else if(m == 0){
+		return (point.y*test.y)>=0.0;
+	}else{
+		return (m*point.x+b-point.y)*(m*test.x+b-test.y)>=0.0;
+	}
+}
+//==============================================================================
+/** Get perpendicular to a line given by 2 points A, B in point C.
+ */
+void perpendicularLine(cv::Point2f A, cv::Point2f B, cv::Point2f C, double &m,\
+double &b){
+	double slope = (double)(B.y - A.y)/(double)(B.x - A.x);
+	m            = -1.0/slope;
+	b            = C.y - m * C.x;
+}
+//==============================================================================
+/** Just displaying an image a bit larger to visualize it better.
+ */
+void showZoomedImage(cv::Mat image, const std::string title){
+	cv::Mat large;
+	cv::resize(image, large, cv::Size(0,0), 5, 5, cv::INTER_CUBIC);
+	cv::imshow(title, large);
+	cv::waitKey(0);
+	cvDestroyWindow(title.c_str());
+	large.release();
+}
+//==============================================================================
+
+
+
+
+

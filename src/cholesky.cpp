@@ -3,6 +3,12 @@
  * Modified by: Silvia-Laura Pintea
  */
 #include "cholesky.h"
+#include <iostream>
+#include <string>
+#include <cmath>
+#include <err.h>
+#include <exception>
+#include <opencv2/opencv.hpp>
 //==============================================================================
 /** Checks to see if the decomposition was already done (returns true if it is
  * done).

@@ -3,27 +3,6 @@
  */
 #ifndef ANNOTATIONSHANDLE_H_
 #define ANNOTATIONSHANDLE_H_
-#include <iostream>
-#include <exception>
-#include <cmath>
-#include <fstream>
-#include <string>
-#include <stdio.h>
-#include <opencv/cv.h>
-#include <opencv/highgui.h>
-#include <opencv2/opencv.hpp>
-#include <boost/thread.hpp>
-#include <boost/version.hpp>
-#include <boost/filesystem/operations.hpp>
-#include <boost/filesystem/fstream.hpp>
-#if BOOST_VERSION < 103500
-	#include <boost/thread/detail/lock.hpp>
-#endif
-#include <boost/thread/xtime.hpp>
-#include "eigenbackground/src/Annotate.hh"
-#include "eigenbackground/src/Helpers.hh"
-#include "eigenbackground/src/defines.hh"
-#include "Auxiliary.h"
 using namespace std;
 
 /** Class for annotating both positions and poses of the people in the images.
@@ -33,7 +12,6 @@ class annotationsHandle {
 		/** All considered poses.
 		 */
 		enum POSE {SITTING, STANDING, BENDING, LONGITUDE, LATITUDE};
-
 		/** A structure that stores a single annotation for a specific person.
  		 */
 		struct ANNOTATION {
@@ -50,7 +28,6 @@ class annotationsHandle {
 				}
 			}
 		};
-
 		/** Structure containing a vector of annotations for each image.
 		 */
 		struct FULL_ANNOTATIONS {
@@ -65,7 +42,6 @@ class annotationsHandle {
 				}
 			}
 		};
-
 		/** Shows which id from the old annotations is assigned to which id from
 		 * the new annotations based on what minimal distance.
 		 */

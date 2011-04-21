@@ -4,14 +4,6 @@
  */
 #ifndef GAUSSIANPROCESS_H_
 #define GAUSSIANPROCESS_H_
-#include <iostream>
-#include <fstream>
-#include <string>
-#include <cmath>
-#include <exception>
-#include <deque>
-#include <opencv2/opencv.hpp>
-#include "cholesky.h"
 
 /** Class implementing the Gaussian Process Regression.
  */

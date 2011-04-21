@@ -2,7 +2,27 @@
  * Author: Silvia-Laura Pintea
  */
 #include "annotationsHandle.h"
-
+#include <iostream>
+#include <exception>
+#include <cmath>
+#include <fstream>
+#include <string>
+#include <stdio.h>
+#include <opencv/cv.h>
+#include <opencv/highgui.h>
+#include <opencv2/opencv.hpp>
+#include <boost/thread.hpp>
+#include <boost/version.hpp>
+#include <boost/filesystem/operations.hpp>
+#include <boost/filesystem/fstream.hpp>
+#if BOOST_VERSION < 103500
+	#include <boost/thread/detail/lock.hpp>
+#endif
+#include <boost/thread/xtime.hpp>
+#include "eigenbackground/src/Annotate.hh"
+#include "eigenbackground/src/Helpers.hh"
+#include "eigenbackground/src/defines.hh"
+#include "Auxiliary.h"
 //==============================================================================
 /** Initializes all the values of the class variables.
  */
