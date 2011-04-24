@@ -5,7 +5,7 @@
 #ifndef FEATUREEXTRACTOR_H_
 #define FEATUREEXTRACTOR_H_
 #include <opencv2/opencv.hpp>
-
+#include <deque>
 /** Extracts the actual features from the images and stores them in data matrix.
  */
 class featureExtractor {
@@ -23,9 +23,47 @@ class featureExtractor {
 				}
 			}
 		};
+		/** Structure containing images of the size of the detected people.
+		 */
+		struct people{
+			cv::Point2f absoluteLoc;
+			cv::Point2f relativeLoc;
+			std::deque<unsigned> borders;
+			cv::Mat_<cv::Vec3b> pixels;
+			people(){
+				this->absoluteLoc = cv::Point2f(0,0);
+				this->relativeLoc = cv::Point2f(0,0);
+			}
+			~people(){
+				if(!this->borders.empty()){
+					this->borders.clear();
+				}
+				if(!this->pixels.empty()){
+					this->pixels.release();
+				}
+			}
+		};
+		/** Structure to store templates so they don't get recomputed all the time.
+		 */
+		struct templ{
+			cv::Point2f center;
+			cv::Point2f head;
+			std::deque<double> extremes;
+			std::vector<cv::Point2f> points;
+			templ(cv::Point theCenter){
+				this->center = theCenter;
+			}
+			~templ(){
+				this->extremes.clear();
+				this->points.clear();
+			}
+		};
 		/** All available feature types.
 		 */
 		enum FEATURE {IPOINTS, EDGES, SIFT_DICT, SURF, SIFT, GABOR, HOG};
+		/** What needs to be rotated.
+		 */
+		enum ROTATE {MATRIX, TEMPLATE, KEYS};
 		/** Initializes the class elements.
 		 */
 		void init(featureExtractor::FEATURE fType, std::string featFile);
@@ -37,7 +75,9 @@ class featureExtractor {
 		/** Initializes the settings for the SIFT dictionary.
 		 */
 		void initSIFT(std::string dictName, unsigned means=500, unsigned size=128);
-		void extractFeatures();
+		/** Creates a data matrix for each image and stores it locally.
+		 */
+		void extractFeatures(cv::Mat image,std::string sourceName,int colorspaceCode);
 		/** Extract the interest points in a gird and returns them.
 		 */
 		cv::Mat extractPointsGrid(cv::Mat image);
@@ -74,8 +114,8 @@ class featureExtractor {
 			std::vector<cv::Point2f> &indices, cv::Rect roi, cv::Mat test=cv::Mat());
 		/** Creates a "histogram" of interest points + number of blobs.
 		 */
-		cv::Mat featureExtractor::getPointsGrid(cv::Mat feature, cv::Rect roi,\
-			peopleDetector::templ aTempl, cv::Mat test=cv::Mat());
+		cv::Mat getPointsGrid(cv::Mat feature, cv::Rect roi,\
+			featureExtractor::templ aTempl, cv::Mat test=cv::Mat());
 		/** Convolves an image with a Gabor filter with the given parameters and
 		 * returns the response image.
 		 */
@@ -86,9 +126,22 @@ class featureExtractor {
 		cv::Mat createGabor(double *params = NULL);
 		/** Returns the row corresponding to the indicated feature type.
 		 */
-		cv::Mat getDataRow(peopleDetector::templ aTempl, cv::Rect roi,\
-		peopleDetector::people person, cv::Mat thresholded,cv::vector<cv::Point2f> &keys,\
+		cv::Mat getDataRow(cv::Mat image,featureExtractor::templ aTempl, cv::Rect roi,\
+		featureExtractor::people person, cv::Mat thresholded,cv::vector<cv::Point2f> &keys,\
 		std::string imgName, cv::Point2f absRotCenter, cv::Point2f rotBorders);
+		/** Compares SURF 2 descriptors and returns the boolean value of their comparison.
+		 */
+		static bool compareDescriptors(const featureExtractor::keyDescr k1,\
+			const featureExtractor::keyDescr k2);
+		/** Checks to see if a given pixel is inside a template.
+		 */
+		static bool isInTemplate(unsigned pixelX, unsigned pixelY,\
+			std::vector<cv::Point2f> templ);
+		/** Rotate a matrix/a template/keypoints wrt to the camera location.
+		 */
+		cv::Mat rotate2Zero(cv::Point2f headLocation, cv::Point2f feetLocation,\
+			cv::Mat toRotate, cv::Point2f &rotBorders, cv::Point2f rotCenter,\
+			featureExtractor::ROTATE what, std::vector<cv::Point2f> &pts);
 	//==========================================================================
 	private:
 		/** @var isInit
@@ -127,6 +180,10 @@ class featureExtractor {
 		 * Plot some features or not.
 		 */
 		bool plot;
+		/** @var dictionarySIFT
+		 * The SIFT dictionary loaded as from the file where is stored.
+		 */
+		cv::Mat dictionarySIFT;
 };
 
 #endif /* FEATUREEXTRACTOR_H_ */

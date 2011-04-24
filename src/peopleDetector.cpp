@@ -12,22 +12,20 @@
 #include <fstream>
 #include <string>
 #include <cmath>
+#include <err.h>
 #include <exception>
-#include <opencv2/opencv.hpp>
-#include "eigenbackground/src/Tracker.hh"
 #include "eigenbackground/src/Helpers.hh"
-#include "eigenbackground/src/defines.hh"
-#include "featureExtractor.h"
-#include "annotationsHandle.h"
 #include "peopleDetector.h"
+#include "Auxiliary.h"
+#include "cmn/FastMath.hh"
 //======================================================================
-peopleDetector::peopleDetector(int argc,char** argv, bool extract=false,\
-bool buildBg=false):Tracker(argc, argv, 10, buildBg, true){
+peopleDetector::peopleDetector(int argc,char** argv, bool extract,\
+bool buildBg):Tracker(argc, argv, 10, buildBg, true){
 	if(argc == 3){
 		std::string dataPath  = std::string(argv[1]);
 		std::string imgString = std::string(argv[2]);
 		if(datasetPath[dataPath.size()-1]!='/'){
-			dataPath += '/';
+			dataPath += "/";
 		}
 		this->plot           = true;
 		this->print          = true;
@@ -42,13 +40,13 @@ bool buildBg=false):Tracker(argc, argv, 10, buildBg, true){
 		this->imageString    = imgString;
 		this->extractor      = new featureExtractor();
 	}else{
-		std::cerr<"Wrong number of arguments: command datasetPath/"<<\
+		std::cerr<<"Wrong number of arguments: command datasetPath/"<<\
 			" imageString"<<std::endl;
 		exit(1);
 	}
 }
 //==============================================================================
-virtual peopleDetector::~peopleDetector(){
+peopleDetector::~peopleDetector(){
 	delete this->extractor;
 	if(this->producer){
 		delete this->producer;
@@ -68,17 +66,6 @@ virtual peopleDetector::~peopleDetector(){
 	}
 	this->templates.clear();
 }
-//==============================================================================
-/** Checks to see if a pixel's x coordinate is on a scanline.
- */
-struct onScanline{
-	public:
-		unsigned pixelY;
-		onScanline(const unsigned pixelY){this->pixelY=pixelY;}
-		bool operator()(const scanline_t line)const{
-			return (line.line == this->pixelY);
-		}
-};
 //==============================================================================
 /** Checks the image name (used to find the corresponding labels for each image).
  */
@@ -126,13 +113,6 @@ featureExtractor::FEATURE feat, bool readFromFolder){
 	this->templates.clear();
 }
 //==============================================================================
-/** Compares SURF 2 descriptors and returns the boolean value of their comparison.
- */
-bool peopleDetector::compareDescriptors(const peopleDetector::keyDescr k1,\
-const peopleDetector::keyDescr k2){
-	return (k1.keys.response>k2.keys.response);
-}
-//==============================================================================
 /** Get template extremities (if needed, considering some borders --
  * relative to the ROI).
  */
@@ -173,34 +153,10 @@ std::vector<cv::Point2f> templ){
 	return minDist;
 }
 //==============================================================================
-/** Checks to see if a given pixel is inside a template.
- */
-bool peopleDetector::isInTemplate(unsigned pixelX, unsigned pixelY,\
-std::vector<cv::Point2f> templ){
-	std::vector<cv::Point2f> hull;
-	convexHull(templ, hull);
-	std::deque<scanline_t> lines;
-	getScanLines(hull, lines);
-
-	std::deque<scanline_t>::iterator iter = std::find_if(lines.begin(),\
-		lines.end(), onScanline(pixelY));
-	if(iter == lines.end()){
-		return false;
-	}
-
-	if(std::abs(static_cast<int>(iter->line)-static_cast<int>(pixelY))<5 &&\
-	static_cast<int>(iter->start) <= static_cast<int>(pixelX) &&\
-	static_cast<int>(iter->end) >= static_cast<int>(pixelX)){
-		return true;
-	}else{
-		return false;
-	}
-}
-//==============================================================================
 /** Returns the size of a window around a template centered in a given point.
  */
 void peopleDetector::templateWindow(cv::Size imgSize, int &minX, int &maxX,\
-int &minY, int &maxY, peopleDetector::templ aTempl, int tplBorder){
+int &minY, int &maxY, featureExtractor::templ aTempl, int tplBorder){
 	// TRY TO ADD BORDERS TO MAKE IT 100
 	minX = aTempl.extremes[0];
 	maxX = aTempl.extremes[1];
@@ -241,15 +197,16 @@ int k, cv::Mat thresh, cv::Mat &colorRoi, double tmplHeight){
 			if((int)(thresh.at<uchar>((int)(y+minY),(int)(x+minX)))>0){
 
 				// IF THE PIXEL IS NOT INSIDE OF THE TEMPLATE
-				if(!this->isInTemplate((x+minX),(y+minY),this->templates[k].points)\
-				&& this->templates.size()>1){
-					double minDist = thrsh.rows*thrsh.cols;
+				if(featureExtractor::isInTemplate((x+minX),(y+minY),\
+				this->templates[k].points) && this->templates.size()>1){
+					double minDist = thresh.rows*thresh.cols;
 					unsigned label = -1;
 					for(unsigned l=0; l<this->templates.size(); l++){
 						if(k==l){continue;}
 
 						// IF IT IS IN ANOTHER TEMPLATE THEN IGNORE THE PIXEL
-						if(this->isInTemplate((x+minX),(y+minY),this->templates[l].points)){
+						if(featureExtractor::isInTemplate((x+minX),(y+minY),\
+						this->templates[l].points)){
 							minDist = 0;label = l;
 							break;
 
@@ -280,8 +237,8 @@ int k, cv::Mat thresh, cv::Mat &colorRoi, double tmplHeight){
 void peopleDetector::add2Templates(std::deque<unsigned> existing){
 	this->templates.clear();
 	for(unsigned i=0; i<existing.size(); i++){
-		peopleDetector::templ aTempl;
-		aTempl.center = this->cvPoint(existing[i]);
+		cv::Point2f center = this->cvPoint(existing[i]);
+		featureExtractor::templ aTempl(center);
 		genTemplate2(aTempl.center, persHeight, camHeight, aTempl.points);
 		aTempl.head = cv::Point2f((aTempl.points[12].x+aTempl.points[14].x)/2,\
 						(aTempl.points[12].y+aTempl.points[14].y)/2);
@@ -292,7 +249,7 @@ void peopleDetector::add2Templates(std::deque<unsigned> existing){
 //==============================================================================
 /** Get the foreground pixels corresponding to each person.
  */
-void peopleDetector::allForegroundPixels(std::deque<peopleDetector::people>\
+void peopleDetector::allForegroundPixels(std::deque<featureExtractor::people>\
 &allPeople, std::deque<unsigned> existing, IplImage *bg, double threshold){
 	// INITIALIZING STUFF
 	cv::Mat thsh, thrsh;
@@ -405,8 +362,8 @@ void peopleDetector::extractDataRow(std::deque<unsigned> &existing, IplImage *bg
 
 	// REDUCE THE IMAGE TO ONLY THE INTERESTING AREA
 	this->add2Templates(existing);
-	std::deque<peopleDetector::people> allPeople(existing.size(),\
-		peopleDetector::people());
+	std::deque<featureExtractor::people> allPeople(existing.size(),\
+			featureExtractor::people());
 	this->allForegroundPixels(allPeople, existing, bg, 7.0);
 
 	//GET ONLY THE IMAGE NAME OUT THE CURRENT IMAGE'S NAME
@@ -425,12 +382,15 @@ void peopleDetector::extractDataRow(std::deque<unsigned> &existing, IplImage *bg
 		// ROTATE THE FOREGROUND PIXELS, THREHSOLD AND THE TEMPLATE
 		cv::Mat thresholded;
 		cv::Point2f rotBorders;
+		cv::vector<cv::Point2f> keys;
 		cv::Point2f absRotCenter(allPeople[i].pixels.cols/2.0+allPeople[i].borders[0],\
 			allPeople[i].pixels.rows/2.0+allPeople[i].borders[2]);
-		allPeople[i].pixels = peopleDetector::rotate2Zero(head,center,\
-								allPeople[i].pixels,rotBorders);
-		this->templates[i].points = peopleDetector::rotatePoints2Zero(head,center,\
-									this->templates[i].points,rotBorders,absRotCenter);
+		allPeople[i].pixels = this->extractor->rotate2Zero(this->templates[i].head,\
+			this->templates[i].center,allPeople[i].pixels,rotBorders,absRotCenter,\
+			featureExtractor::MATRIX,keys);
+		this->templates[i].points = this->extractor->rotate2Zero(this->templates[i].head,\
+			this->templates[i].center,cv::Mat(),rotBorders,absRotCenter,\
+			featureExtractor::TEMPLATE,keys);
 		this->templates[i].extremes = this->templateExtremes(this->templates[i].points);
 
 		// IF WE CAN THRESHOLD THE IMAGE USING THE BACKGROUND MODEL
@@ -447,18 +407,18 @@ void peopleDetector::extractDataRow(std::deque<unsigned> &existing, IplImage *bg
 		}
 
 		// ANF FINALLY EXTRACT THE DATA ROW
-		cv::vector<cv::Point2f> keys;
-		cv::Mat dataRow = this->extractor->getDataRow(this->templates[i],roi,\
-							allPeople[i],thresholded,keys,imgName,absRotCenter,\
-							rotBorders);
+		cv::Mat dataRow = this->extractor->getDataRow(cv::Mat(this->current->img),\
+							this->templates[i],roi,allPeople[i],thresholded,keys,\
+							imgName,absRotCenter,rotBorders);
 		if(this->tracking && !this->entireNext.empty()){
 			dataRow.at<double>(0,dataRow.cols-1) = this->motionVector(\
 				this->templates[i].head,this->templates[i].center);
 			cv::Mat nextImg(this->entireNext,roi);
-			nextImg = peopleDetector::rotate2Zero(this->templates[i].head,\
-						this->templates[i].center,nextImg.clone(),rotBorders);
+			nextImg = this->extractor->rotate2Zero(this->templates[i].head,\
+					this->templates[i].center,nextImg.clone(),rotBorders,\
+					absRotCenter,featureExtractor::MATRIX,keys);
 			dataRow.at<double>(0,dataRow.cols-2) = \
-				this->opticalFlow(feature,allPeople[i].pixels,nextImg,keys,\
+				this->opticalFlow(allPeople[i].pixels,nextImg,keys,\
 				this->templates[i].head,this->templates[i].center,false);
 			nextImg.release();
 		}
@@ -476,9 +436,8 @@ void peopleDetector::extractDataRow(std::deque<unsigned> &existing, IplImage *bg
 //==============================================================================
 /** Compute the dominant direction of the SIFT or SURF features.
  */
-double peopleDetector::opticalFlow(cv::Mat keys, cv::Mat currentImg,\
-cv::Mat nextImg,std::vector<cv::Point2f> keyPts,cv::Point2f head,\
-cv::Point2f center,bool maxOrAvg){
+double peopleDetector::opticalFlow(cv::Mat currentImg,cv::Mat nextImg,\
+std::vector<cv::Point2f> keyPts,cv::Point2f head,cv::Point2f center,bool maxOrAvg){
 	// GET THE OPTICAL FLOW MATRIX FROM THE FEATURES
 	double direction = -1;
 	cv::Mat currGray, nextGray;
@@ -558,122 +517,6 @@ unsigned k,double distance, std::deque<int> &assignment){
 		}
 	}
 	return true;
-}
-//==============================================================================
-/** Rotate the points wrt to the camera location.
- */
-std::vector<cv::Point2f> peopleDetector::rotatePoints2Zero(cv::Point2f \
-headLocation, cv::Point2f feetLocation, std::vector<cv::Point2f> pts,\
-cv::Point2f rotBorders, cv::Point2f rotCenter){
-	// GET THE ANGLE WITH WHICH WE NEED TO ROTATE
-	double rotAngle = std::atan2((headLocation.y-feetLocation.y),\
-						(headLocation.x-feetLocation.x));
-	rotAngle -= M_PI;
-	angle0to360(rotAngle);
-
-	// THE ROTATION ANGLE NEEDS TO BE IN DEGREES
-	rotAngle *= (180.0/M_PI);
-
-	// GET THE ROTATION MATRIX WITH RESPECT TO THE GIVEN CENTER
-	cv::Mat rotationMat = cv::getRotationMatrix2D(rotCenter, rotAngle, 1.0);
-
-	// BUILD A MATRIX OUT OF THE TEMPLATE POINTS
-	cv::Mat toRotate = cv::Mat::ones(cv::Size(3, pts.size()),\
-						cv::DataType<double>::type);
-	for(std::size_t i=0; i<pts.size(); i++){
-		toRotate.at<double>(i,0) = pts[i].x + rotBorders.x;
-		toRotate.at<double>(i,1) = pts[i].y + rotBorders.y;
-	}
-
-	// MULTIPLY THE TEMPLATE MATRIX WITH THE ROTATION MATRIX
-	toRotate.convertTo(toRotate, cv::DataType<double>::type);
-	cv::Mat rotated = toRotate*rotationMat.t();
-	rotated.convertTo(rotated, cv::DataType<double>::type);
-
-	// COPY THE RESULT BACK INTO A TEMPLATE SHAPE
-	std::vector<cv::Point2f> newPts(rotated.rows);
-	for(int y=0; y<rotated.rows; y++){
-		newPts[y].x = rotated.at<double>(y,0);
-		newPts[y].y = rotated.at<double>(y,1);
-	}
-	rotationMat.release();
-	toRotate.release();
-	rotated.release();
-	return newPts;
-}
-//==============================================================================
-/** Rotate the keypoints wrt to the camera location.
- */
-void peopleDetector::rotateKeypts2Zero(cv::Point2f headLocation, cv::Point2f \
-feetLocation, cv::Mat &keys, cv::Point2f rotBorders, cv::Point2f rotCenter){
-	// GET THE ANGLE WITH WHICH WE NEED TO ROTATE
-	double rotAngle = std::atan2((headLocation.y-feetLocation.y),\
-						(headLocation.x-feetLocation.x));
-	rotAngle -= M_PI;
-	angle0to360(rotAngle);
-
-	// THE ROTATION ANGLE NEEDS TO BE IN DEGREES
-	rotAngle *= (180.0/M_PI);
-
-	// GET THE ROTATION MATRIX WITH RESPECT TO THE GIVEN CENTER
-	cv::Mat rotationMat = cv::getRotationMatrix2D(rotCenter, rotAngle, 1.0);
-
-	// BUILD A MATRIX OUT OF THE TEMPLATE POINTS
-	cv::Mat toRotate = cv::Mat::ones(cv::Size(3,keys.rows),\
-						cv::DataType<double>::type);
-	for(int y=0; y<keys.rows; y++){
-		toRotate.at<double>(y,0) = keys.at<double>(y,keys.cols-2)+rotBorders.x;
-		toRotate.at<double>(y,1) = keys.at<double>(y,keys.cols-1)+rotBorders.y;
-	}
-
-	// MULTIPLY THE TEMPLATE MATRIX WITH THE ROTATION MATRIX
-	toRotate.convertTo(toRotate, cv::DataType<double>::type);
-	cv::Mat rotated = toRotate*rotationMat.t();
-	rotated.convertTo(rotated, cv::DataType<double>::type);
-
-	// COPY THE RESULT BACK INTO A TEMPLATE SHAPE
-	for(int y=0; y<keys.rows; y++){
-		keys.at<double>(y,keys.cols-2) = rotated.at<double>(y,0);
-		keys.at<double>(y,keys.cols-1) = rotated.at<double>(y,1);
-	}
-	rotationMat.release();
-	toRotate.release();
-	rotated.release();
-}
-//==============================================================================
-/** Rotate matrix wrt to the camera location.
- */
-cv::Mat peopleDetector::rotate2Zero(cv::Point2f headLocation,\
-cv::Point2f feetLocation, cv::Mat toRotate, cv::Point2f &borders){
-	// GET THE ANGLE TO ROTATE WITH
-	double rotAngle = std::atan2((headLocation.y-feetLocation.y),\
-						(headLocation.x-feetLocation.x));
-	rotAngle -= M_PI;
-	angle0to360(rotAngle);
-
-	// THE ANGLE NEEDS TO BE IN DEGREES TO ROTATE WITH IT
-	rotAngle *= (180.0/M_PI);
-
-	// ADD A BLACK BORDER TO THE ORIGINAL IMAGE
-	double diag       = std::sqrt(toRotate.cols*toRotate.cols+toRotate.rows*\
-						toRotate.rows);
-	borders.x         = std::ceil((diag-toRotate.cols)/2.0);
-	borders.y         = std::ceil((diag-toRotate.rows)/2.0);
-	cv::Mat srcRotate = cv::Mat::zeros(cv::Size(toRotate.cols+2*borders.x,\
-						toRotate.rows+2*borders.y),toRotate.type());
-	cv::copyMakeBorder(toRotate,srcRotate,borders.y,borders.y,borders.x,\
-		borders.x,cv::BORDER_CONSTANT);
-
-	// GET THE ROTATION MATRIX
-	cv::Mat rotationMat = cv::getRotationMatrix2D(cv::Point2f(\
-		srcRotate.cols/2.0,srcRotate.rows/2.0),rotAngle, 1.0);
-
-	// ROTATE THE IMAGE WITH THE ROTATION MATRIX
-	cv::Mat rotated = cv::Mat::zeros(srcRotate.size(),toRotate.type());
-	cv::warpAffine(srcRotate, rotated, rotationMat, srcRotate.size());
-	rotationMat.release();
-	srcRotate.release();
-	return rotated;
 }
 //==============================================================================
 /** Fixes the angle to be relative to the camera position with respect to the
@@ -835,7 +678,8 @@ const FLOAT logBGProb,const vnl_vector<FLOAT> &logSumPixelBGProb){
 	//7') EXTRACT FEATURES FOR THE CURRENTLY DETECTED LOCATIONS
 	cout<<"Number of templates: "<<existing.size()<<endl;
 	if(this->onlyExtract){
-		this->extractor->extractFeatures();
+		this->extractor->extractFeatures(cv::Mat(this->current->img),\
+			this->current->sourceName,this->colorspaceCode);
 	}else{
 		this->extractDataRow(existing, bg);
 	}
@@ -1028,7 +872,8 @@ void peopleDetector::start(bool readFromFolder, bool useGT){
 			this->current->index      = index;
 			std::cout<<index<<") Image... "<<this->current->sourceName<<std::endl;
 			if(this->onlyExtract){
-				this->extractor->extractFeatures();
+				this->extractor->extractFeatures(cv::Mat(this->current->img),\
+					this->current->sourceName, this->colorspaceCode);
 			}else{
 				// READ THE LOCATION AT WICH THERE ARE PEOPLE
 				std::deque<unsigned> existing = this->readLocations();

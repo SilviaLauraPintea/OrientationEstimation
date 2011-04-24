@@ -4,7 +4,7 @@
 #ifndef AUXILIARY_H_
 #define AUXILIARY_H_
 using namespace std;
-using namespace boost;
+#include <opencv2/opencv.hpp>
 
 /** Converts a pointer to an IplImage to an OpenCV Mat.
  */

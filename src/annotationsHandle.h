@@ -4,6 +4,11 @@
 #ifndef ANNOTATIONSHANDLE_H_
 #define ANNOTATIONSHANDLE_H_
 using namespace std;
+#include <deque>
+#include <opencv2/opencv.hpp>
+#include <boost/thread.hpp>
+#include <vnl/vnl_vector.h>
+#include "eigenbackground/src/defines.hh"
 
 /** Class for annotating both positions and poses of the people in the images.
  */

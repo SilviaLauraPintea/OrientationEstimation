@@ -3,6 +3,12 @@
  */
 #ifndef PEOPLEDETECTOR_H_
 #define PEOPLEDETECTOR_H_
+#include <opencv2/opencv.hpp>
+#include <vnl/vnl_vector.h>
+#include "eigenbackground/src/defines.hh"
+#include "eigenbackground/src/Tracker.hh"
+#include "featureExtractor.h"
+#include "annotationsHandle.h"
 
 /** Class used for detecting useful features in the images that can be later
  * used for training and classifying.
@@ -15,41 +21,6 @@ class peopleDetector:public Tracker{
 		/** What values can be used for the feature part to be extracted.
 		 */
 		enum FEATUREPART {TOP, BOTTOM, WHOLE};
-		/** Structure containing images of the size of the detected people.
-		 */
-		struct people{
-			cv::Point2f absoluteLoc;
-			cv::Point2f relativeLoc;
-			std::deque<unsigned> borders;
-			cv::Mat_<cv::Vec3b> pixels;
-			people(){
-				this->absoluteLoc = cv::Point2f(0,0);
-				this->relativeLoc = cv::Point2f(0,0);
-			}
-			~people(){
-				if(!this->borders.empty()){
-					this->borders.clear();
-				}
-				if(!this->pixels.empty()){
-					this->pixels.release();
-				}
-			}
-		};
-		/** Structure to store templates so they don't get recomputed all the time.
-		 */
-		struct templ{
-			cv::Point2f center;
-			cv::Point2f head;
-			std::deque<double> extremes;
-			std::vector<cv::Point2f> points;
-			templ(cv::Point theCenter){
-				this->center = theCenter;
-			}
-			~templ(){
-				this->extremes.clear();
-				this->points.clear();
-			}
-		};
 		/** Overwrites the \c doFindPeople function from the \c Tracker class
 		 * to make it work with the feature extraction.
 		 */
@@ -61,14 +32,11 @@ class peopleDetector:public Tracker{
 		bool imageProcessingMenu();
 		/** Get the foreground pixels corresponding to each person.
 		 */
-		void allForegroundPixels(std::deque<peopleDetector::people> &allPeople,\
+		void allForegroundPixels(std::deque<featureExtractor::people> &allPeople,\
 			std::deque<unsigned> existing, IplImage *bg, double threshold);
 		/** Gets the distance to the given template from a given pixel location.
 		 */
 		double getDistToTemplate(int pixelX,int pixelY,std::vector<cv::Point2f> templ);
-		/** Checks to see if a given pixel is inside a template.
-		 */
-		bool isInTemplate(unsigned pixelX, unsigned pixelY, std::vector<cv::Point2f> templ);
 		/** Creates on data row in the final data matrix by getting the feature
 		 * descriptors.
 		 */
@@ -80,7 +48,7 @@ class peopleDetector:public Tracker{
 		/** Returns the size of a window around a template centered in a given point.
 		 */
 		void templateWindow(cv::Size imgSize, int &minX, int &maxX, int &minY,\
-			int &maxY, std::vector<cv::Point2f> &templ, int tplBorder = 200);
+			int &maxY, featureExtractor::templ aTempl, int tplBorder=200);
 		/** Initializes the parameters of the tracker.
 		 */
 		void init(std::string dataFolder, std::string theAnnotationsFile,\
@@ -94,27 +62,9 @@ class peopleDetector:public Tracker{
 		 */
 		double fixAngle(cv::Point2f feetLocation, cv::Point2f cameraLocation,\
 			double angle);
-		/** Compares SURF 2 descriptors and returns the boolean value of their comparison.
-		 */
-		static bool compareDescriptors(const peopleDetector::keyDescr k1,\
-			const peopleDetector::keyDescr k2);
-		/** Rotate matrix wrt to the camera location.
-		 */
-		static cv::Mat rotate2Zero(cv::Point2f feetLocation, cv::Point2f headLocation,\
-			cv::Mat toRotate, cv::Point2f &borders);
-		/** Rotate the points corresponding wrt to the camera location.
-		 */
-		static std::vector<cv::Point2f> rotatePoints2Zero(cv::Point2f feetLocation,\
-			cv::Point2f headLocation, std::vector<cv::Point2f> pts,\
-			cv::Point2f rotBorders, cv::Point2f rotCenter);
 		/** Get template extremities (if needed, considering some borders --
 		 * relative to the ROI).
 		 */
-		/** Rotate the keypoints wrt to the camera location.
-		 */
-		static void rotateKeypts2Zero(cv::Point2f feetLocation, cv::Point2f\
-			headLocation, cv::Mat &keys, cv::Point2f rotBorders,\
-			cv::Point2f rotCenter);
 		std::deque<double> templateExtremes(std::vector<cv::Point2f> templ,\
 			int minX = 0, int minY = 0);
 		/** If only a part needs to be used to extract the features then the threshold
@@ -126,7 +76,7 @@ class peopleDetector:public Tracker{
 		double motionVector(cv::Point2f head, cv::Point2f center);
 		/** Compute the dominant direction of the SIFT or SURF features.
 		 */
-		double opticalFlow(cv::Mat keys, cv::Mat currentImg, cv::Mat nextImg,\
+		double opticalFlow(cv::Mat currentImg, cv::Mat nextImg,\
 			std::vector<cv::Point2f> keyPts,cv::Point2f head, cv::Point2f center,\
 			bool maxOrAvg);
 		/** Keeps only the largest blob from the thresholded image.
@@ -215,6 +165,6 @@ class peopleDetector:public Tracker{
 		/** @var imageString
 		 * The string that appears in the name of the images.
 		 */
-		std::vector<peopleDetector::templ> templates;
+		std::vector<featureExtractor::templ> templates;
 };
 #endif /* PEOPLEDETECTOR_H_ */

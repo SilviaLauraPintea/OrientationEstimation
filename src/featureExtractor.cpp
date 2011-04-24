@@ -1,8 +1,20 @@
 /* featureExtractor.cpp
  * Author: Silvia-Laura Pintea
  */
-
+#include "eigenbackground/src/Helpers.hh"
 #include "featureExtractor.h"
+#include "Auxiliary.h"
+//==============================================================================
+/** Checks to see if a pixel's x coordinate is on a scanline.
+ */
+struct onScanline{
+	public:
+		unsigned pixelY;
+		onScanline(const unsigned pixelY){this->pixelY=pixelY;}
+		bool operator()(const scanline_t line)const{
+			return (line.line == this->pixelY);
+		}
+};
 //==============================================================================
 featureExtractor::featureExtractor(){
 	this->isInit      = false;
@@ -20,6 +32,9 @@ featureExtractor::~featureExtractor(){
 	if(!this->data.empty()){
 		this->data.release();
 	}
+	if(!this->dictionarySIFT.empty()){
+		this->dictionarySIFT.release();
+	}
 }
 //==============================================================================
 /** Initializes the class elements.
@@ -34,9 +49,17 @@ void featureExtractor::init(featureExtractor::FEATURE fType, std::string featFil
 /** Initializes the settings for the SIFT dictionary.
  */
 void featureExtractor::initSIFT(std::string dictName, unsigned means, unsigned size){
+	if(!this->dictionarySIFT.empty()){
+		this->dictionarySIFT.release();
+	}
 	this->dictFilename = dictName;
 	this->noMeans      = means;
 	this->meanSize     = size;
+
+	// ASSUME THAT THERE IS ALREADY A SIFT DICTIONARY AVAILABLE
+	if(this->dictionarySIFT.empty()){
+		binFile2mat(this->dictionarySIFT, const_cast<char*>(this->dictFilename.c_str()));
+	}
 }
 //==============================================================================
 /** Resets the variables to the default values.
@@ -45,7 +68,115 @@ void featureExtractor::reset(){
 	if(!this->data.empty()){
 		this->data.release();
 	}
+	if(!this->dictionarySIFT.empty()){
+		this->dictionarySIFT.release();
+	}
 	this->isInit = false;
+}
+//==============================================================================
+/** Compares SURF 2 descriptors and returns the boolean value of their comparison.
+ */
+bool featureExtractor::compareDescriptors(const featureExtractor::keyDescr k1,\
+const featureExtractor::keyDescr k2){
+	return (k1.keys.response>k2.keys.response);
+}
+//==============================================================================
+/** Checks to see if a given pixel is inside a template.
+ */
+bool featureExtractor::isInTemplate(unsigned pixelX, unsigned pixelY,\
+std::vector<cv::Point2f> templ){
+	std::vector<cv::Point2f> hull;
+	convexHull(templ, hull);
+	std::deque<scanline_t> lines;
+	getScanLines(hull, lines);
+
+	std::deque<scanline_t>::iterator iter = std::find_if(lines.begin(),\
+		lines.end(), onScanline(pixelY));
+	if(iter == lines.end()){
+		return false;
+	}
+
+	if(std::abs(static_cast<int>(iter->line)-static_cast<int>(pixelY))<5 &&\
+	static_cast<int>(iter->start) <= static_cast<int>(pixelX) &&\
+	static_cast<int>(iter->end) >= static_cast<int>(pixelX)){
+		return true;
+	}else{
+		return false;
+	}
+}
+//==============================================================================
+/** Rotate a matrix/a template/keypoints wrt to the camera location.
+ */
+cv::Mat featureExtractor::rotate2Zero(cv::Point2f headLocation, cv::Point2f \
+feetLocation, cv::Mat toRotate, cv::Point2f &rotBorders, cv::Point2f rotCenter,\
+featureExtractor::ROTATE what, std::vector<cv::Point2f> &pts){
+	// GET THE ANGLE WITH WHICH WE NEED TO ROTATE
+	double rotAngle = std::atan2((headLocation.y-feetLocation.y),\
+						(headLocation.x-feetLocation.x));
+	rotAngle -= M_PI;
+	angle0to360(rotAngle);
+
+	// THE ROTATION ANGLE NEEDS TO BE IN DEGREES
+	rotAngle *= (180.0/M_PI);
+
+	double diag;
+	cv::Mat srcRotate, rotated, rotationMat, result;
+	switch(what){
+		case(featureExtractor::MATRIX):
+			diag      = std::sqrt(toRotate.cols*toRotate.cols+toRotate.rows*\
+						toRotate.rows);
+			rotBorders.x = std::ceil((diag-toRotate.cols)/2.0);
+			rotBorders.y = std::ceil((diag-toRotate.rows)/2.0);
+			srcRotate = cv::Mat::zeros(cv::Size(toRotate.cols+2*rotBorders.x,\
+						toRotate.rows+2*rotBorders.y),toRotate.type());
+			cv::copyMakeBorder(toRotate,srcRotate,rotBorders.y,rotBorders.y,\
+				rotBorders.x,rotBorders.x,cv::BORDER_CONSTANT);
+			rotationMat = cv::getRotationMatrix2D(rotCenter, rotAngle, 1.0);
+			rotated     = cv::Mat::zeros(srcRotate.size(),toRotate.type());
+			cv::warpAffine(srcRotate, rotated, rotationMat, srcRotate.size());
+			rotated.copyTo(result);
+			break;
+		case(featureExtractor::TEMPLATE):
+			rotationMat = cv::getRotationMatrix2D(rotCenter, rotAngle, 1.0);
+			toRotate    = cv::Mat::ones(cv::Size(3, pts.size()),\
+							cv::DataType<double>::type);
+			for(std::size_t i=0; i<pts.size(); i++){
+				toRotate.at<double>(i,0) = pts[i].x + rotBorders.x;
+				toRotate.at<double>(i,1) = pts[i].y + rotBorders.y;
+			}
+			toRotate.convertTo(toRotate, cv::DataType<double>::type);
+			rotated = toRotate*rotationMat.t();
+			rotated.convertTo(rotated, cv::DataType<double>::type);
+			pts.clear();
+			pts = std::vector<cv::Point2f>(rotated.rows);
+			for(int y=0; y<rotated.rows; y++){
+				pts[y].x = rotated.at<double>(y,0);
+				pts[y].y = rotated.at<double>(y,1);
+			}
+			break;
+		case(featureExtractor::KEYS):
+			srcRotate = cv::Mat::ones(cv::Size(3,toRotate.rows),\
+						cv::DataType<double>::type);
+			for(int y=0; y<toRotate.rows; y++){
+				srcRotate.at<double>(y,0) = toRotate.at<double>(y,toRotate.cols-2)+\
+											rotBorders.x;
+				srcRotate.at<double>(y,1) = toRotate.at<double>(y,toRotate.cols-1)+\
+											rotBorders.y;
+			}
+			srcRotate.convertTo(srcRotate, cv::DataType<double>::type);
+			rotated = srcRotate*rotationMat.t();
+			rotated.convertTo(rotated, cv::DataType<double>::type);
+			srcRotate.copyTo(result);
+			for(int y=0; y<toRotate.rows; y++){
+				result.at<double>(y,toRotate.cols-2) = rotated.at<double>(y,0);
+				result.at<double>(y,toRotate.cols-1) = rotated.at<double>(y,1);
+			}
+			break;
+	}
+	rotationMat.release();
+	srcRotate.release();
+	rotated.release();
+	return result;
 }
 //==============================================================================
 /** Gets the edges in an image.
@@ -56,7 +187,10 @@ cv::Rect roi, cv::Point2f head, cv::Point2f center){
 	cv::Point2f rotBorders;
 	feature.convertTo(feature,CV_8UC1);
 	cv::Mat tmpFeat(feature.clone(),roi);
-	tmpFeat = peopleDetector::rotate2Zero(head,center,tmpFeat.clone(),rotBorders);
+	std::vector<cv::Point2f> dummy;
+	cv::Point2f rotCenter(tmpFeat.cols/2+roi.x,tmpFeat.rows/2+roi.y);
+	tmpFeat = this->rotate2Zero(head,center,tmpFeat.clone(),rotBorders,\
+				rotCenter, featureExtractor::MATRIX, dummy);
 
 	// PICK OUT ONLY THE THRESHOLDED ARES RESHAPE IT AND RETURN IT
 	cv::Mat tmpEdge;
@@ -122,7 +256,7 @@ std::vector<cv::Point2f> &indices, cv::Rect roi,cv::Mat test){
 		}
 		double ptX = feature.at<double>(y,feature.cols-2);
 		double ptY = feature.at<double>(y,feature.cols-1);
-		if(this->isInTemplate(ptX, ptY, templ)){
+		if(featureExtractor::isInTemplate(ptX, ptY, templ)){
 			cv::Mat dummy1 = tmp.row(counter);
 			cv::Mat dummy2 = feature.row(y);
 			cv::Mat dummy3 = dummy2.colRange(0,feature.cols-2);
@@ -168,7 +302,7 @@ std::vector<cv::Point2f> &indices, cv::Rect roi,cv::Mat test){
 /** Creates a "histogram" of interest points + number of blobs.
  */
 cv::Mat featureExtractor::getPointsGrid(cv::Mat feature, cv::Rect roi,\
-peopleDetector::templ aTempl, cv::Mat test){
+featureExtractor::templ aTempl, cv::Mat test){
 	// GET THE GRID SIZE FROM THE TEMPLATE SIZE
 	unsigned no     = 10;
 	cv::Mat rowData = cv::Mat::zeros(cv::Size(no*no+1,1),cv::DataType<double>::type);
@@ -180,7 +314,7 @@ peopleDetector::templ aTempl, cv::Mat test){
 	for(int y=0; y<feature.rows; y++){
 		double ptX = feature.at<double>(y,0);
 		double ptY = feature.at<double>(y,1);
-		if(this->isInTemplate(ptX, ptY, aTempl.points)){
+		if(featureExtractor::isInTemplate(ptX, ptY, aTempl.points)){
 			cv::Point2f pt(ptX, ptY);
 			indices.push_back(pt);
 
@@ -267,13 +401,15 @@ cv::Mat featureExtractor::createGabor(double *params){
 /** Convolves an image with a Gabor filter with the given parameters and
  * returns the response image.
  */
-cv::Mat peopleDetector::getGabor(cv::Mat feature, cv::Mat thresholded,\
+cv::Mat featureExtractor::getGabor(cv::Mat feature, cv::Mat thresholded,\
 cv::Rect roi, cv::Point2f center, cv::Point2f head, cv::Size foregrSize){
 	unsigned gaborNo    = std::ceil(feature.rows/height);
 	int gaborRows       = std::ceil(feature.rows/gaborNo);
 	unsigned resultCols = foregrSize.width*foregrSize.height;
 	cv::Mat result      = cv::Mat::zeros(cv::Size(2*resultCols+1,1),\
 								cv::DataType<double>::type);
+	cv::Point2f rotCenter(foregrSize.width/2+roi.x,foregrSize.height/2+roi.y);
+	std::vector<cv::Point2f> dummy;
 	for(unsigned i=0; i<gaborNo; i++){
 		// GET THE ROI OUT OF THE iTH GABOR
 		cv::Mat tmp1 = feature.rowRange(i*gaborRows,(i+1)*gaborRows);
@@ -282,8 +418,8 @@ cv::Rect roi, cv::Point2f center, cv::Point2f head, cv::Size foregrSize){
 
 		// ROTATE EACH GABOR TO THE RIGHT POSITION
 		cv::Point2f rotBorders;
-		tmp2 = peopleDetector::rotate2Zero(head,center,tmp2.clone(),rotBorders);
-
+		tmp2 = this->rotate2Zero(head,center,tmp2.clone(),rotBorders,rotCenter,\
+				featureExtractor::MATRIX,dummy);
 		// KEEP ONLY THE THRESHOLDED VALUES
 		cv::Mat tmp3;
 		tmp2.copyTo(tmp3,thresholded);
@@ -321,7 +457,7 @@ cv::Rect roi, cv::Point2f center, cv::Point2f head, cv::Size foregrSize){
 //==============================================================================
 /** Compute the features from the SIFT descriptors by doing vector quantization.
  */
-cv::Mat peopleDetector::getSIFT(cv::Mat feature,std::vector<cv::Point2f> templ,
+cv::Mat featureExtractor::getSIFT(cv::Mat feature,std::vector<cv::Point2f> templ,
 std::vector<cv::Point2f> &indices, cv::Rect roi, cv::Mat test){
 	// KEEP ONLY THE SIFT FEATURES THAT ARE WITHIN THE TEMPLATE
 	cv::Mat tmp = cv::Mat::zeros(cv::Size(feature.cols-2,feature.rows),\
@@ -330,7 +466,7 @@ std::vector<cv::Point2f> &indices, cv::Rect roi, cv::Mat test){
 	for(int y=0; y<feature.rows; y++){
 		double ptX = feature.at<double>(y,feature.cols-2);
 		double ptY = feature.at<double>(y,feature.cols-1);
-		if(this->isInTemplate(ptX, ptY, templ)){
+		if(featureExtractor::isInTemplate(ptX, ptY, templ)){
 			cv::Mat dummy1 = tmp.row(counter);
 			cv::Mat dummy2 = feature.row(y);
 			cv::Mat dummy3 = dummy2.colRange(0,dummy2.cols-2);
@@ -353,7 +489,7 @@ std::vector<cv::Point2f> &indices, cv::Rect roi, cv::Mat test){
 
 	// ASSUME THAT THERE IS ALREADY A SIFT DICTIONARY AVAILABLE
 	if(this->dictionarySIFT.empty()){
-		binFile2mat(this->dictionarySIFT, const_cast<char*>(this->dictFileName.c_str()));
+		binFile2mat(this->dictionarySIFT, const_cast<char*>(this->dictFilename.c_str()));
 	}
 
 	// COMPUTE THE DISTANCES FROM EACH NEW FEATURE TO THE DICTIONARY ONES
@@ -419,9 +555,9 @@ std::vector<cv::Point2f> &indices, cv::Rect roi, cv::Mat test){
 //==============================================================================
 /** Creates a data matrix for each image and stores it locally.
  */
-void peopleDetector::extractFeatures(){
-	cv::Mat image(this->current->img);
-	cv::cvtColor(image, image, this->colorspaceCode);
+void featureExtractor::extractFeatures(cv::Mat image, std::string sourceName,\
+int colorspaceCode){
+	cv::cvtColor(image, image, colorspaceCode);
 
 	if(this->featureFile[this->featureFile.size()-1]!='/'){
 		this->featureFile = this->featureFile + '/';
@@ -432,32 +568,32 @@ void peopleDetector::extractFeatures(){
 	cv::Mat feature;
 	std::string toWrite = this->featureFile;
 	switch(this->featureType){
-		case (peopleDetector::IPOINTS):
+		case (featureExtractor::IPOINTS):
 			toWrite += "IPOINTS/";
 			file_exists(toWrite.c_str(), true);
 			feature = this->extractPointsGrid(image);
 			break;
-		case peopleDetector::EDGES:
+		case featureExtractor::EDGES:
 			toWrite += "EDGES/";
 			file_exists(toWrite.c_str(), true);
 			feature = this->extractEdges(image);
 			break;
-		case peopleDetector::SURF:
+		case featureExtractor::SURF:
 			toWrite += "SURF/";
 			file_exists(toWrite.c_str(), true);
 			feature = this->extractSURF(image);
 			break;
-		case peopleDetector::GABOR:
+		case featureExtractor::GABOR:
 			toWrite += "GABOR/";
 			file_exists(toWrite.c_str(), true);
 			feature = this->extractGabor(image);
 			break;
-		case peopleDetector::SIFT:
+		case featureExtractor::SIFT:
 			toWrite += "SIFT/";
 			file_exists(toWrite.c_str(), true);
 			feature = this->extractSIFT(image);
 			break;
-		case peopleDetector::HOG:
+		case featureExtractor::HOG:
 			toWrite += "HOG/";
 			file_exists(toWrite.c_str(), true);
 			feature = this->extractHOG(image);
@@ -466,9 +602,9 @@ void peopleDetector::extractFeatures(){
 	feature.convertTo(feature, cv::DataType<double>::type);
 
 	//WRITE THE FEATURE TO A BINARY FILE
-	unsigned pos1      = (this->current->sourceName).find_last_of("/\\");
-	std::string imgName = (this->current->sourceName).substr(pos1+1);
-	unsigned pos2      = imgName.find_last_of(".");
+	unsigned pos1       = sourceName.find_last_of("/\\");
+	std::string imgName = sourceName.substr(pos1+1);
+	unsigned pos2       = imgName.find_last_of(".");
 	imgName             = imgName.substr(0,pos2);
 	toWrite += (imgName + ".bin");
 
@@ -479,7 +615,7 @@ void peopleDetector::extractFeatures(){
 //==============================================================================
 /** Extract the interest points in a gird and returns them.
  */
-cv::Mat peopleDetector::extractPointsGrid(cv::Mat image){
+cv::Mat featureExtractor::extractPointsGrid(cv::Mat image){
 	// EXTRACT MAXIMALLY STABLE BLOBS
 	std::vector<std::vector<cv::Point> > msers;
 	cv::MSER aMSER;
@@ -491,7 +627,7 @@ cv::Mat peopleDetector::extractPointsGrid(cv::Mat image){
 
 	// NICE FEATURE POINTS
 	std::vector<cv::Point2f> corners;
-	cv::Ptr<cv::peopleDetector> detector = new cv::GoodFeaturesToTrackDetector(\
+	cv::Ptr<cv::FeatureDetector> detector = new cv::GoodFeaturesToTrackDetector(\
 											5000, 0.00001, 1.0, 3.0);
 	cv::GridAdaptedFeatureDetector gafd(detector, 5000, 10, 10);
 	std::vector<cv::KeyPoint> keys;
@@ -517,7 +653,6 @@ cv::Mat peopleDetector::extractPointsGrid(cv::Mat image){
 	}
 
 	if(this->plot){
-		cv::Mat toSee(this->current->img);
 		for(int y=0; y<interestPoints.rows; y++){
 			cv::Scalar color;
 			if(y<msersNo){
@@ -527,18 +662,17 @@ cv::Mat peopleDetector::extractPointsGrid(cv::Mat image){
 			}
 			double ptX = interestPoints.at<double>(y,0);
 			double ptY = interestPoints.at<double>(y,1);
-			cv::circle(toSee, cv::Point2f(ptX,ptY),3,color);
+			cv::circle(image, cv::Point2f(ptX,ptY),3,color);
 		}
-		cv::imshow("IPOINTS", toSee);
+		cv::imshow("IPOINTS", image);
 		cv::waitKey(0);
-		toSee.release();
 	}
 	return interestPoints;
 }
 //==============================================================================
 /** Extract edges from the whole image.
  */
-cv::Mat peopleDetector::extractEdges(cv::Mat image){
+cv::Mat featureExtractor::extractEdges(cv::Mat image){
 	cv::Mat gray, edges;
 	cv::cvtColor(image, gray, CV_BGR2GRAY);
 	normalizeMat(gray);
@@ -559,7 +693,7 @@ cv::Mat peopleDetector::extractEdges(cv::Mat image){
 /** Extracts all the surf descriptors from the whole image and writes them in a
  * matrix.
  */
-cv::Mat peopleDetector::extractSURF(cv::Mat image){
+cv::Mat featureExtractor::extractSURF(cv::Mat image){
 	std::vector<float> descriptors;
 	std::vector<cv::KeyPoint> keypoints;
 	cv::SURF aSURF = cv::SURF(0.01,4,2,false);
@@ -576,9 +710,9 @@ cv::Mat peopleDetector::extractSURF(cv::Mat image){
 	gray.release();
 
 	// WRITE ALL THE DESCRIPTORS IN THE STRUCTURE OF KEY-DESCRIPTORS
-	std::deque<peopleDetector::keyDescr> kD;
+	std::deque<featureExtractor::keyDescr> kD;
 	for(std::size_t i=0; i<keypoints.size();i++){
-		peopleDetector::keyDescr tmp;
+		featureExtractor::keyDescr tmp;
 		for(int j=0; j<aSURF.descriptorSize();j++){
 			tmp.descr.push_back(descriptors[i*aSURF.descriptorSize()+j]);
 		}
@@ -588,7 +722,7 @@ cv::Mat peopleDetector::extractSURF(cv::Mat image){
 	}
 
 	// SORT THE REMAINING DESCRIPTORS SO WE DON'T NEED TO DO THAT LATER
-	std::sort(kD.begin(),kD.end(),(&peopleDetector::compareDescriptors));
+	std::sort(kD.begin(),kD.end(),(&featureExtractor::compareDescriptors));
 
 	// WRITE THEM IN THE MATRIX AS FOLLOWS:
 	cv::Mat surfs = cv::Mat::zeros(cv::Size(aSURF.descriptorSize()+2,kD.size()),\
@@ -606,21 +740,19 @@ cv::Mat peopleDetector::extractSURF(cv::Mat image){
 
 	// PLOT THE KEYPOINTS TO SEE THEM
 	if(this->plot){
-		cv::Mat toSee(this->current->img);
 		for(std::size_t i=0; i<kD.size();i++){
-			cv::circle(toSee, cv::Point2f(kD[i].keys.pt.x,kD[i].keys.pt.y),\
+			cv::circle(image, cv::Point2f(kD[i].keys.pt.x,kD[i].keys.pt.y),\
 				3,cv::Scalar(0,0,255));
 		}
-		cv::imshow("SURFS", toSee);
+		cv::imshow("SURFS", image);
 		cv::waitKey(0);
-		toSee.release();
 	}
 	return surfs;
 }
 //==============================================================================
 /** Extract some HOG descriptors out of an image.
  */
-cv::Mat peopleDetector::extractHOG(cv::Mat image){
+cv::Mat featureExtractor::extractHOG(cv::Mat image){
 	std::cout<<"freaking HOG!!!"<<std::endl;
 
 	cv::HOGDescriptor hog(cv::Size(64,128),cv::Size(16,16),cv::Size(8,8),\
@@ -631,6 +763,7 @@ cv::Mat peopleDetector::extractHOG(cv::Mat image){
 	hog.detectMultiScale(image,locations,0,cv::Size(8,8),cv::Size(24,16),1.05,2);
 	std::cout<<"locations="<<locations.size()<<" "<<hog.getDescriptorSize()<<std::endl;
 
+	/*
 	hog.compute(image,descriptors,cv::Size(5,5),cv::Size(3,3),locations);
 
 	// WRITE ALL THE DESCRIPTORS IN THE STRUCTURE OF KEY-DESCRIPTORS
@@ -643,13 +776,14 @@ cv::Mat peopleDetector::extractHOG(cv::Mat image){
 		std::cout<<descriptors[i]<<" ";
 	}
 	std::cout<<endl;
-	return hogs;
+	*/
+	return image;
 }
 //==============================================================================
 /** Convolves the whole image with some Gabors wavelets and then stores the
  * results.
  */
-cv::Mat peopleDetector::extractGabor(cv::Mat image){
+cv::Mat featureExtractor::extractGabor(cv::Mat image){
 	// DEFINE THE PARAMETERS FOR A FEW GABORS
 	// params[0] -- sigma: (3, 68) // the actual size
 	// params[1] -- gamma: (0.2, 1) // how round the filter is
@@ -708,7 +842,7 @@ cv::Mat peopleDetector::extractGabor(cv::Mat image){
 //==============================================================================
 /** Extracts SIFT features from the image and stores them in a matrix.
  */
-cv::Mat peopleDetector::extractSIFT(cv::Mat image, std::vector<cv::Point2f> templ,\
+cv::Mat featureExtractor::extractSIFT(cv::Mat image, std::vector<cv::Point2f> templ,\
 cv::Rect roi){
 	// DEFINE THE SURF KEYPOINTS AND THE DESCRIPTORS
 	std::vector<cv::KeyPoint> keypoints;
@@ -728,12 +862,12 @@ cv::Rect roi){
 
 	// WE USE THE SAME FUNCTION TO BUILD THE DICTIONARY ALSO
 	if(templ.size()!=0){
-		std::cout<<"EXtracting SIFT features for... "<<this->current->sourceName<<std::endl;
 		sift = cv::Mat::zeros(keypoints.size(),aSIFT.descriptorSize(),\
 				cv::DataType<double>::type);
 		std::vector<cv::KeyPoint> goodKP;
 		for(std::size_t i=0; i<keypoints.size();i++){
-			if(this->isInTemplate(keypoints[i].pt.x+roi.x,keypoints[i].pt.y+roi.y,templ)){
+			if(featureExtractor::isInTemplate(keypoints[i].pt.x+roi.x,\
+			keypoints[i].pt.y+roi.y,templ)){
 				goodKP.push_back(keypoints[i]);
 			}
 		}
@@ -788,53 +922,54 @@ cv::Rect roi){
 //==============================================================================
 /** Returns the row corresponding to the indicated feature type.
  */
-cv::Mat featureExtractor::getDataRow(peopleDetector::templ aTempl, cv::Rect roi,\
-peopleDetector::people person, cv::Mat thresholded,cv::vector<cv::Point2f> &keys,\
-std::string imgName, cv::Point2f absRotCenter, cv::Point2f rotBorders){
+cv::Mat featureExtractor::getDataRow(cv::Mat image, featureExtractor::templ aTempl,\
+cv::Rect roi,featureExtractor::people person, cv::Mat thresholded,\
+cv::vector<cv::Point2f> &keys, std::string imgName, cv::Point2f absRotCenter,\
+cv::Point2f rotBorders){
 	cv::Mat dataRow, feature;
 	std::string toRead;
 	cv::Mat dictImage;
 	switch(this->featureType){
-		case (peopleDetector::IPOINTS):
+		case (featureExtractor::IPOINTS):
 			toRead = (this->featureFile+"IPOINTS/"+imgName+".bin");
 			binFile2mat(feature, const_cast<char*>(toRead.c_str()));
 			feature.convertTo(feature,cv::DataType<double>::type);
-			peopleDetector::rotateKeypts2Zero(aTempl.head,aTempl.center,feature,\
-				rotBorders,absRotCenter);
+			feature = this->rotate2Zero(aTempl.head,aTempl.center,feature,rotBorders,\
+						absRotCenter,featureExtractor::KEYS,keys);
 			dataRow = this->getPointsGrid(feature,roi,aTempl,person.pixels);
 			break;
-		case peopleDetector::EDGES:
+		case featureExtractor::EDGES:
 			toRead = (this->featureFile+"EDGES/"+imgName+".bin");
 			binFile2mat(feature, const_cast<char*>(toRead.c_str()));
 			dataRow = this->getEdges(feature,thresholded,roi,aTempl.head,\
 						aTempl.center);
 			break;
-		case peopleDetector::SURF:
+		case featureExtractor::SURF:
 			toRead = (this->featureFile+"SURF/"+imgName+".bin");
 			binFile2mat(feature, const_cast<char*>(toRead.c_str()));
 			feature.convertTo(feature,cv::DataType<double>::type);
-			peopleDetector::rotateKeypts2Zero(aTempl.head,aTempl.center,feature,\
-				rotBorders,absRotCenter);
+			feature = this->rotate2Zero(aTempl.head,aTempl.center,feature,rotBorders,\
+						absRotCenter,featureExtractor::KEYS,keys);
 			dataRow = this->getSURF(feature,aTempl.points,keys,roi,person.pixels);
 			break;
-		case peopleDetector::GABOR:
+		case featureExtractor::GABOR:
 			toRead = (this->featureFile+"GABOR/"+imgName+".bin");
 			binFile2mat(feature, const_cast<char*>(toRead.c_str()));
 			dataRow = this->getGabor(feature,thresholded,roi,aTempl.center,\
 					aTempl.head,person.pixels.size());
 			break;
-		case peopleDetector::SIFT_DICT:
+		case featureExtractor::SIFT_DICT:
 			dictImage = cv::Mat(image, roi);
-			dictImage = peopleDetector::rotate2Zero(aTempl.head,aTempl.center,\
-						dictImage,rotBorders);
+			dictImage = this->rotate2Zero(aTempl.head,aTempl.center,dictImage,\
+						rotBorders,absRotCenter,featureExtractor::MATRIX,keys);
 			dataRow   = this->extractSIFT(dictImage, aTempl.points, roi);
 			break;
-		case peopleDetector::SIFT:
+		case featureExtractor::SIFT:
 			toRead = (this->featureFile+"SIFT/"+imgName+".bin");
 			binFile2mat(feature, const_cast<char*>(toRead.c_str()));
 			feature.convertTo(feature,cv::DataType<double>::type);
-			peopleDetector::rotateKeypts2Zero(aTempl.head,aTempl.center,feature,\
-				rotBorders,absRotCenter);
+			feature = this->rotate2Zero(aTempl.head,aTempl.center,feature,rotBorders,\
+						absRotCenter,featureExtractor::KEYS,keys);
 			dataRow = this->getSIFT(feature,aTempl.points,keys,roi,person.pixels);
 			break;
 	}
