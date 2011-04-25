@@ -60,7 +60,7 @@ class featureExtractor {
 		};
 		/** All available feature types.
 		 */
-		enum FEATURE {IPOINTS, EDGES, SIFT_DICT, SURF, SIFT, GABOR, HOG};
+		enum FEATURE {IPOINTS, EDGES, SIFT_DICT, SURF, SIFT, GABOR, PIXELS};
 		/** What needs to be rotated.
 		 */
 		enum ROTATE {MATRIX, TEMPLATE, KEYS};
@@ -96,9 +96,9 @@ class featureExtractor {
 		 * matrix.
 		 */
 		cv::Mat extractSURF(cv::Mat image);
-		/** Extract some HOG descriptors out of an image.
+		/** Gets the plain pixels corresponding to the upper part of the body.
 		 */
-		cv::Mat extractHOG(cv::Mat image);
+		cv::Mat getPixels(cv::Mat thresholded,featureExtractor::templ aTempl);
 		/** Gets the edges in an image.
 		 */
 		cv::Mat getEdges(cv::Mat feature, cv::Mat thresholded, cv::Rect roi,\

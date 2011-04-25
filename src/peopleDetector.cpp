@@ -27,7 +27,7 @@ bool buildBg):Tracker(argc, argv, 10, buildBg, true){
 		if(datasetPath[dataPath.size()-1]!='/'){
 			dataPath += "/";
 		}
-		this->plot           = true;
+		this->plot           = false;
 		this->print          = true;
 		this->useGroundTruth = true;
 		this->lastIndex      = 0;
@@ -105,9 +105,13 @@ featureExtractor::FEATURE feat, bool readFromFolder){
 			(theAnnotationsFile.c_str()), this->targetAnno);
 	}
 	this->lastIndex = 0;
-	if(feat == featureExtractor::SIFT_DICT){
-		this->tracking = false;
+	if(feat==featureExtractor::SIFT_DICT || feat==featureExtractor::SIFT){
 		this->extractor->initSIFT(this->datasetPath+"SIFT_"+this->imageString+".bin");
+	}
+	if(feat==featureExtractor::SIFT_DICT){
+		this->tracking = false;
+	}else if(feat==featureExtractor::PIXELS){
+		this->featurePart = peopleDetector::TOP;
 	}
 	this->extractor->init(feat,this->datasetPath+"features/");
 	this->templates.clear();
@@ -197,15 +201,13 @@ int k, cv::Mat thresh, cv::Mat &colorRoi, double tmplHeight){
 			if((int)(thresh.at<uchar>((int)(y+minY),(int)(x+minX)))>0){
 
 				// IF THE PIXEL IS NOT INSIDE OF THE TEMPLATE
-				if(featureExtractor::isInTemplate((x+minX),(y+minY),\
+				if(!featureExtractor::isInTemplate((x+minX),(y+minY),\
 				this->templates[k].points) && this->templates.size()>1){
 					double minDist = thresh.rows*thresh.cols;
 					unsigned label = -1;
 					for(unsigned l=0; l<this->templates.size(); l++){
-						if(k==l){continue;}
-
 						// IF IT IS IN ANOTHER TEMPLATE THEN IGNORE THE PIXEL
-						if(featureExtractor::isInTemplate((x+minX),(y+minY),\
+						if(k!=l && featureExtractor::isInTemplate((x+minX),(y+minY),\
 						this->templates[l].points)){
 							minDist = 0;label = l;
 							break;
@@ -213,7 +215,7 @@ int k, cv::Mat thresh, cv::Mat &colorRoi, double tmplHeight){
 						// ELSE COMPUTE THE DISTANCE FROM THE PIXEL TO THE TEMPLATE
 						}else{
 							double ptDist = dist(cv::Point2f(x+minX,y+minY),\
-								this->templates[l].center);
+											this->templates[l].center);
 							if(minDist>ptDist){
 								minDist = ptDist;label = l;
 							}
@@ -244,6 +246,8 @@ void peopleDetector::add2Templates(std::deque<unsigned> existing){
 						(aTempl.points[12].y+aTempl.points[14].y)/2);
 		aTempl.extremes = this->templateExtremes(aTempl.points);
 		this->templates.push_back(aTempl);
+		aTempl.extremes.clear();
+		aTempl.points.clear();
 	}
 }
 //==============================================================================
@@ -260,12 +264,11 @@ void peopleDetector::allForegroundPixels(std::deque<featureExtractor::people>\
 		cv::threshold(thrsh, thrsh, threshold, 255, cv::THRESH_BINARY);
 	}
 	cv::Mat foregr(this->current->img);
-
 	// FOR EACH EXISTING TEMPLATE LOOK ON AN AREA OF 100 PIXELS AROUND IT
 	for(unsigned k=0; k<existing.size();k++){
 		cv::Point2f center       = this->cvPoint(existing[k]);
 		allPeople[k].absoluteLoc = center;
-		double tmplHeight = dist(this->templates[k].head,this->templates[k].head);
+		double tmplHeight = dist(this->templates[k].head,this->templates[k].center);
 		double tmplArea   = tmplHeight*dist(this->templates[k].points[0],\
 							this->templates[k].points[1]);
 
@@ -277,7 +280,6 @@ void peopleDetector::allForegroundPixels(std::deque<featureExtractor::people>\
 		int height = maxY-minY;
 		cv::Mat colorRoi = cv::Mat(foregr.clone(),cv::Rect(cv::Point2f(minX,minY),\
 							cv::Size(width,height)));
-
 		//IF THERE IS NO BACKGROUND THEN JUST COPY THE ROI
 		cv::Mat thrshRoi;
 		if(!bg){
@@ -299,7 +301,9 @@ void peopleDetector::allForegroundPixels(std::deque<featureExtractor::people>\
 		allPeople[k].borders[3] = maxY;
 		if(this->plot){
 			cv::imshow("people", allPeople[k].pixels);
-			cv::imshow("threshold", thrshRoi);
+			if(bg){
+				cv::imshow("threshold", thrshRoi);
+			}
 			cv::waitKey(0);
 		}
 		colorRoi.release();
@@ -315,6 +319,10 @@ double tmplArea){
 	std::vector<std::vector<cv::Point> > contours;
 	cv::findContours(thresh,contours,CV_RETR_EXTERNAL,CV_CHAIN_APPROX_SIMPLE);
 	cv::drawContours(thresh,contours,-1,cv::Scalar(255,255,255),CV_FILLED);
+	std::cout<<"Number of contours: "<<contours.size()<<std::endl;
+	if(contours.size() == 1){
+		return;
+	}
 
 	int contourIdx =-1;
 	double minDist = thresh.cols*thresh.rows;
@@ -329,7 +337,7 @@ double tmplArea){
 		}
 		double ptDist = dist(center,cv::Point2f((maxX+minX)/2,(maxY+minY)/2));
 		double area   = (maxX-minX)*(maxY-minY);
-		if(ptDist<minDist & area>=tmplArea){
+		if(ptDist<minDist && area>=tmplArea){
 			contourIdx = i;
 			minDist    = ptDist;
 		}
@@ -381,18 +389,17 @@ void peopleDetector::extractDataRow(std::deque<unsigned> &existing, IplImage *bg
 
 		// ROTATE THE FOREGROUND PIXELS, THREHSOLD AND THE TEMPLATE
 		cv::Mat thresholded;
-		cv::Point2f rotBorders;
+		cv::Point2f rotBorders, absRotCenter;
 		cv::vector<cv::Point2f> keys;
-		cv::Point2f absRotCenter(allPeople[i].pixels.cols/2.0+allPeople[i].borders[0],\
-			allPeople[i].pixels.rows/2.0+allPeople[i].borders[2]);
 		allPeople[i].pixels = this->extractor->rotate2Zero(this->templates[i].head,\
 			this->templates[i].center,allPeople[i].pixels,rotBorders,absRotCenter,\
 			featureExtractor::MATRIX,keys);
-		this->templates[i].points = this->extractor->rotate2Zero(this->templates[i].head,\
+		absRotCenter = cv::Point2f(allPeople[i].pixels.cols/2.0+allPeople[i].borders[0],\
+			allPeople[i].pixels.rows/2.0+allPeople[i].borders[2]);
+		this->extractor->rotate2Zero(this->templates[i].head,\
 			this->templates[i].center,cv::Mat(),rotBorders,absRotCenter,\
-			featureExtractor::TEMPLATE,keys);
+			featureExtractor::TEMPLATE,this->templates[i].points);
 		this->templates[i].extremes = this->templateExtremes(this->templates[i].points);
-
 		// IF WE CAN THRESHOLD THE IMAGE USING THE BACKGROUND MODEL
 		if(bg){
 			cv::inRange(allPeople[i].pixels,cv::Scalar(1,1,1),cv::Scalar(255,225,225),\
@@ -401,7 +408,7 @@ void peopleDetector::extractDataRow(std::deque<unsigned> &existing, IplImage *bg
 		}
 
 		// IF THE PART TO BE CONSIDERED IS ONLY FEET OR ONLY HEAD
-		if(this->featurePart != ' '){
+		if(this->featurePart != peopleDetector::WHOLE){
 			this->templatePart(thresholded,i,allPeople[i].borders[0],\
 				allPeople[i].borders[2]);
 		}
@@ -706,7 +713,7 @@ const FLOAT logBGProb,const vnl_vector<FLOAT> &logSumPixelBGProb){
 /** Simple "menu" for skipping to the next image or quitting the processing.
  */
 bool peopleDetector::imageProcessingMenu(){
-	if(this->print){
+	if(this->plot){
 		cout<<" To quite press 'q'.\n To pause press 'p'.\n To skip 10 "<<\
 			"images press 's'.\n To skip 100 images press 'f'.\n To go back 10 "<<\
 			"images  press 'b'.\n To go back 100 images press 'r'.\n";
@@ -797,6 +804,7 @@ double offsetY){
 			this->templates[k].points[i].x = middleBot+offsetX;
 		}
 	}
+	this->templates[k].extremes = this->templateExtremes(this->templates[k].points);
 
 	if(this->plot){
 		std::vector<cv::Point2f> tmpTempl = this->templates[k].points;
@@ -865,7 +873,6 @@ void peopleDetector::start(bool readFromFolder, bool useGT){
 		halfresY      = height/2;
 		this->producer->backward(1);
 		this->current = new Image_t();
-
 		unsigned index = 0;
 		while((this->current->img = this->producer->getFrame())){
 			this->current->sourceName = this->producer->getSource(-1);
@@ -882,6 +889,10 @@ void peopleDetector::start(bool readFromFolder, bool useGT){
 			}
 			index++;
 		}
+		cvReleaseImage(&this->current->img);
+		this->current->img = NULL;
+		delete this->current;
+		this->current = NULL;
 	}else{
 		// FOR THE EDGES AND GABOR I NEED A BACKGROUND MODEL EVEN IF I ONLY EXTRACT
 		this->useGroundTruth = false;
@@ -970,9 +981,9 @@ std::deque<unsigned> peopleDetector::readLocations(){
 }
 //==============================================================================
 int main(int argc, char **argv){
-	peopleDetector feature(argc,argv,true,false);
+	peopleDetector feature(argc,argv,false,false);
 	feature.init(std::string(argv[1])+"annotated_train",\
-		std::string(argv[1])+"annotated_train.txt",featureExtractor::HOG,true);
+		std::string(argv[1])+"annotated_train.txt",featureExtractor::SIFT,true);
 	feature.start(true, true);
 }
 

@@ -25,7 +25,7 @@ featureExtractor::featureExtractor(){
 	this->meanSize     = 128;
 	this->featureFile  = "none";
 	this->print        = true;
-	this->plot         = true;
+	this->plot         = false;
 }
 //==============================================================================
 featureExtractor::~featureExtractor(){
@@ -96,7 +96,7 @@ std::vector<cv::Point2f> templ){
 		return false;
 	}
 
-	if(std::abs(static_cast<int>(iter->line)-static_cast<int>(pixelY))<5 &&\
+	if(std::abs(static_cast<int>(iter->line)==static_cast<int>(pixelY)) &&\
 	static_cast<int>(iter->start) <= static_cast<int>(pixelX) &&\
 	static_cast<int>(iter->end) >= static_cast<int>(pixelX)){
 		return true;
@@ -131,6 +131,7 @@ featureExtractor::ROTATE what, std::vector<cv::Point2f> &pts){
 						toRotate.rows+2*rotBorders.y),toRotate.type());
 			cv::copyMakeBorder(toRotate,srcRotate,rotBorders.y,rotBorders.y,\
 				rotBorders.x,rotBorders.x,cv::BORDER_CONSTANT);
+			rotCenter = cv::Point2f(srcRotate.cols/2.0,srcRotate.rows/2.0);
 			rotationMat = cv::getRotationMatrix2D(rotCenter, rotAngle, 1.0);
 			rotated     = cv::Mat::zeros(srcRotate.size(),toRotate.type());
 			cv::warpAffine(srcRotate, rotated, rotationMat, srcRotate.size());
@@ -155,6 +156,7 @@ featureExtractor::ROTATE what, std::vector<cv::Point2f> &pts){
 			}
 			break;
 		case(featureExtractor::KEYS):
+			rotationMat = cv::getRotationMatrix2D(rotCenter, rotAngle, 1.0);
 			srcRotate = cv::Mat::ones(cv::Size(3,toRotate.rows),\
 						cv::DataType<double>::type);
 			for(int y=0; y<toRotate.rows; y++){
@@ -166,31 +168,54 @@ featureExtractor::ROTATE what, std::vector<cv::Point2f> &pts){
 			srcRotate.convertTo(srcRotate, cv::DataType<double>::type);
 			rotated = srcRotate*rotationMat.t();
 			rotated.convertTo(rotated, cv::DataType<double>::type);
-			srcRotate.copyTo(result);
+			toRotate.copyTo(result);
 			for(int y=0; y<toRotate.rows; y++){
 				result.at<double>(y,toRotate.cols-2) = rotated.at<double>(y,0);
 				result.at<double>(y,toRotate.cols-1) = rotated.at<double>(y,1);
 			}
 			break;
 	}
+	toRotate.release();
 	rotationMat.release();
 	srcRotate.release();
 	rotated.release();
 	return result;
 }
 //==============================================================================
+/** Gets the plain pixels corresponding to the upper part of the body.
+ */
+cv::Mat featureExtractor::getPixels(cv::Mat thresholded,featureExtractor::templ \
+aTempl){
+	// JUST COPY THE PIXELS THAT ARE LARGER THAN 0 INTO
+	cv::Mat tmp(thresholded, cv::Rect(aTempl.extremes[0],aTempl.extremes[2],
+		aTempl.extremes[1]-aTempl.extremes[0],aTempl.extremes[3]-\
+		aTempl.extremes[2]));
+
+cv::imshow("tmp",tmp);
+cv::waitKey(0);
+
+	// RESIZE TO A COMMON SIZE SUCH THAT ALL THE ROWS HAVE THE SAME LENGTH
+
+	// RESHAPE AND RETURN
+}
+//==============================================================================
 /** Gets the edges in an image.
  */
 cv::Mat featureExtractor::getEdges(cv::Mat feature, cv::Mat thresholded,\
 cv::Rect roi, cv::Point2f head, cv::Point2f center){
+	if(thresholded.empty()){
+		std::cerr<<"Edge-feature needs a background model"<<std::endl;
+		exit(1);
+	}
+
 	// EXTRACT THE EDGES AND ROTATE THE EDGES TO THE RIGHT POSSITION
 	cv::Point2f rotBorders;
 	feature.convertTo(feature,CV_8UC1);
 	cv::Mat tmpFeat(feature.clone(),roi);
 	std::vector<cv::Point2f> dummy;
 	cv::Point2f rotCenter(tmpFeat.cols/2+roi.x,tmpFeat.rows/2+roi.y);
-	tmpFeat = this->rotate2Zero(head,center,tmpFeat.clone(),rotBorders,\
-				rotCenter, featureExtractor::MATRIX, dummy);
+	tmpFeat = this->rotate2Zero(head,center,tmpFeat,rotBorders,rotCenter,\
+				featureExtractor::MATRIX,dummy);
 
 	// PICK OUT ONLY THE THRESHOLDED ARES RESHAPE IT AND RETURN IT
 	cv::Mat tmpEdge;
@@ -209,7 +234,7 @@ cv::Rect roi, cv::Point2f head, cv::Point2f center){
 	cv::Mat edge = cv::Mat::zeros(cv::Size(2*(tmpEdge.cols*tmpEdge.rows)+1,1),\
 					cv::DataType<double>::type);
 
-	// ADD THE CINTOURS ALSO
+	// ADD THE CONTOURS ALSO
 	cv::drawContours(thresholded,contours,-1,cv::Scalar(255,255,255));
 	thresholded = (thresholded).reshape(0,1);
 	thresholded.convertTo(thresholded,cv::DataType<double>::type);
@@ -593,11 +618,6 @@ int colorspaceCode){
 			file_exists(toWrite.c_str(), true);
 			feature = this->extractSIFT(image);
 			break;
-		case featureExtractor::HOG:
-			toWrite += "HOG/";
-			file_exists(toWrite.c_str(), true);
-			feature = this->extractHOG(image);
-			break;
 	}
 	feature.convertTo(feature, cv::DataType<double>::type);
 
@@ -748,36 +768,6 @@ cv::Mat featureExtractor::extractSURF(cv::Mat image){
 		cv::waitKey(0);
 	}
 	return surfs;
-}
-//==============================================================================
-/** Extract some HOG descriptors out of an image.
- */
-cv::Mat featureExtractor::extractHOG(cv::Mat image){
-	std::cout<<"freaking HOG!!!"<<std::endl;
-
-	cv::HOGDescriptor hog(cv::Size(64,128),cv::Size(16,16),cv::Size(8,8),\
-		cv::Size(8,8),9,1,-1,cv::HOGDescriptor::L2Hys, 0.2, true);
-	std::vector<float> descriptors;
-	std::vector<cv::Rect> locations;
-
-	hog.detectMultiScale(image,locations,0,cv::Size(8,8),cv::Size(24,16),1.05,2);
-	std::cout<<"locations="<<locations.size()<<" "<<hog.getDescriptorSize()<<std::endl;
-
-	/*
-	hog.compute(image,descriptors,cv::Size(5,5),cv::Size(3,3),locations);
-
-	// WRITE ALL THE DESCRIPTORS IN THE STRUCTURE OF KEY-DESCRIPTORS
-	cv::Mat hogs = cv::Mat::zeros(cv::Size(1,descriptors.size()+2),\
-					cv::DataType<double>::type);
-
-	std::cout<<"descriptors="<<descriptors.size()<<" locations="<<locations.size()<<std::endl;
-	for(int i=0; i<descriptors.size(); i++){
-		if(i<10)
-		std::cout<<descriptors[i]<<" ";
-	}
-	std::cout<<endl;
-	*/
-	return image;
 }
 //==============================================================================
 /** Convolves the whole image with some Gabors wavelets and then stores the
@@ -943,6 +933,9 @@ cv::Point2f rotBorders){
 			binFile2mat(feature, const_cast<char*>(toRead.c_str()));
 			dataRow = this->getEdges(feature,thresholded,roi,aTempl.head,\
 						aTempl.center);
+			break;
+		case featureExtractor::PIXELS:
+			dataRow = this->getPixels(thresholded,aTempl);
 			break;
 		case featureExtractor::SURF:
 			toRead = (this->featureFile+"SURF/"+imgName+".bin");

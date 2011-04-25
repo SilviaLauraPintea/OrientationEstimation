@@ -444,6 +444,7 @@ void classifyImages::buildDictionary(int colorSp, bool toUseGT){
 /** Does the cross-validation and computes the average error over all folds.
  */
 double classifyImages::runCrossValidation(unsigned k, int colorSp, bool onTrain){
+	this->readFromFolder = false;
 	double finalErrorLong=0.0, finalNormErrorLong=0.0;
 	double finalErrorLat=0.0, finalNormErrorLat=0.0;
 	double finalMeanDiffLat=0.0, finalMeanDiffLong=0.0;
@@ -500,12 +501,7 @@ double classifyImages::runCrossValidation(unsigned k, int colorSp, bool onTrain)
 		predictionsSin.clear();
 		predictionsCos.clear();
 		*/
-//----------------------------------REMOVE--------------------------------------
-		break;
 	}
-	return finalNormErrorLong;
-//----------------------------------REMOVE--------------------------------------
-
 
 	finalErrorLong /= static_cast<double>(k);
 	finalNormErrorLong /= static_cast<double>(k);
@@ -672,30 +668,11 @@ int main(int argc, char **argv){
  	classi.runTest(CV_BGR2Luv);
 */
 
-/*
-	classifyImages classi(argc, argv, classifyImages::EVALUATE);
+  	// evaluate
+ 	classifyImages classi(argc, argv, classifyImages::EVALUATE);
 	classi.init(0.01,100.0,featureDetector::SURF,&gaussianProcess::sqexp,\
 			false, true, true);
 	classi.runCrossValidation(5,CV_BGR2Luv,false);
-*/
-
-	// evaluate
-	classifyImages classi(argc, argv, classifyImages::EVALUATE);
-	ofstream test, train;
-	test.open("testError.txt", ios::app);
-	train.open("trainError.txt", ios::app);
-	for(double i=26.1; i<200; i+=2.0){
-		for(double j=94.1; j<200; j+=2.0){
-			classi.init(i,j,featureDetector::SURF,&gaussianProcess::sqexp,\
-					false, true, true);
-			double errorTrain = classi.runCrossValidation(5,CV_BGR2Luv,true);
-			train<<i<<" "<<j<<" "<<errorTrain<<std::endl;
-			double errorTest = classi.runCrossValidation(5,CV_BGR2Luv,false);
-			test<<i<<" "<<j<<" "<<errorTest<<std::endl;
-		}
-	}
-	train.close();
-	test.close();
 
 /*
 	// BUILD THE SIFT DICTIONARY
