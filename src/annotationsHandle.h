@@ -36,7 +36,7 @@ class annotationsHandle {
 		/** Structure containing a vector of annotations for each image.
 		 */
 		struct FULL_ANNOTATIONS {
-			string imgFile;
+			std::string imgFile;
 			std::deque<annotationsHandle::ANNOTATION> annos;
 			FULL_ANNOTATIONS(){
 				this->imgFile = "";
@@ -53,7 +53,7 @@ class annotationsHandle {
 		struct ASSIGNED {
 			short int id;
 			short int to;
-			double dist;
+			float dist;
 			ASSIGNED(){
 				this->id   = 0;
 				this->to   = 0;
@@ -121,8 +121,8 @@ class annotationsHandle {
 		 */
 		static void annoDifferences(std::deque<annotationsHandle::FULL_ANNOTATIONS>\
 			&train, std::deque<annotationsHandle::FULL_ANNOTATIONS> &test,\
-			double &avgDist, double &Ndiff, double ssdLongDiff, double ssdLatDiff,\
-			double poseDiff);
+			float &avgDist, float &Ndiff, float ssdLongDiff, float ssdLatDiff,\
+			float poseDiff);
 
 		/** Correlate annotations' from locations in \c annoOld to locations in
 		 * \c annoNew through IDs.
@@ -135,7 +135,7 @@ class annotationsHandle {
 		 * new distance.
 		 */
 		static bool canBeAssigned(std::deque<annotationsHandle::ASSIGNED> &idAssignedTo, short int id, \
-			double newDist, short int to);
+			float newDist, short int to);
 
 		/** Displays the complete annotations for all images.
 		 */

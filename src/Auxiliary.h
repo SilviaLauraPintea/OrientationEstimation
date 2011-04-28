@@ -42,17 +42,17 @@ void binFile2mat(cv::Mat &matrix, char* fileName);
 std::string int2string(int i);
 /** Changes a given angle in RADIANS to be positive and between [0,2*M_PI).
  */
-void angle0to360(double &angle);
+void angle0to360(float &angle);
 /** Changes a given angle in RADIANS to be positive and between [-M_PI,M_PI).
  */
-void angle180to180(double &angle);
+void angle180to180(float &angle);
 /** Get perpendicular to a line given by 2 points A, B in point C.
  */
 void perpendicularLine(cv::Point2f A, cv::Point2f B, cv::Point2f C, \
-	double &m, double &b);
+	float &m, float &b);
 /** Checks to see if a point is on the same side of a line like another given point.
  */
-bool sameSubplane(cv::Point2f test,cv::Point2f point, double m, double b);
+bool sameSubplane(cv::Point2f test,cv::Point2f point, float m, float b);
 /** Just displaying an image a bit larger to visualize it better.
  */
 void showZoomedImage(cv::Mat image, std::string title="zoomed");

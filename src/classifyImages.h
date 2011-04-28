@@ -3,7 +3,10 @@
  */
 #ifndef CLASSIFYIMAGES_H_
 #define CLASSIFYIMAGES_H_
-
+#include <opencv2/opencv.hpp>
+#include "annotationsHandle.h"
+#include "gaussianProcess.h"
+#include "peopleDetector.h"
 /** Class used for classifying the training data.
  */
 class classifyImages {
@@ -36,7 +39,7 @@ class classifyImages {
 
 		/** Initialize the options for the Gaussian Process regression.
 		 */
-		void init(double theNoise, double theLength, featureDetector::FEATURE \
+		void init(float theNoise, float theLength, featureExtractor::FEATURE \
 			theFeature, gaussianProcess::kernelFunction theKFunction = \
 			&gaussianProcess::sqexp, bool fromFolder=true, bool store=true,\
 			bool toUseGT = false);
@@ -45,7 +48,7 @@ class classifyImages {
 		 */
 		void evaluate(std::deque<gaussianProcess::prediction> predictionsSin,\
 			std::deque<gaussianProcess::prediction> predictionsCos,\
-			double &error, double &normError, double &meanDiff);
+			float &error, float &normError, float &meanDiff);
 
 		/** Do k-fold cross-validation by splitting the training folder into
 		 * training-set and validation-set.
@@ -54,7 +57,7 @@ class classifyImages {
 
 		/** Does the cross-validation and computes the average error over all folds.
 		 */
-		double runCrossValidation(unsigned k, int colorSp = CV_BGR2Lab,\
+		float runCrossValidation(unsigned k, int colorSp = CV_BGR2Lab,\
 			bool onTrain = false);
 
 		/** Runs the final evaluation (test).
@@ -64,7 +67,7 @@ class classifyImages {
 		/** Try to optimize the prediction of the angle considering the variance of sin
 		 * and cos.
 		 */
-		double optimizePrediction(gaussianProcess::prediction predictionsSin,\
+		float optimizePrediction(gaussianProcess::prediction predictionsSin,\
 			gaussianProcess::prediction predictionsCos);
 		/** Reset the features object when the training and testing might have different
 		 * calibration, background models...
@@ -73,9 +76,9 @@ class classifyImages {
 		//======================================================================
 	protected:
 		/** @var features
-		 * An instance of \c featureDetector class.
+		 * An instance of \c peopleDetector class.
 		 */
-		featureDetector *features;
+		peopleDetector *features;
 
 		/** @var trainData
 		 * The training data matrix.
@@ -130,12 +133,12 @@ class classifyImages {
 		/** @var noise
 		 * The noise level of the data.
 		 */
-		double noise;
+		float noise;
 
 		/** @var length
 		 * The length in the Gaussian Process.
 		 */
-		double length;
+		float length;
 
 		/** @var kFunction
 		 * The kernel function in the Gaussian Process.
@@ -145,7 +148,7 @@ class classifyImages {
 		/** @var feature
 		 * Feature to be extracted.
 		 */
-		featureDetector::FEATURE feature;
+		featureExtractor::FEATURE feature;
 
 		/** @var readFromFolder
 		 * If the images are read from folder or from a file with image names.
@@ -198,10 +201,10 @@ class classifyImages {
 		 * The letters in the image names for the train data.
 		 */
 		std::string trainImgString;
-		/** @var useGT
+		/** @var useGroundTruth
 		 * Use the annotations' positions or use the tracker.
 		 */
-		bool useGT;
+		bool useGroundTruth;
 };
 
 #endif /* CLASSIFYIMAGES_H_ */

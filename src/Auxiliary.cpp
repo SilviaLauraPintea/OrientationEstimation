@@ -35,20 +35,22 @@ IplImage* mat2ipl(cv::Mat image){
 /** Convert the values from a cv::Mat of doubles to be between 0 and 1.
  */
 void normalizeMat(cv::Mat &matrix){
-	matrix.convertTo(matrix, cv::DataType<double>::type);
-	double min = matrix.at<double>(0,0), max = matrix.at<double>(0,0);
+	matrix.convertTo(matrix, CV_32FC1);
+	float mini = matrix.at<float>(0,0), maxi = matrix.at<float>(0,0);
 	for(int x=0; x<matrix.cols; x++){
 		for(int y=0; y<matrix.rows; y++){
-			if(min>matrix.at<double>(y,x)){
-				min = matrix.at<double>(y,x);
+			if(mini>matrix.at<float>(y,x)){
+				mini = matrix.at<float>(y,x);
 			}
-			if(max<matrix.at<double>(y,x)){
-				max = matrix.at<double>(y,x);
+			if(maxi<matrix.at<float>(y,x)){
+				maxi = matrix.at<float>(y,x);
 			}
 		}
 	}
-	matrix -= min;
-	matrix /= (max-min);
+	matrix -= mini;
+	if(static_cast<int>(maxi-mini)!=0){
+		matrix /= (maxi-mini);
+	}
 }
 //==============================================================================
 /* Changes the values of the matrix to be between [-1,1].
@@ -62,24 +64,24 @@ void range1Mat(cv::Mat &matrix){
 /* Write a 2D-matrix to a text file (first row is the dimension of the matrix).
  */
 void mat2TxtFile(cv::Mat matrix, char* fileName, bool append){
-	ofstream dictOut;
+	std::ofstream dictOut;
 	try{
 		if(append){
-			dictOut.open(fileName, ios::out | ios::app);
-			dictOut.seekp(0, ios::end);
+			dictOut.open(fileName, std::ios::out | std::ios::app);
+			dictOut.seekp(0, std::ios::end);
 		}else{
-			dictOut.open(fileName, ios::out);
+			dictOut.open(fileName, std::ios::out);
 		}
 	}catch(std::exception &e){
 		cerr<<"Cannot open file: %s"<<e.what()<<endl;
 		exit(1);
 	}
 
-	matrix.convertTo(matrix, cv::DataType<double>::type);
+	matrix.convertTo(matrix, CV_32FC1);
 	dictOut<<matrix.cols<<" "<<matrix.rows<<std::endl;
 	for(int y=0; y<matrix.rows; y++){
 		for(int x=0; x<matrix.cols; x++){
-			dictOut<<matrix.at<double>(y,x)<<" ";
+			dictOut<<matrix.at<float>(y,x)<<" ";
 		}
 		dictOut<<std::endl;
 	}
@@ -89,7 +91,7 @@ void mat2TxtFile(cv::Mat matrix, char* fileName, bool append){
 /* Reads a 2D-matrix from a text file (first row is the dimension of the matrix).
  */
 void txtFile2Mat(cv::Mat &matrix, char* fileName){
-	ifstream dictFile(fileName);
+	std::ifstream dictFile(fileName);
 	int y=0;
 	if(dictFile.is_open()){
 		// FIRST LINE IS THE SIZE OF THE MATRIX
@@ -101,8 +103,7 @@ void txtFile2Mat(cv::Mat &matrix, char* fileName){
 			char *pRows, *pCols;
 			int cols = strtol(flineVect[0].c_str(), &pCols, 10);
 			int rows = strtol(flineVect[1].c_str(), &pRows, 10);
-			matrix   = cv::Mat::zeros(cv::Size(cols,rows),\
-						cv::DataType<double>::type);
+			matrix   = cv::Mat::zeros(cv::Size(cols,rows), CV_32FC1);
 		}else return;
 		fline.clear();
 		flineVect.clear();
@@ -116,7 +117,7 @@ void txtFile2Mat(cv::Mat &matrix, char* fileName){
 			if(lineVect.size()>=1){
 				for(std::size_t x=0; x<lineVect.size(); x++){
 					char *pValue;
-					matrix.at<double>(y,static_cast<int>(x)) = \
+					matrix.at<float>(y,static_cast<int>(x)) = \
 						strtod(lineVect[x].c_str(), &pValue);
 				}
 				y++;
@@ -126,26 +127,26 @@ void txtFile2Mat(cv::Mat &matrix, char* fileName){
 		}
 		dictFile.close();
 	}
-	matrix.convertTo(matrix, cv::DataType<double>::type);
+	matrix.convertTo(matrix, CV_32FC1);
 }
 //==============================================================================
 /* Write a 2D-matrix to a binary file (first the dimension of the matrix).
  */
 void mat2BinFile(cv::Mat matrix, char* fileName, bool append){
-	ofstream mxFile;
+	std::ofstream mxFile;
 	try{
 		if(append){
-			mxFile.open(fileName, ios::out|ios::app|ios::binary);
-			mxFile.seekp(0, ios::end);
+			mxFile.open(fileName, std::ios::out|std::ios::app|std::ios::binary);
+			mxFile.seekp(0, std::ios::end);
 		}else{
-			mxFile.open(fileName, ios::out|ios::binary);
+			mxFile.open(fileName, std::ios::out|std::ios::binary);
 		}
 	}catch(std::exception &e){
 		cerr<<"Cannot open file: %s"<<e.what()<<endl;
 		exit(1);
 	}
 
-	matrix.convertTo(matrix, cv::DataType<double>::type);
+	matrix.convertTo(matrix, CV_32FC1);
 
 	// FIRST WRITE THE DIMENSIONS OF THE MATRIX
 	mxFile.write(reinterpret_cast<char*>(&matrix.cols), sizeof(int));
@@ -154,8 +155,8 @@ void mat2BinFile(cv::Mat matrix, char* fileName, bool append){
 	// WRITE THE MATRIX TO THE FILE
 	for(int x=0; x<matrix.cols; x++){
 		for(int y=0; y<matrix.rows; y++){
-			mxFile.write(reinterpret_cast<char*>(&matrix.at<double>(y,x)),\
-				sizeof(double));
+			mxFile.write(reinterpret_cast<char*>(&matrix.at<float>(y,x)),\
+				sizeof(float));
 		}
 	}
 	mxFile.close();
@@ -168,25 +169,25 @@ void binFile2mat(cv::Mat &matrix, char* fileName){
 		std::cerr<<"Error opening the file: "<<fileName<<std::endl;
 		exit(1);
 	}
-	ifstream mxFile(fileName, ios::in | ios::binary);
+	std::ifstream mxFile(fileName, std::ios::in | std::ios::binary);
 
 	if(mxFile.is_open()){
 		// FIRST READ THE MATRIX SIZE AND ALLOCATE IT
 		int cols, rows;
 		mxFile.read(reinterpret_cast<char*>(&cols), sizeof(int));
 		mxFile.read(reinterpret_cast<char*>(&rows), sizeof(int));
-		matrix = cv::Mat::zeros(cv::Size(cols,rows),cv::DataType<double>::type);
+		matrix = cv::Mat::zeros(cv::Size(cols,rows),CV_32FC1);
 
 		// READ THE CONTENT OF THE MATRIX
 		for(int x=0; x<matrix.cols; x++){
 			for(int y=0; y<matrix.rows; y++){
-				mxFile.read(reinterpret_cast<char*>(&matrix.at<double>(y,x)),\
-					sizeof(double));
+				mxFile.read(reinterpret_cast<char*>(&matrix.at<float>(y,x)),\
+					sizeof(float));
 			}
 		}
 		mxFile.close();
 	}
-	matrix.convertTo(matrix, cv::DataType<double>::type);
+	matrix.convertTo(matrix, CV_32FC1);
 }
 //==============================================================================
 /** Convert int to string.
@@ -199,7 +200,7 @@ std::string int2string(int i){
 //==============================================================================
 /** Changes a given angle in RADIANS to be positive and between [0,2*M_PI).
  */
-void angle0to360(double &angle){
+void angle0to360(float &angle){
 	while(angle >= 2.0*M_PI){
 		angle -= 2.0*M_PI;
 	}
@@ -210,7 +211,7 @@ void angle0to360(double &angle){
 //==============================================================================
 /** Changes a given angle in RADIANS to be positive and between [-M_PI,M_PI).
  */
-void angle180to180(double &angle){
+void angle180to180(float &angle){
 	while(angle >= 2.0*M_PI){
 		angle -= 2.0*M_PI;
 	}
@@ -222,7 +223,7 @@ void angle180to180(double &angle){
 //==============================================================================
 /** Checks to see if a point is on the same side of a line like another given point.
  */
-bool sameSubplane(cv::Point2f test, cv::Point2f point, double m, double b){
+bool sameSubplane(cv::Point2f test, cv::Point2f point, float m, float b){
 	if(isnan(m)){
 		return (point.x*test.x)>=0.0;
 	}else if(m == 0){
@@ -234,9 +235,9 @@ bool sameSubplane(cv::Point2f test, cv::Point2f point, double m, double b){
 //==============================================================================
 /** Get perpendicular to a line given by 2 points A, B in point C.
  */
-void perpendicularLine(cv::Point2f A, cv::Point2f B, cv::Point2f C, double &m,\
-double &b){
-	double slope = (double)(B.y - A.y)/(double)(B.x - A.x);
+void perpendicularLine(cv::Point2f A, cv::Point2f B, cv::Point2f C, float &m,\
+float &b){
+	float slope = (float)(B.y - A.y)/(float)(B.x - A.x);
 	m            = -1.0/slope;
 	b            = C.y - m * C.x;
 }

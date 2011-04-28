@@ -48,7 +48,7 @@ class featureExtractor {
 		struct templ{
 			cv::Point2f center;
 			cv::Point2f head;
-			std::deque<double> extremes;
+			std::deque<float> extremes;
 			std::vector<cv::Point2f> points;
 			templ(cv::Point theCenter){
 				this->center = theCenter;
@@ -60,7 +60,8 @@ class featureExtractor {
 		};
 		/** All available feature types.
 		 */
-		enum FEATURE {IPOINTS, EDGES, SIFT_DICT, SURF, SIFT, GABOR, PIXELS};
+		enum FEATURE {IPOINTS, EDGES, SIFT_DICT, SURF, SIFT, GABOR, PIXELS,\
+			HOG};
 		/** What needs to be rotated.
 		 */
 		enum ROTATE {MATRIX, TEMPLATE, KEYS};
@@ -98,11 +99,15 @@ class featureExtractor {
 		cv::Mat extractSURF(cv::Mat image);
 		/** Gets the plain pixels corresponding to the upper part of the body.
 		 */
-		cv::Mat getPixels(cv::Mat thresholded,featureExtractor::templ aTempl);
+		cv::Mat getPixels(cv::Mat image,featureExtractor::templ aTempl,\
+			cv::Rect roi);
+		/** Gets the HOG descriptors over an image.
+		 */
+		cv::Mat getHOG(cv::Mat pixels);
 		/** Gets the edges in an image.
 		 */
 		cv::Mat getEdges(cv::Mat feature, cv::Mat thresholded, cv::Rect roi,\
-			cv::Point2f head, cv::Point2f center);
+			cv::Point2f head, cv::Point2f center, featureExtractor::templ aTempl);
 		/** SURF descriptors (Speeded Up Robust Features).
 		 */
 		cv::Mat getSURF(cv::Mat feature, std::vector<cv::Point2f> templ,\
@@ -123,7 +128,7 @@ class featureExtractor {
 			cv::Point2f center, cv::Point2f head, cv::Size foregrSize);
 		/** Creates a gabor with the parameters given by the parameter vector.
 		 */
-		cv::Mat createGabor(double *params = NULL);
+		cv::Mat createGabor(float *params = NULL);
 		/** Returns the row corresponding to the indicated feature type.
 		 */
 		cv::Mat getDataRow(cv::Mat image,featureExtractor::templ aTempl, cv::Rect roi,\
@@ -142,6 +147,12 @@ class featureExtractor {
 		cv::Mat rotate2Zero(cv::Point2f headLocation, cv::Point2f feetLocation,\
 			cv::Mat toRotate, cv::Point2f &rotBorders, cv::Point2f rotCenter,\
 			featureExtractor::ROTATE what, std::vector<cv::Point2f> &pts);
+		/**Return number of means.
+		 */
+		unsigned readNoMeans();
+		/**Return name of the SIFT dictionary.
+		 */
+		std::string readDictName();
 	//==========================================================================
 	private:
 		/** @var isInit

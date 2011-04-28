@@ -4,6 +4,7 @@
  */
 #ifndef CHOLESKY_H_
 #define CHOLESKY_H_
+#include <opencv2/opencv.hpp>
 
 /** The \c Cholesky decomposition is used to solve Ax = b; if A is symmetric and
  * positive definite => we can decompose A = LL* and instead of solving Ax = b,
@@ -53,7 +54,7 @@ class cholesky {
 
 		/** Returns the log of the determiner of the (covariance) matrix, A.
 		 */
-		double logDet();
+		float logDet();
 	//==========================================================================
 	public:
 		unsigned n;

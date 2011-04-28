@@ -4,6 +4,7 @@
  */
 #ifndef GAUSSIANPROCESS_H_
 #define GAUSSIANPROCESS_H_
+#include "cholesky.h"
 
 /** Class implementing the Gaussian Process Regression.
  */
@@ -11,13 +12,13 @@ class gaussianProcess {
 	public:
 		/** Define a pointer to the kernel function
 		 */
-		typedef double (gaussianProcess::*kernelFunction)(cv::Mat, cv::Mat, double);
+		typedef float (gaussianProcess::*kernelFunction)(cv::Mat, cv::Mat, float);
 
 		/** A structure used to define predictions.
 		 */
 		struct prediction {
-		  std::deque<double> mean;
-		  std::deque<double> variance;
+		  std::deque<float> mean;
+		  std::deque<float> variance;
 		  ~prediction(){
 			  if(!this->mean.empty()){
 				  this->mean.clear();
@@ -53,19 +54,19 @@ class gaussianProcess {
 		/** Generates a selected distribution of the functions given the parameters (the
 		 * mean: mu, the covariance: cov, the data x).
 		 */
-		double distribution(cv::Mat x,gaussianProcess::DISTRIBUTION distrib,\
-			cv::Mat mu = cv::Mat(),cv::Mat cov = cv::Mat(),double a=0,double b=0,\
-			double s=0);
+		float distribution(cv::Mat x,gaussianProcess::DISTRIBUTION distrib,\
+			cv::Mat mu = cv::Mat(),cv::Mat cov = cv::Mat(),float a=0,float b=0,\
+			float s=0);
 
 		/** Trains the Gaussian process.
 		 */
-		void train(cv::Mat X, cv::Mat y, double (gaussianProcess::*fFunction)\
-			(cv::Mat, cv::Mat, double), double sigmasq, double length=1.0);
+		void train(cv::Mat X, cv::Mat y, float (gaussianProcess::*fFunction)\
+			(cv::Mat, cv::Mat, float), float sigmasq, float length);
 
 		/** Returns the prediction for the test data, x (only one test data point).
 		 */
 		void predict(cv::Mat x, gaussianProcess::prediction &predi,\
-			double length=1.0);
+			float length);
 
 		/** Samples an N-dimensional Gaussian.
 		 */
@@ -73,7 +74,7 @@ class gaussianProcess {
 
 		/** Returns a random number from the normal distribution.
 		 */
-		double rand_normal();
+		float rand_normal();
 
 		/** Samples the process that generates the inputs.
 		 */
@@ -81,23 +82,23 @@ class gaussianProcess {
 
 		/** Samples the Gaussian Process Prior.
 		 */
-		void sampleGPPrior(double (gaussianProcess::*fFunction)(cv::Mat,\
-		cv::Mat, double), cv::Mat inputs, cv::Mat &smpl);
+		void sampleGPPrior(float (gaussianProcess::*fFunction)(cv::Mat,\
+		cv::Mat, float), cv::Mat inputs, cv::Mat &smpl);
 
 		// Squared exponential kernel function.
-		double sqexp(cv::Mat x1, cv::Mat x2, double l=1.0);
+		float sqexp(cv::Mat x1, cv::Mat x2, float l=1.0);
 
 		// Matern05 kernel function.
-		double matern05(cv::Mat x1, cv::Mat x2, double l=1.0);
+		float matern05(cv::Mat x1, cv::Mat x2, float l=1.0);
 
 		// Exponential Covariance kernel function.
-		double expCovar(cv::Mat x1, cv::Mat x2, double l=1.0);
+		float expCovar(cv::Mat x1, cv::Mat x2, float l=1.0);
 
 		// Matern15 kernel function.
-		double matern15(cv::Mat x1, cv::Mat x2, double l=1.0);
+		float matern15(cv::Mat x1, cv::Mat x2, float l=1.0);
 
 		// Matern25 kernel function.
-		double matern25(cv::Mat x1, cv::Mat x2, double l=1.0);
+		float matern25(cv::Mat x1, cv::Mat x2, float l=1.0);
 		/** Initializes or re-initializes a Gaussian Process.
 		 */
 		void init(gaussianProcess::kernelFunction theKFunction =\
@@ -130,7 +131,7 @@ class gaussianProcess {
 		kernelFunction kFunction;
 
 		bool _norm_fast;
-		double _norm_next,_norm_max;
+		float _norm_next,_norm_max;
 		int rand_x, rand_y;
 };
 #endif /* GAUSSIANPROCESS_H_ */
