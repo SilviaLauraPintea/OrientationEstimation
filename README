@@ -5,28 +5,28 @@ Short Description:
 ______________________
 
 The project has two main parts: the first part entails tracking people in real-time 
-and estimating their orientation and pose; and the second part involves the detection 
-of groups given the estimated poses.
+and estimating their orientation; and the second part involves the detection 
+of groups given the estimated orientations.
 
-After tracking the people in the image, the orientation and the pose of each one of 
+After tracking the people in the image, the orientation of each one of 
 them needs to be estimated. 
 The data used in this project is video data obtained from a single ceiling-mounted 
-camera -- this makes the pose estimation task harder because of the presence of image 
+camera -- this makes the oientation estimation task harder because of the presence of image 
 noise, occlusion, clutter and difference in perspective.
 A number of features and object recognition techniques need to be implemented and 
 tested in order to discover an efficient one. 
-The pose estimation part will mainly be carried out by using supervised learning 
+The orientation estimation part will mainly be carried out by using supervised learning 
 techniques (data has to be annotated and classifiers have to be trained on a set 
 of features that were found to be useful for this task).
 
-Once an efficient way of estimating the poses is determined, the second part of the 
-project involves finding a reliable way of using these pose estimations in order 
-to detect the groups present in the video and the dynamics of these groups.
-The second part will be performed by exploiting available unsupervised learning 
-techniques.
+Once an efficient way of estimating the orientation (facing direction) is determined, 
+the second part of the project involves finding a reliable way of using these orientation 
+estimations in order to detect the groups present in the video and the dynamics of 
+these groups. The second part will be performed by exploiting available unsupervised 
+learning techniques.
 The difficulty that arises in this part of the project is the need for a robust 
 method that would account for the possible inaccuracies resulted from the estimation 
-of the poses.
+of the orientation.
 The fact that it is rather hard to acquire a good prior knowledge related to the 
 number of groups present in a video is another challenge of this project. Thus, well 
 known methods such as "Expectation Maximization" can not be applied efficiently on 
