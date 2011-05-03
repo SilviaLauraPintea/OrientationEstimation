@@ -1,4 +1,4 @@
-Social Groups Detection
+Group Detection
 
 
 Short Description:
@@ -6,7 +6,7 @@ ______________________
 
 The project has two main parts: the first part entails tracking people in real-time 
 and estimating their orientation and pose; and the second part involves the detection 
-of social groups given the estimated poses.
+of groups given the estimated poses.
 
 After tracking the people in the image, the orientation and the pose of each one of 
 them needs to be estimated. 
@@ -21,7 +21,7 @@ of features that were found to be useful for this task).
 
 Once an efficient way of estimating the poses is determined, the second part of the 
 project involves finding a reliable way of using these pose estimations in order 
-to detect the social groups present in the video and the dynamics of these groups.
+to detect the groups present in the video and the dynamics of these groups.
 The second part will be performed by exploiting available unsupervised learning 
 techniques.
 The difficulty that arises in this part of the project is the need for a robust 
