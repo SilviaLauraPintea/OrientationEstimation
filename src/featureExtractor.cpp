@@ -17,9 +17,8 @@ struct onScanline{
 };
 //==============================================================================
 featureExtractor::featureExtractor(){
-	this->isInit      = false;
-	this->featureType = featureExtractor::EDGES;
-
+	this->isInit       = false;
+	this->featureType  = featureExtractor::EDGES;
 	this->dictFilename = "none";
 	this->noMeans      = 500;
 	this->meanSize     = 128;
@@ -107,18 +106,9 @@ std::vector<cv::Point2f> templ){
 //==============================================================================
 /** Rotate a matrix/a template/keypoints wrt to the camera location.
  */
-cv::Mat featureExtractor::rotate2Zero(cv::Point2f headLocation, cv::Point2f \
-feetLocation, cv::Mat toRotate, cv::Point2f &rotBorders, cv::Point2f rotCenter,\
-featureExtractor::ROTATE what, std::vector<cv::Point2f> &pts){
-	// GET THE ANGLE WITH WHICH WE NEED TO ROTATE
-	float rotAngle = std::atan2((headLocation.y-feetLocation.y),\
-						(headLocation.x-feetLocation.x));
-	rotAngle -= M_PI;
-	angle0to360(rotAngle);
-
-	// THE ROTATION ANGLE NEEDS TO BE IN DEGREES
-	rotAngle *= (180.0/M_PI);
-
+cv::Mat featureExtractor::rotate2Zero(float rotAngle, cv::Mat toRotate,\
+cv::Point2f &rotBorders, cv::Point2f rotCenter, featureExtractor::ROTATE what,\
+std::vector<cv::Point2f> &pts){
 	float diag;
 	cv::Mat srcRotate, rotated, rotationMat, result;
 	switch(what){
@@ -130,12 +120,13 @@ featureExtractor::ROTATE what, std::vector<cv::Point2f> &pts){
 			srcRotate = cv::Mat::zeros(cv::Size(toRotate.cols+2*rotBorders.x,\
 						toRotate.rows+2*rotBorders.y),toRotate.type());
 			cv::copyMakeBorder(toRotate,srcRotate,rotBorders.y,rotBorders.y,\
-				rotBorders.x,rotBorders.x,cv::BORDER_CONSTANT);
+				rotBorders.x,rotBorders.x,cv::BORDER_CONSTANT,cv::Scalar(0,0,0));
 			rotCenter = cv::Point2f(srcRotate.cols/2.0,srcRotate.rows/2.0);
 			rotationMat = cv::getRotationMatrix2D(rotCenter, rotAngle, 1.0);
 			rotationMat.convertTo(rotationMat, CV_32FC1);
 			rotated     = cv::Mat::zeros(srcRotate.size(),toRotate.type());
-			cv::warpAffine(srcRotate, rotated, rotationMat, srcRotate.size());
+			cv::warpAffine(srcRotate, rotated, rotationMat, srcRotate.size(),\
+				cv::INTER_LINEAR,cv::BORDER_CONSTANT,cv::Scalar(0,0,0));
 			rotated.copyTo(result);
 			break;
 		case(featureExtractor::TEMPLATE):
@@ -188,37 +179,53 @@ featureExtractor::ROTATE what, std::vector<cv::Point2f> &pts){
 cv::Mat featureExtractor::getPixels(cv::Mat image,featureExtractor::templ \
 aTempl, cv::Rect roi){
 	// JUST COPY THE PIXELS THAT ARE LARGER THAN 0 INTO
-	cv::Mat tmp(image, cv::Rect(std::max(0.0f,aTempl.extremes[0]-roi.x),\
-		std::max(0.0f,aTempl.extremes[2]-roi.y),
-		aTempl.extremes[1]-aTempl.extremes[0],aTempl.extremes[3]-\
-		aTempl.extremes[2]));
-	cv::Mat large, gray;
+	cv::Rect up(std::max(0.0f,aTempl.extremes[0]-roi.x),\
+		std::max(0.0f,aTempl.extremes[2]-roi.y),aTempl.extremes[1]-\
+		aTempl.extremes[0],aTempl.extremes[3]-aTempl.extremes[2]);
+	cv::Mat tmp(image, up), large, gray;
 	cv::resize(tmp,large,cv::Size(50,50),0,0,cv::INTER_CUBIC);
 	cv::cvtColor(large, gray, CV_BGR2GRAY);
 	normalizeMat(gray);
 	gray *= 255.0;
 	gray.convertTo(gray,CV_8UC1);
-	cv::equalizeHist(gray,gray);
+	cv::medianBlur(gray, gray, 3);
 
-	if(this->plot){
-		std::vector<cv::Point2f> tmpTempl;
-		for(unsigned i=0; i<aTempl.points.size(); i++){
-			tmpTempl.push_back(cv::Point2f(aTempl.points[i].x-roi.x,\
-				aTempl.points[i].y-roi.y));
+	// MATCH SOME HEADS ON TOP AND GET THE RESULTS
+	int radius     = std::min(up.width,up.height)/2;
+	cv::Mat pixels = cv::Mat::zeros(cv::Size(5*30*30+2,1),CV_32FC1);
+	for(int i=0; i<4; i++){
+		cv::Mat result,small,tmple,dummy,resized;
+		std::string imgName = "templates/templ"+int2string(i)+".jpg";
+		tmple               = cv::imread(imgName.c_str(),0);
+		if(tmple.empty()){
+			std::cerr<<"In template matching FILE NOT FOUND: "<<imgName<<std::endl;
+			exit(1);
 		}
-		plotTemplate2(image,cv::Point2f(0,0),cv::Scalar(150,0,0),tmpTempl);
-		cv::imshow("part",image);
-		cv::imshow("tmp",gray);
-		cv::waitKey(0);
-	}
+		cv::resize(tmple,small,cv::Size(radius,radius),0,0,cv::INTER_CUBIC);
+		normalizeMat(small);
+		small *= 255.0;
+		small.convertTo(small,CV_8UC1);
+		cv::matchTemplate(gray,small,result,CV_TM_CCOEFF_NORMED);
+		cv::resize(result,resized,cv::Size(30,30),0,0,cv::INTER_CUBIC);
+		if(this->plot){
+			cv::imshow("result"+int2string(i), resized);
+			cv::waitKey(0);
+		}
 
-	// RESHAPE AND RETURN
-	gray.convertTo(gray, CV_32FC1);
-	cv::Mat pixels = cv::Mat::zeros(cv::Size(50*50+2,1),CV_32FC1);
-	gray           = gray.reshape(0,1);
-	cv::Mat dummy  = pixels.colRange(0,gray.cols*gray.rows);
-	gray.copyTo(dummy);
+		// RESHAPE THE RESULT AND CONVERT IT TO FLOAT
+		resized = resized.reshape(0,1);
+		resized.convertTo(resized, CV_32FC1);
+		dummy = pixels.colRange(i*resized.cols*resized.rows,(i+1)*resized.cols*\
+				resized.rows);
+		resized.copyTo(dummy);
+		result.release();
+		resized.release();
+		small.release();
+		tmple.release();
+		dummy.release();
+	}
 	pixels.convertTo(pixels,CV_32FC1);
+
 	if(this->print){
 		std::cout<<"Size(PIXELS): ("<<pixels.rows<<","<<pixels.cols<<")"<<std::endl;
 		for(int i=0; i<std::min(10,pixels.cols);i++){
@@ -226,9 +233,7 @@ aTempl, cv::Rect roi){
 		}
 		std::cout<<"..."<<std::endl;
 	}
-
 	tmp.release();
-	dummy.release();
 	large.release();
 	gray.release();
 	return pixels;
@@ -237,7 +242,8 @@ aTempl, cv::Rect roi){
 /** Gets the edges in an image.
  */
 cv::Mat featureExtractor::getEdges(cv::Mat feature, cv::Mat thresholded,\
-cv::Rect roi,cv::Point2f head,cv::Point2f center,featureExtractor::templ aTempl){
+cv::Rect roi,featureExtractor::templ aTempl,\
+float rotAngle){
 	if(thresholded.empty()){
 		std::cerr<<"Edge-feature needs a background model"<<std::endl;
 		exit(1);
@@ -249,9 +255,8 @@ cv::Rect roi,cv::Point2f head,cv::Point2f center,featureExtractor::templ aTempl)
 	cv::Mat tmpFeat(feature.clone(),roi);
 	std::vector<cv::Point2f> dummy;
 	cv::Point2f rotCenter(tmpFeat.cols/2+roi.x,tmpFeat.rows/2+roi.y);
-	tmpFeat = this->rotate2Zero(head,center,tmpFeat,rotBorders,rotCenter,\
+	tmpFeat = this->rotate2Zero(rotAngle,tmpFeat,rotBorders,rotCenter,\
 				featureExtractor::MATRIX,dummy);
-
 	// PICK OUT ONLY THE THRESHOLDED ARES RESHAPE IT AND RETURN IT
 	cv::Mat tmpEdge;
 	tmpFeat.copyTo(tmpEdge,thresholded);
@@ -447,7 +452,7 @@ cv::Mat featureExtractor::createGabor(float *params){
  * returns the response image.
  */
 cv::Mat featureExtractor::getGabor(cv::Mat feature, cv::Mat thresholded,\
-cv::Rect roi, cv::Point2f center, cv::Point2f head, cv::Size foregrSize){
+cv::Rect roi, cv::Size foregrSize, float rotAngle){
 	unsigned gaborNo    = std::ceil(feature.rows/height);
 	int gaborRows       = std::ceil(feature.rows/gaborNo);
 	unsigned resultCols = foregrSize.width*foregrSize.height;
@@ -462,7 +467,7 @@ cv::Rect roi, cv::Point2f center, cv::Point2f head, cv::Size foregrSize){
 
 		// ROTATE EACH GABOR TO THE RIGHT POSITION
 		cv::Point2f rotBorders;
-		tmp2 = this->rotate2Zero(head,center,tmp2.clone(),rotBorders,rotCenter,\
+		tmp2 = this->rotate2Zero(rotAngle,tmp2.clone(),rotBorders,rotCenter,\
 				featureExtractor::MATRIX,dummy);
 		// KEEP ONLY THE THRESHOLDED VALUES
 		cv::Mat tmp3;
@@ -601,10 +606,10 @@ std::vector<cv::Point2f> &indices, cv::Rect roi, cv::Mat test){
 void featureExtractor::extractFeatures(cv::Mat image, std::string sourceName,\
 int colorspaceCode){
 	cv::cvtColor(image, image, colorspaceCode);
-
 	if(this->featureFile[this->featureFile.size()-1]!='/'){
 		this->featureFile = this->featureFile + '/';
 	}
+	file_exists(this->featureFile.c_str(), true);
 	std::cout<<"In extract features"<<std::endl;
 
 	// FOR EACH LOCATION IN THE IMAGE EXTRACT FEATURES AND STORE
@@ -717,7 +722,6 @@ cv::Mat featureExtractor::extractEdges(cv::Mat image){
 	normalizeMat(gray);
 	gray *= 255.0;
 	gray.convertTo(gray, CV_8UC1);
-	cv::equalizeHist(gray,gray);
 	cv::medianBlur(gray, gray, 3);
 	cv::Canny(gray, edges, 100, 0, 3, true);
 	edges.convertTo(edges,CV_32FC1);
@@ -745,7 +749,6 @@ cv::Mat featureExtractor::extractSURF(cv::Mat image){
 	normalizeMat(gray);
 	gray *= 255.0;
 	gray.convertTo(gray,CV_8UC1);
-	cv::equalizeHist(gray, gray);
 	cv::medianBlur(gray, gray, 3);
 	aSURF(gray, cv::Mat(), keypoints, descriptors, false);
 	gray.release();
@@ -820,7 +823,7 @@ cv::Mat featureExtractor::extractGabor(cv::Mat image){
 	cv::cvtColor(image, gray, CV_BGR2GRAY);
 	normalizeMat(gray);
 	gray *= 255.0;
-	cv::equalizeHist(gray, gray);
+	gray.convertTo(gray, CV_8UC1);
 	cv::medianBlur(gray, gray, 3);
 
 	// CREATE EACH GABOR AND CONVOLVE THE IMAGE WITH IT
@@ -869,7 +872,7 @@ cv::Rect roi){
 	cv::cvtColor(image, gray, CV_BGR2GRAY);
 	normalizeMat(gray);
 	gray *= 255.0;
-	cv::equalizeHist(gray, gray);
+	gray.convertTo(gray, CV_8UC1);
 	cv::medianBlur(gray, gray, 3);
 	aSIFT(gray, cv::Mat(), keypoints);
 
@@ -937,7 +940,7 @@ cv::Rect roi){
 cv::Mat featureExtractor::getDataRow(cv::Mat image, featureExtractor::templ aTempl,\
 cv::Rect roi,featureExtractor::people person, cv::Mat thresholded,\
 cv::vector<cv::Point2f> &keys, std::string imgName, cv::Point2f absRotCenter,\
-cv::Point2f rotBorders){
+cv::Point2f rotBorders, float rotAngle){
 	cv::Mat dataRow, feature;
 	std::string toRead;
 	cv::Mat dictImage;
@@ -946,33 +949,32 @@ cv::Point2f rotBorders){
 			toRead = (this->featureFile+"IPOINTS/"+imgName+".bin");
 			binFile2mat(feature, const_cast<char*>(toRead.c_str()));
 			feature.convertTo(feature,CV_32FC1);
-			feature = this->rotate2Zero(aTempl.head,aTempl.center,feature,rotBorders,\
+			feature = this->rotate2Zero(rotAngle,feature,rotBorders,\
 						absRotCenter,featureExtractor::KEYS,keys);
 			dataRow = this->getPointsGrid(feature,roi,aTempl,person.pixels);
 			break;
 		case featureExtractor::EDGES:
 			toRead = (this->featureFile+"EDGES/"+imgName+".bin");
 			binFile2mat(feature, const_cast<char*>(toRead.c_str()));
-			dataRow = this->getEdges(feature,thresholded,roi,aTempl.head,\
-						aTempl.center,aTempl);
+			dataRow = this->getEdges(feature,thresholded,roi,aTempl,rotAngle);
 			break;
 		case featureExtractor::SURF:
 			toRead = (this->featureFile+"SURF/"+imgName+".bin");
 			binFile2mat(feature, const_cast<char*>(toRead.c_str()));
 			feature.convertTo(feature,CV_32FC1);
-			feature = this->rotate2Zero(aTempl.head,aTempl.center,feature,rotBorders,\
+			feature = this->rotate2Zero(rotAngle,feature,rotBorders,\
 						absRotCenter,featureExtractor::KEYS,keys);
 			dataRow = this->getSURF(feature,aTempl.points,keys,roi,person.pixels);
 			break;
 		case featureExtractor::GABOR:
 			toRead = (this->featureFile+"GABOR/"+imgName+".bin");
 			binFile2mat(feature, const_cast<char*>(toRead.c_str()));
-			dataRow = this->getGabor(feature,thresholded,roi,aTempl.center,\
-					aTempl.head,person.pixels.size());
+			dataRow = this->getGabor(feature,thresholded,roi,person.pixels.size(),\
+						rotAngle);
 			break;
 		case featureExtractor::SIFT_DICT:
 			dictImage = cv::Mat(image, roi);
-			dictImage = this->rotate2Zero(aTempl.head,aTempl.center,dictImage,\
+			dictImage = this->rotate2Zero(rotAngle,dictImage,\
 						rotBorders,absRotCenter,featureExtractor::MATRIX,keys);
 			dataRow   = this->extractSIFT(dictImage, aTempl.points, roi);
 			break;
@@ -980,7 +982,7 @@ cv::Point2f rotBorders){
 			toRead = (this->featureFile+"SIFT/"+imgName+".bin");
 			binFile2mat(feature, const_cast<char*>(toRead.c_str()));
 			feature.convertTo(feature,CV_32FC1);
-			feature = this->rotate2Zero(aTempl.head,aTempl.center,feature,rotBorders,\
+			feature = this->rotate2Zero(rotAngle,feature,rotBorders,\
 						absRotCenter,featureExtractor::KEYS,keys);
 			dataRow = this->getSIFT(feature,aTempl.points,keys,roi,person.pixels);
 			break;
@@ -990,7 +992,7 @@ cv::Point2f rotBorders){
 			break;
 		case featureExtractor::HOG:
 			// CAN ONLY EXTRACT THEM OVER AN IMAGE SO NO FEATURES CAN BE STORED
-			dataRow = this->getHOG(person.pixels);
+			dataRow = this->getHOG(person.pixels,aTempl,roi);
 			break;
 	}
 	dictImage.release();
@@ -1003,17 +1005,28 @@ cv::Point2f rotBorders){
 //==============================================================================
 /** Gets the HOG descriptors over an image.
  */
-cv::Mat featureExtractor::getHOG(cv::Mat pixels){
-	cv::HOGDescriptor hogD(pixels.size(),cv::Size(8,8),cv::Size(4,4),\
-		cv::Size(4,4),9,1,-1,cv::HOGDescriptor::L2Hys, 0.2, true);
+cv::Mat featureExtractor::getHOG(cv::Mat pixels, featureExtractor::templ aTempl,\
+cv::Rect roi){
+	// JUST COPY THE PIXELS THAT ARE LARGER THAN 0 INTO
+	cv::Rect up(std::max(0.0f,aTempl.extremes[0]-roi.x),\
+		std::max(0.0f,aTempl.extremes[2]-roi.y),aTempl.extremes[1]-\
+		aTempl.extremes[0],aTempl.extremes[3]-aTempl.extremes[2]);
+	cv::Mat tmp(pixels, up), large;
+	cv::resize(tmp,large,cv::Size(64,64),0,0,cv::INTER_CUBIC);
+	cv::HOGDescriptor hogD(large.size(),cv::Size(16,16),cv::Size(8,8),\
+		cv::Size(8,8),9,1,-1,cv::HOGDescriptor::L2Hys, 0.2, true);
 	std::vector<float> descriptors;
 
-	hogD.compute(pixels,descriptors,cv::Size(48,48),cv::Size(12,12),\
+	if(this->plot){
+		cv::imshow("image4HOG",large);
+		cv::waitKey(0);
+	}
+	hogD.compute(large,descriptors,cv::Size(8,8),cv::Size(0,0),\
 		std::vector<cv::Point>());
 	cv::Mat hog(descriptors);
 	hog.convertTo(hog, CV_32FC1);
 
-	std::cout<<"In HOG"<<std::endl;
+	std::cout<<"In HOG: descriptorSize = "<<descriptors.size()<<std::endl;
 	if(this->print){
 		unsigned counts = 0;
 		std::cout<<"Size(HOG): ("<<hog.rows<<","<<hog.cols<<")"<<std::endl;
@@ -1025,6 +1038,8 @@ cv::Mat featureExtractor::getHOG(cv::Mat pixels){
 		}
 		std::cout<<"..."<<std::endl;
 	}
+	tmp.release();
+	large.release();
 	return hog.t();
 }
 //==============================================================================

@@ -103,11 +103,11 @@ class featureExtractor {
 			cv::Rect roi);
 		/** Gets the HOG descriptors over an image.
 		 */
-		cv::Mat getHOG(cv::Mat pixels);
+		cv::Mat getHOG(cv::Mat pixels,featureExtractor::templ aTempl,cv::Rect roi);
 		/** Gets the edges in an image.
 		 */
 		cv::Mat getEdges(cv::Mat feature, cv::Mat thresholded, cv::Rect roi,\
-			cv::Point2f head, cv::Point2f center, featureExtractor::templ aTempl);
+			featureExtractor::templ aTempl, float rotAngle);
 		/** SURF descriptors (Speeded Up Robust Features).
 		 */
 		cv::Mat getSURF(cv::Mat feature, std::vector<cv::Point2f> templ,\
@@ -125,7 +125,7 @@ class featureExtractor {
 		 * returns the response image.
 		 */
 		cv::Mat getGabor(cv::Mat feature, cv::Mat thresholded, cv::Rect roi,\
-			cv::Point2f center, cv::Point2f head, cv::Size foregrSize);
+			cv::Size foregrSize, float rotAngle);
 		/** Creates a gabor with the parameters given by the parameter vector.
 		 */
 		cv::Mat createGabor(float *params = NULL);
@@ -133,7 +133,7 @@ class featureExtractor {
 		 */
 		cv::Mat getDataRow(cv::Mat image,featureExtractor::templ aTempl, cv::Rect roi,\
 		featureExtractor::people person, cv::Mat thresholded,cv::vector<cv::Point2f> &keys,\
-		std::string imgName, cv::Point2f absRotCenter, cv::Point2f rotBorders);
+		std::string imgName, cv::Point2f absRotCenter, cv::Point2f rotBorders,float rotAngle);
 		/** Compares SURF 2 descriptors and returns the boolean value of their comparison.
 		 */
 		static bool compareDescriptors(const featureExtractor::keyDescr k1,\
@@ -144,9 +144,9 @@ class featureExtractor {
 			std::vector<cv::Point2f> templ);
 		/** Rotate a matrix/a template/keypoints wrt to the camera location.
 		 */
-		cv::Mat rotate2Zero(cv::Point2f headLocation, cv::Point2f feetLocation,\
-			cv::Mat toRotate, cv::Point2f &rotBorders, cv::Point2f rotCenter,\
-			featureExtractor::ROTATE what, std::vector<cv::Point2f> &pts);
+		cv::Mat rotate2Zero(float rotAngle, cv::Mat toRotate, cv::Point2f \
+			&rotBorders, cv::Point2f rotCenter,featureExtractor::ROTATE what,\
+			std::vector<cv::Point2f> &pts);
 		/**Return number of means.
 		 */
 		unsigned readNoMeans();

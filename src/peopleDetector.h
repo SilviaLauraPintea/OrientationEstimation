@@ -100,6 +100,9 @@ class peopleDetector:public Tracker{
 		/** Gets the location of the head given the feet location.
 		 */
 		cv::Point2f headLocation(cv::Point2f center);
+		/** Return rotation angle given the head and feet position.
+		 */
+		float rotationAngle(cv::Point2f headLocation,cv::Point2f feetLocation);
 		//======================================================================
 	public:
 		/** @var print

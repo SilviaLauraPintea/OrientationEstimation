@@ -500,11 +500,7 @@ float classifyImages::runCrossValidation(unsigned k, int colorSp, bool onTrain){
 		predictionsSin.clear();
 		predictionsCos.clear();
 		*/
-//-----------------------------REMOVE--------------------------------------------
-		return finalNormErrorLong;
 	}
-//-----------------------------REMOVE--------------------------------------------
-
 	finalErrorLong /= static_cast<float>(k);
 	finalNormErrorLong /= static_cast<float>(k);
 	finalMeanDiffLong /= static_cast<float>(k);
@@ -669,12 +665,11 @@ int main(int argc, char **argv){
  	classi.runTest(CV_BGR2Luv);
 */
 
-
   	// evaluate
  	classifyImages classi(argc, argv, classifyImages::EVALUATE);
 	classi.init(0.1,50.0,featureExtractor::EDGES,&gaussianProcess::sqexp,\
-			false, true, false);
-	classi.runCrossValidation(5,CV_BGR2Luv,false);
+			false, true, true);
+	classi.runCrossValidation(5,CV_BGR2XYZ,false);
 
 
 /*
@@ -682,10 +677,9 @@ int main(int argc, char **argv){
 	train.open("train.txt", std::ios::out);
 	test.open("test.txt", std::ios::out);
 	classifyImages classi(argc, argv, classifyImages::EVALUATE);
-	for(float v=0.01; v<5; v+=0.02){
-//		for(float l=25; l<75; l++){
-		float l = 50.0;
-		  	// evaluate
+	for(float v=1.8; v<5; v+=0.2){
+		for(float l=65; l<125; l+=10){
+			// evaluate
 			classi.init(v,l,featureExtractor::EDGES,&gaussianProcess::sqexp,\
 					false, true, true);
 			float errorTrain = classi.runCrossValidation(5,CV_BGR2Luv,true);
@@ -695,7 +689,7 @@ int main(int argc, char **argv){
 					false, true, true);
 			float errorTest = classi.runCrossValidation(5,CV_BGR2Luv,false);
 			test<<v<<" "<<l<<" "<<errorTest<<std::endl;
-//		}
+		}
 	}
 	train.close();
 	test.close();
