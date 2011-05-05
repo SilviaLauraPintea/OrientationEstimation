@@ -1,6 +1,5 @@
-This is pdfTeX, Version 3.1415926-1.40.10 (TeX Live 2009/Debian) (format=pdflatex 2010.9.1)  24 JAN 2011 16:46
+This is pdfTeX, Version 3.1415926-1.40.10 (TeX Live 2009/Debian) (format=pdflatex 2011.4.4)  5 MAY 2011 14:56
 entering extended mode
- restricted \write18 enabled.
  %&-line parsing enabled.
 **refman.tex
 (./refman.tex
@@ -863,35 +862,63 @@ File: ts1kurierlc.fd 2005/10/03 v1.2 font definition file for TS1/kurierlc (MW)
 (./classannotationsHandle.tex [1
 
 ]
-LaTeX Font Info:    Try loading font information for T1+pcr on input line 45.
+LaTeX Font Info:    Try loading font information for T1+pcr on input line 48.
 
 (/usr/share/texmf-texlive/tex/latex/psnfss/t1pcr.fd
 File: t1pcr.fd 2001/06/04 font definitions for T1/pcr.
 )
 LaTeX Font Info:    Font shape `T1/pcr/m/it' in size <9> not available
-(Font)              Font shape `T1/pcr/m/sl' tried instead on input line 45.
- [2])
-(./structannotationsHandle_1_1ASSIGNED.tex) (./classclassifyImages.tex [3])
-(./classfeatureDetector.tex [4] [5]
+(Font)              Font shape `T1/pcr/m/sl' tried instead on input line 48.
+
+Underfull \hbox (badness 2626) in paragraph at lines 67--69
+[]\T1/kurierlc/m/n/10 static void [][]ann-oD-if-fer-ences[][] (std::deque$\OML/
+kurierlc/m/it/10 <$ [][]\T1/kurierlc/m/n/10 annotationsHandle::FULL_-ANNOTATION
+S[][] $\OML/kurierlc/m/it/10 >$ \T1/kurierlc/m/n/10 &train,
+ []
+
+[2]
 LaTeX Font Info:    Font shape `T1/pcr/b/it' in size <10> not available
-(Font)              Font shape `T1/pcr/b/sl' tried instead on input line 173.
-)
-(./structannotationsHandle_1_1FULL__ANNOTATIONS.tex [6])
-(./structfeatureDetector_1_1people.tex) (./refman.ind [7] [8
+(Font)              Font shape `T1/pcr/b/sl' tried instead on input line 162.
+ [3]) (./structannotationsHandle_1_1ASSIGNED.tex) (./classcholesky.tex
+[4]) (./classclassifyImages.tex [5] [6] [7]) (./structcompareImg.tex)
+(./classfeatureExtractor.tex [8]
+Underfull \hbox (badness 2662) in paragraph at lines 110--112
+[]\T1/kurierlc/m/n/10 cv::Mat [][]get-Points-Grid[][] (cv::Mat fea-ture, cv::Re
+ct roi, [][]fea-ture-Ex-trac-tor::templ[][] aTempl, cv::Mat
+ []
+
+[9]) (./structannotationsHandle_1_1FULL__ANNOTATIONS.tex)
+(./classgaussianProcess.tex [10] [11])
+(./structfeatureExtractor_1_1keyDescr.tex) (./structonScanline.tex [12])
+(./structfeatureExtractor_1_1people.tex) (./classpeopleDetector.tex [13]
+[14] [15]) (./structgaussianProcess_1_1prediction.tex)
+(./structfeatureExtractor_1_1templ.tex) (./refman.ind [16] [17
 
 
 ]) (./refman.aux) ) 
 Here is how much of TeX's memory you used:
- 8691 strings out of 495061
- 126651 string characters out of 1182622
- 212625 words of memory out of 3000000
- 11570 multiletter control sequences out of 15000+50000
- 67760 words of font info for 51 fonts, out of 3000000 for 9000
+ 9025 strings out of 495061
+ 141633 string characters out of 1182622
+ 214607 words of memory out of 3000000
+ 11716 multiletter control sequences out of 15000+50000
+ 75786 words of font info for 59 fonts, out of 3000000 for 9000
  28 hyphenation exceptions out of 8191
- 38i,12n,58p,436b,500s stack positions out of 5000i,500n,10000p,200000b,50000s
-pdfTeX warning (dest): name{classfeatureDetector_a84a8847c41
-24b284d1d5ae20bc9be583} has been referenced but does not exist, replaced by a f
-ixed one
+ 38i,11n,58p,557b,500s stack positions out of 5000i,500n,10000p,200000b,50000s
+pdfTeX warning (dest): name{classpeopleDetector_a6ac98abe8ed
+7600f0db3fb04d718c27c} has been referenced but does not exist, replaced by a fi
+xed one
+
+pdfTeX warning (dest): name{classgaussianProcess_ade80fdcd8f2dde57393f56d0cdfae
+ed0} has been referenced but does not exist, replaced by a fixed one
+
+pdfTeX warning (dest): name{classfeatureExtractor_a99e9f9e991fdf79bafc52c2ebbe5
+1710} has been referenced but does not exist, replaced by a fixed one
+
+pdfTeX warning (dest): name{classfeatureExtractor_a84a8847c4124b284d1d5ae20bc9b
+e583} has been referenced but does not exist, replaced by a fixed one
+
+pdfTeX warning (dest): name{classclassifyImages_a7fab19a2fed8c0c376fdb8f7c16abb
+6b} has been referenced but does not exist, replaced by a fixed one
 
 pdfTeX warning (dest): name{classannotationsHandle_a7a9e324ff6c85eeb2c2bd91b2b8
 cbdba} has been referenced but does not exist, replaced by a fixed one
@@ -907,9 +934,9 @@ r/kuriercmi.pfb></usr/share/texmf-texlive/fonts/type1/urw/courier/ucrb8a.pfb></
 usr/share/texmf-texlive/fonts/type1/urw/courier/ucrbo8a.pfb></usr/share/texmf-t
 exlive/fonts/type1/urw/courier/ucrr8a.pfb></usr/share/texmf-texlive/fonts/type1
 /urw/courier/ucrro8a.pfb>
-Output written on refman.pdf (12 pages, 173877 bytes).
+Output written on refman.pdf (21 pages, 269489 bytes).
 PDF statistics:
- 370 PDF objects out of 1000 (max. 8388607)
- 112 named destinations out of 1000 (max. 500000)
- 121 words of extra memory for PDF output out of 10000 (max. 10000000)
+ 799 PDF objects out of 1000 (max. 8388607)
+ 281 named destinations out of 1000 (max. 500000)
+ 201 words of extra memory for PDF output out of 10000 (max. 10000000)
 

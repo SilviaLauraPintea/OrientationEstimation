@@ -2,14 +2,24 @@
 \indexentry{annotationsHandle@{annotationsHandle}|hyperpage}{1}
 \indexentry{annotationsHandle@{annotationsHandle}!runAnn@{runAnn}|hyperpage}{3}
 \indexentry{runAnn@{runAnn}!annotationsHandle@{annotationsHandle}|hyperpage}{3}
-\indexentry{annotationsHandle@{annotationsHandle}!runEvaluation@{runEvaluation}|hyperpage}{3}
-\indexentry{runEvaluation@{runEvaluation}!annotationsHandle@{annotationsHandle}|hyperpage}{3}
-\indexentry{annotationsHandle@{annotationsHandle}!image@{image}|hyperpage}{3}
-\indexentry{image@{image}!annotationsHandle@{annotationsHandle}|hyperpage}{3}
-\indexentry{annotationsHandle::ASSIGNED@{annotationsHandle::ASSIGNED}|hyperpage}{3}
-\indexentry{classifyImages@{classifyImages}|hyperpage}{4}
-\indexentry{featureDetector@{featureDetector}|hyperpage}{4}
-\indexentry{featureDetector@{featureDetector}!getGabor@{getGabor}|hyperpage}{6}
-\indexentry{getGabor@{getGabor}!featureDetector@{featureDetector}|hyperpage}{6}
-\indexentry{annotationsHandle::FULL\_\discretionary {-}{}{}ANNOTATIONS@{annotationsHandle::FULL\_\discretionary {-}{}{}ANNOTATIONS}|hyperpage}{7}
-\indexentry{featureDetector::people@{featureDetector::people}|hyperpage}{7}
+\indexentry{annotationsHandle@{annotationsHandle}!runEvaluation@{runEvaluation}|hyperpage}{4}
+\indexentry{runEvaluation@{runEvaluation}!annotationsHandle@{annotationsHandle}|hyperpage}{4}
+\indexentry{annotationsHandle@{annotationsHandle}!image@{image}|hyperpage}{4}
+\indexentry{image@{image}!annotationsHandle@{annotationsHandle}|hyperpage}{4}
+\indexentry{annotationsHandle::ASSIGNED@{annotationsHandle::ASSIGNED}|hyperpage}{4}
+\indexentry{cholesky@{cholesky}|hyperpage}{4}
+\indexentry{classifyImages@{classifyImages}|hyperpage}{5}
+\indexentry{compareImg@{compareImg}|hyperpage}{8}
+\indexentry{featureExtractor@{featureExtractor}|hyperpage}{8}
+\indexentry{featureExtractor@{featureExtractor}!initSIFT@{initSIFT}|hyperpage}{10}
+\indexentry{initSIFT@{initSIFT}!featureExtractor@{featureExtractor}|hyperpage}{10}
+\indexentry{annotationsHandle::FULL\_\discretionary {-}{}{}ANNOTATIONS@{annotationsHandle::FULL\_\discretionary {-}{}{}ANNOTATIONS}|hyperpage}{10}
+\indexentry{gaussianProcess@{gaussianProcess}|hyperpage}{11}
+\indexentry{featureExtractor::keyDescr@{featureExtractor::keyDescr}|hyperpage}{12}
+\indexentry{onScanline@{onScanline}|hyperpage}{12}
+\indexentry{featureExtractor::people@{featureExtractor::people}|hyperpage}{13}
+\indexentry{peopleDetector@{peopleDetector}|hyperpage}{13}
+\indexentry{peopleDetector@{peopleDetector}!data@{data}|hyperpage}{16}
+\indexentry{data@{data}!peopleDetector@{peopleDetector}|hyperpage}{16}
+\indexentry{gaussianProcess::prediction@{gaussianProcess::prediction}|hyperpage}{16}
+\indexentry{featureExtractor::templ@{featureExtractor::templ}|hyperpage}{16}

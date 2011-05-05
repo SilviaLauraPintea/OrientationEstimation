@@ -1,39 +1,59 @@
 \begin{theindex}
 
   \item {annotationsHandle}, \hyperpage{1}
-    \subitem {image}, \hyperpage{3}
+    \subitem {image}, \hyperpage{4}
     \subitem {runAnn}, \hyperpage{3}
-    \subitem {runEvaluation}, \hyperpage{3}
+    \subitem {runEvaluation}, \hyperpage{4}
   \item {annotationsHandle::ANNOTATION}, \hyperpage{1}
-  \item {annotationsHandle::ASSIGNED}, \hyperpage{3}
+  \item {annotationsHandle::ASSIGNED}, \hyperpage{4}
   \item {annotationsHandle::FULL\_\discretionary {-}{}{}ANNOTATIONS}, 
-		\hyperpage{7}
+		\hyperpage{10}
 
   \indexspace
 
-  \item {classifyImages}, \hyperpage{4}
+  \item {cholesky}, \hyperpage{4}
+  \item {classifyImages}, \hyperpage{5}
+  \item {compareImg}, \hyperpage{8}
 
   \indexspace
 
-  \item {featureDetector}, \hyperpage{4}
-    \subitem {getGabor}, \hyperpage{6}
-  \item {featureDetector::people}, \hyperpage{7}
+  \item {data}
+    \subitem {peopleDetector}, \hyperpage{16}
 
   \indexspace
 
-  \item {getGabor}
-    \subitem {featureDetector}, \hyperpage{6}
+  \item {featureExtractor}, \hyperpage{8}
+    \subitem {initSIFT}, \hyperpage{10}
+  \item {featureExtractor::keyDescr}, \hyperpage{12}
+  \item {featureExtractor::people}, \hyperpage{13}
+  \item {featureExtractor::templ}, \hyperpage{16}
+
+  \indexspace
+
+  \item {gaussianProcess}, \hyperpage{11}
+  \item {gaussianProcess::prediction}, \hyperpage{16}
 
   \indexspace
 
   \item {image}
-    \subitem {annotationsHandle}, \hyperpage{3}
+    \subitem {annotationsHandle}, \hyperpage{4}
+  \item {initSIFT}
+    \subitem {featureExtractor}, \hyperpage{10}
+
+  \indexspace
+
+  \item {onScanline}, \hyperpage{12}
+
+  \indexspace
+
+  \item {peopleDetector}, \hyperpage{13}
+    \subitem {data}, \hyperpage{16}
 
   \indexspace
 
   \item {runAnn}
     \subitem {annotationsHandle}, \hyperpage{3}
   \item {runEvaluation}
-    \subitem {annotationsHandle}, \hyperpage{3}
+    \subitem {annotationsHandle}, \hyperpage{4}
 
 \end{theindex}

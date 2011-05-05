@@ -1,0 +1,171 @@
+\hypertarget{classfeatureExtractor}{
+\section{featureExtractor Class Reference}
+\label{classfeatureExtractor}\index{featureExtractor@{featureExtractor}}
+}
+
+
+Extracts the actual features from the images and stores them in data matrix.  
+
+
+\subsection*{Data Structures}
+\begin{DoxyCompactItemize}
+\item 
+struct \hyperlink{structfeatureExtractor_1_1keyDescr}{keyDescr}
+\begin{DoxyCompactList}\small\item\em Structure for storing keypoints and descriptors. \item\end{DoxyCompactList}\item 
+struct \hyperlink{structfeatureExtractor_1_1people}{people}
+\begin{DoxyCompactList}\small\item\em Structure containing images of the size of the detected people. \item\end{DoxyCompactList}\item 
+struct \hyperlink{structfeatureExtractor_1_1templ}{templ}
+\begin{DoxyCompactList}\small\item\em Structure to store templates so they don't get recomputed all the time. \item\end{DoxyCompactList}\end{DoxyCompactItemize}
+\subsection*{Public Types}
+\begin{DoxyCompactItemize}
+\item 
+enum \hyperlink{classfeatureExtractor_a84a8847c4124b284d1d5ae20bc9be583}{FEATURE} \{ \par
+{\bfseries IPOINTS}, 
+{\bfseries EDGES}, 
+{\bfseries SIFT\_\-DICT}, 
+{\bfseries SURF}, 
+\par
+{\bfseries SIFT}, 
+{\bfseries GABOR}, 
+{\bfseries PIXELS}, 
+{\bfseries HOG}
+ \}
+\begin{DoxyCompactList}\small\item\em All available feature types. \item\end{DoxyCompactList}\item 
+enum \hyperlink{classfeatureExtractor_a99e9f9e991fdf79bafc52c2ebbe51710}{ROTATE} \{ {\bfseries MATRIX}, 
+{\bfseries TEMPLATE}, 
+{\bfseries KEYS}
+ \}
+\begin{DoxyCompactList}\small\item\em What needs to be rotated. \item\end{DoxyCompactList}\end{DoxyCompactItemize}
+\subsection*{Public Member Functions}
+\begin{DoxyCompactItemize}
+\item 
+\hypertarget{classfeatureExtractor_aebb97884208813fa41ef1fe7bbe49a73}{
+void \hyperlink{classfeatureExtractor_aebb97884208813fa41ef1fe7bbe49a73}{init} (\hyperlink{classfeatureExtractor_a84a8847c4124b284d1d5ae20bc9be583}{featureExtractor::FEATURE} fType, std::string featFile)}
+\label{classfeatureExtractor_aebb97884208813fa41ef1fe7bbe49a73}
+
+\begin{DoxyCompactList}\small\item\em Initializes the class elements. \item\end{DoxyCompactList}\item 
+\hypertarget{classfeatureExtractor_ad20897c5c8bd47f5d4005989bead0e55}{
+void \hyperlink{classfeatureExtractor_ad20897c5c8bd47f5d4005989bead0e55}{reset} ()}
+\label{classfeatureExtractor_ad20897c5c8bd47f5d4005989bead0e55}
+
+\begin{DoxyCompactList}\small\item\em Resets the variables to the default values. \item\end{DoxyCompactList}\item 
+void \hyperlink{classfeatureExtractor_a41425a8e80bd7881f4d0e15da8f17a77}{initSIFT} (std::string dictName, unsigned means=500, unsigned size=128)
+\begin{DoxyCompactList}\small\item\em Creates a data matrix for each image and stores it locally. \item\end{DoxyCompactList}\item 
+\hypertarget{classfeatureExtractor_af5656e0ce12663e0896ffcf941cd7ad5}{
+void \hyperlink{classfeatureExtractor_af5656e0ce12663e0896ffcf941cd7ad5}{extractFeatures} (cv::Mat image, std::string sourceName, int colorspaceCode)}
+\label{classfeatureExtractor_af5656e0ce12663e0896ffcf941cd7ad5}
+
+\begin{DoxyCompactList}\small\item\em Creates a data matrix for each image and stores it locally. \item\end{DoxyCompactList}\item 
+\hypertarget{classfeatureExtractor_ae7007dbbde153212c36762e0a2f9368c}{
+cv::Mat \hyperlink{classfeatureExtractor_ae7007dbbde153212c36762e0a2f9368c}{extractPointsGrid} (cv::Mat image)}
+\label{classfeatureExtractor_ae7007dbbde153212c36762e0a2f9368c}
+
+\begin{DoxyCompactList}\small\item\em Extract the interest points in a gird and returns them. \item\end{DoxyCompactList}\item 
+\hypertarget{classfeatureExtractor_aec0105dc52e7732823e4d0ec18f3bd4d}{
+cv::Mat \hyperlink{classfeatureExtractor_aec0105dc52e7732823e4d0ec18f3bd4d}{extractEdges} (cv::Mat image)}
+\label{classfeatureExtractor_aec0105dc52e7732823e4d0ec18f3bd4d}
+
+\begin{DoxyCompactList}\small\item\em Extract edges from the whole image. \item\end{DoxyCompactList}\item 
+\hypertarget{classfeatureExtractor_adc37c3e97cea5f384a449eb7b5559839}{
+cv::Mat \hyperlink{classfeatureExtractor_adc37c3e97cea5f384a449eb7b5559839}{extractGabor} (cv::Mat image)}
+\label{classfeatureExtractor_adc37c3e97cea5f384a449eb7b5559839}
+
+\begin{DoxyCompactList}\small\item\em Convolves the whole image with some Gabors wavelets and then stores the results. \item\end{DoxyCompactList}\item 
+\hypertarget{classfeatureExtractor_ae5f381eedb74dc92fb98933d9e089272}{
+cv::Mat \hyperlink{classfeatureExtractor_ae5f381eedb74dc92fb98933d9e089272}{extractSIFT} (cv::Mat image, std::vector$<$ cv::Point2f $>$ \hyperlink{structfeatureExtractor_1_1templ}{templ}=std::vector$<$ cv::Point2f $>$(), cv::Rect roi=cv::Rect())}
+\label{classfeatureExtractor_ae5f381eedb74dc92fb98933d9e089272}
+
+\begin{DoxyCompactList}\small\item\em Extracts SIFT features from the image and stores them in a matrix. \item\end{DoxyCompactList}\item 
+\hypertarget{classfeatureExtractor_a169fb2c9c930ef17fb5bbb4838946e29}{
+cv::Mat \hyperlink{classfeatureExtractor_a169fb2c9c930ef17fb5bbb4838946e29}{extractSURF} (cv::Mat image)}
+\label{classfeatureExtractor_a169fb2c9c930ef17fb5bbb4838946e29}
+
+\begin{DoxyCompactList}\small\item\em Extracts all the surf descriptors from the whole image and writes them in a matrix. \item\end{DoxyCompactList}\item 
+\hypertarget{classfeatureExtractor_a845f1866a1c4770e8c749130fc4c4c41}{
+cv::Mat \hyperlink{classfeatureExtractor_a845f1866a1c4770e8c749130fc4c4c41}{getPixels} (cv::Mat image, \hyperlink{structfeatureExtractor_1_1templ}{featureExtractor::templ} aTempl, cv::Rect roi)}
+\label{classfeatureExtractor_a845f1866a1c4770e8c749130fc4c4c41}
+
+\begin{DoxyCompactList}\small\item\em Gets the plain pixels corresponding to the upper part of the body. \item\end{DoxyCompactList}\item 
+\hypertarget{classfeatureExtractor_a7a7c8515961c9eb104e1e8faae18412f}{
+cv::Mat \hyperlink{classfeatureExtractor_a7a7c8515961c9eb104e1e8faae18412f}{getHOG} (cv::Mat pixels, \hyperlink{structfeatureExtractor_1_1templ}{featureExtractor::templ} aTempl, cv::Rect roi)}
+\label{classfeatureExtractor_a7a7c8515961c9eb104e1e8faae18412f}
+
+\begin{DoxyCompactList}\small\item\em Gets the HOG descriptors over an image. \item\end{DoxyCompactList}\item 
+\hypertarget{classfeatureExtractor_a2f5da328c58a1f7faaa9765c682e7d16}{
+cv::Mat \hyperlink{classfeatureExtractor_a2f5da328c58a1f7faaa9765c682e7d16}{getEdges} (cv::Mat feature, cv::Mat thresholded, cv::Rect roi, \hyperlink{structfeatureExtractor_1_1templ}{featureExtractor::templ} aTempl, float rotAngle)}
+\label{classfeatureExtractor_a2f5da328c58a1f7faaa9765c682e7d16}
+
+\begin{DoxyCompactList}\small\item\em Gets the edges in an image. \item\end{DoxyCompactList}\item 
+\hypertarget{classfeatureExtractor_abe06d4d1aae133750e264cc1b66a5028}{
+cv::Mat \hyperlink{classfeatureExtractor_abe06d4d1aae133750e264cc1b66a5028}{getSURF} (cv::Mat feature, std::vector$<$ cv::Point2f $>$ \hyperlink{structfeatureExtractor_1_1templ}{templ}, std::vector$<$ cv::Point2f $>$ \&indices, cv::Rect roi, cv::Mat test=cv::Mat())}
+\label{classfeatureExtractor_abe06d4d1aae133750e264cc1b66a5028}
+
+\begin{DoxyCompactList}\small\item\em SURF descriptors (Speeded Up Robust Features). \item\end{DoxyCompactList}\item 
+\hypertarget{classfeatureExtractor_ae0a25673baa0c649ae95fc7890f0b8c6}{
+cv::Mat \hyperlink{classfeatureExtractor_ae0a25673baa0c649ae95fc7890f0b8c6}{getSIFT} (cv::Mat feature, std::vector$<$ cv::Point2f $>$ \hyperlink{structfeatureExtractor_1_1templ}{templ}, std::vector$<$ cv::Point2f $>$ \&indices, cv::Rect roi, cv::Mat test=cv::Mat())}
+\label{classfeatureExtractor_ae0a25673baa0c649ae95fc7890f0b8c6}
+
+\begin{DoxyCompactList}\small\item\em Compute the features from the SIFT descriptors by doing vector quantization. \item\end{DoxyCompactList}\item 
+\hypertarget{classfeatureExtractor_a1a278935bd53768b275edbc60f12f5f4}{
+cv::Mat \hyperlink{classfeatureExtractor_a1a278935bd53768b275edbc60f12f5f4}{getPointsGrid} (cv::Mat feature, cv::Rect roi, \hyperlink{structfeatureExtractor_1_1templ}{featureExtractor::templ} aTempl, cv::Mat test=cv::Mat())}
+\label{classfeatureExtractor_a1a278935bd53768b275edbc60f12f5f4}
+
+\begin{DoxyCompactList}\small\item\em Creates a \char`\"{}histogram\char`\"{} of interest points + number of blobs. \item\end{DoxyCompactList}\item 
+\hypertarget{classfeatureExtractor_aacf5712bf8beea34f835ce3b499fee25}{
+cv::Mat \hyperlink{classfeatureExtractor_aacf5712bf8beea34f835ce3b499fee25}{getGabor} (cv::Mat feature, cv::Mat thresholded, cv::Rect roi, cv::Size foregrSize, float rotAngle)}
+\label{classfeatureExtractor_aacf5712bf8beea34f835ce3b499fee25}
+
+\begin{DoxyCompactList}\small\item\em Convolves an image with a Gabor filter with the given parameters and returns the response image. \item\end{DoxyCompactList}\item 
+\hypertarget{classfeatureExtractor_a83dcac28fd134cc72ad93fd207bef1be}{
+cv::Mat \hyperlink{classfeatureExtractor_a83dcac28fd134cc72ad93fd207bef1be}{createGabor} (float $\ast$params=NULL)}
+\label{classfeatureExtractor_a83dcac28fd134cc72ad93fd207bef1be}
+
+\begin{DoxyCompactList}\small\item\em Creates a gabor with the parameters given by the parameter vector. \item\end{DoxyCompactList}\item 
+\hypertarget{classfeatureExtractor_a586b7275a6e950396270cc910a71694d}{
+cv::Mat \hyperlink{classfeatureExtractor_a586b7275a6e950396270cc910a71694d}{getDataRow} (cv::Mat image, \hyperlink{structfeatureExtractor_1_1templ}{featureExtractor::templ} aTempl, cv::Rect roi, \hyperlink{structfeatureExtractor_1_1people}{featureExtractor::people} person, cv::Mat thresholded, cv::vector$<$ cv::Point2f $>$ \&keys, std::string imgName, cv::Point2f absRotCenter, cv::Point2f rotBorders, float rotAngle)}
+\label{classfeatureExtractor_a586b7275a6e950396270cc910a71694d}
+
+\begin{DoxyCompactList}\small\item\em Returns the row corresponding to the indicated feature type. \item\end{DoxyCompactList}\item 
+\hypertarget{classfeatureExtractor_aec970aa129deac0c1e938d9144a2e5d8}{
+cv::Mat \hyperlink{classfeatureExtractor_aec970aa129deac0c1e938d9144a2e5d8}{rotate2Zero} (float rotAngle, cv::Mat toRotate, cv::Point2f \&rotBorders, cv::Point2f rotCenter, \hyperlink{classfeatureExtractor_a99e9f9e991fdf79bafc52c2ebbe51710}{featureExtractor::ROTATE} what, std::vector$<$ cv::Point2f $>$ \&pts)}
+\label{classfeatureExtractor_aec970aa129deac0c1e938d9144a2e5d8}
+
+\begin{DoxyCompactList}\small\item\em Rotate a matrix/a template/keypoints wrt to the camera location. \item\end{DoxyCompactList}\item 
+\hypertarget{classfeatureExtractor_a94f5fb634c94b61eb15043e8a762e594}{
+unsigned \hyperlink{classfeatureExtractor_a94f5fb634c94b61eb15043e8a762e594}{readNoMeans} ()}
+\label{classfeatureExtractor_a94f5fb634c94b61eb15043e8a762e594}
+
+\begin{DoxyCompactList}\small\item\em Return number of means. \item\end{DoxyCompactList}\item 
+\hypertarget{classfeatureExtractor_ab5044508f002714ab048e2c639e8d870}{
+std::string \hyperlink{classfeatureExtractor_ab5044508f002714ab048e2c639e8d870}{readDictName} ()}
+\label{classfeatureExtractor_ab5044508f002714ab048e2c639e8d870}
+
+\begin{DoxyCompactList}\small\item\em Return name of the SIFT dictionary. \item\end{DoxyCompactList}\end{DoxyCompactItemize}
+\subsection*{Static Public Member Functions}
+\begin{DoxyCompactItemize}
+\item 
+\hypertarget{classfeatureExtractor_a2fe12f9495201071bed4fca296439dfd}{
+static bool \hyperlink{classfeatureExtractor_a2fe12f9495201071bed4fca296439dfd}{compareDescriptors} (const \hyperlink{structfeatureExtractor_1_1keyDescr}{featureExtractor::keyDescr} k1, const \hyperlink{structfeatureExtractor_1_1keyDescr}{featureExtractor::keyDescr} k2)}
+\label{classfeatureExtractor_a2fe12f9495201071bed4fca296439dfd}
+
+\begin{DoxyCompactList}\small\item\em Compares SURF 2 descriptors and returns the boolean value of their comparison. \item\end{DoxyCompactList}\item 
+\hypertarget{classfeatureExtractor_aaa88e9063f8d7d324b71b50ff3b2e3fa}{
+static bool \hyperlink{classfeatureExtractor_aaa88e9063f8d7d324b71b50ff3b2e3fa}{isInTemplate} (unsigned pixelX, unsigned pixelY, std::vector$<$ cv::Point2f $>$ \hyperlink{structfeatureExtractor_1_1templ}{templ})}
+\label{classfeatureExtractor_aaa88e9063f8d7d324b71b50ff3b2e3fa}
+
+\begin{DoxyCompactList}\small\item\em Checks to see if a given pixel is inside a template. \item\end{DoxyCompactList}\end{DoxyCompactItemize}
+
+
+\subsection{Member Function Documentation}
+\hypertarget{classfeatureExtractor_a41425a8e80bd7881f4d0e15da8f17a77}{
+\index{featureExtractor@{featureExtractor}!initSIFT@{initSIFT}}
+\index{initSIFT@{initSIFT}!featureExtractor@{featureExtractor}}
+\subsubsection[{initSIFT}]{\setlength{\rightskip}{0pt plus 5cm}void initSIFT (
+\begin{DoxyParamCaption}
+\item[{std::string}]{ dictName, }
+\item[{unsigned}]{ means = {\ttfamily 500}, }
+\item[{unsigned}]{ size = {\ttfamily 128}}
+\end{DoxyParamCaption}
+)}}
+\label{classfeatureExtractor_a41425a8e80bd7881f4d0e15da8f17a77}
+Initializes the settings for the SIFT dictionary. 

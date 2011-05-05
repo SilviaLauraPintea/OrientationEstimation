@@ -2,37 +2,85 @@
 \section{classifyImages Class Reference}
 \label{classclassifyImages}\index{classifyImages@{classifyImages}}
 }
+
+
+Class used for classifying the training data.  
+
+
+\subsection*{Public Types}
+\begin{DoxyCompactItemize}
+\item 
+enum \hyperlink{classclassifyImages_a7fab19a2fed8c0c376fdb8f7c16abb6b}{USES} \{ {\bfseries EVALUATE}, 
+{\bfseries BUILD\_\-DICTIONARY}, 
+{\bfseries TEST}
+ \}
+\begin{DoxyCompactList}\small\item\em All available uses of this class. \item\end{DoxyCompactList}\end{DoxyCompactItemize}
 \subsection*{Public Member Functions}
 \begin{DoxyCompactItemize}
 \item 
-\hypertarget{classclassifyImages_a2ced301ff23a5c73c73d71bb0aa28d14}{
-{\bfseries classifyImages} (int argc, char $\ast$$\ast$argv)}
-\label{classclassifyImages_a2ced301ff23a5c73c73d71bb0aa28d14}
+\hypertarget{classclassifyImages_ac9559a032acdc161e024e18c2a3f0916}{
+\hyperlink{classclassifyImages_ac9559a032acdc161e024e18c2a3f0916}{classifyImages} (int argc, char $\ast$$\ast$argv, \hyperlink{classclassifyImages_a7fab19a2fed8c0c376fdb8f7c16abb6b}{classifyImages::USES} use=classifyImages::EVALUATE)}
+\label{classclassifyImages_ac9559a032acdc161e024e18c2a3f0916}
 
-\item 
-\hypertarget{classclassifyImages_a406fd42b8a6c482cfdf7a9ad9dbe9122}{
-void \hyperlink{classclassifyImages_a406fd42b8a6c482cfdf7a9ad9dbe9122}{createData} (std::vector$<$ std::string $>$ options)}
-\label{classclassifyImages_a406fd42b8a6c482cfdf7a9ad9dbe9122}
+\begin{DoxyCompactList}\small\item\em Constructor \& destructor of the class. \item\end{DoxyCompactList}\item 
+\hypertarget{classclassifyImages_aa59ef1800a8b93aae254810b3bca11d7}{
+void \hyperlink{classclassifyImages_aa59ef1800a8b93aae254810b3bca11d7}{buildDictionary} (int colorSp=CV\_\-BGR2Lab, bool toUseGT=true)}
+\label{classclassifyImages_aa59ef1800a8b93aae254810b3bca11d7}
 
-\begin{DoxyCompactList}\small\item\em Creates the training data/test data. \item\end{DoxyCompactList}\item 
-\hypertarget{classclassifyImages_a9a5c705866ce77cb4a4a24bda7396c85}{
-void \hyperlink{classclassifyImages_a9a5c705866ce77cb4a4a24bda7396c85}{classifySVM} ()}
-\label{classclassifyImages_a9a5c705866ce77cb4a4a24bda7396c85}
+\begin{DoxyCompactList}\small\item\em Build dictionary for vector quantization. \item\end{DoxyCompactList}\item 
+\hypertarget{classclassifyImages_a665b3293ae3bb47f1f73483e3c1a187d}{
+void \hyperlink{classclassifyImages_a665b3293ae3bb47f1f73483e3c1a187d}{trainGP} (\hyperlink{classannotationsHandle_a7a9e324ff6c85eeb2c2bd91b2b8cbdba}{annotationsHandle::POSE} \hyperlink{classclassifyImages_a9e23cf1c143525bef9b6b2422417cea9}{what})}
+\label{classclassifyImages_a665b3293ae3bb47f1f73483e3c1a187d}
 
-\begin{DoxyCompactList}\small\item\em Regression SVM classification. \item\end{DoxyCompactList}\end{DoxyCompactItemize}
+\begin{DoxyCompactList}\small\item\em Creates the training data (according to the options), the labels and trains the a {\ttfamily GaussianProcess} on the data. \item\end{DoxyCompactList}\item 
+\hypertarget{classclassifyImages_a5cc0ec230cd62c017dedf0302155df56}{
+void \hyperlink{classclassifyImages_a5cc0ec230cd62c017dedf0302155df56}{predictGP} (std::deque$<$ \hyperlink{structgaussianProcess_1_1prediction}{gaussianProcess::prediction} $>$ \&predictionsSin, std::deque$<$ \hyperlink{structgaussianProcess_1_1prediction}{gaussianProcess::prediction} $>$ \&predictionsCos, \hyperlink{classannotationsHandle_a7a9e324ff6c85eeb2c2bd91b2b8cbdba}{annotationsHandle::POSE} \hyperlink{classclassifyImages_a9e23cf1c143525bef9b6b2422417cea9}{what})}
+\label{classclassifyImages_a5cc0ec230cd62c017dedf0302155df56}
+
+\begin{DoxyCompactList}\small\item\em Creates the test data and applies {\ttfamily GaussianProcess} prediction on the test data. \item\end{DoxyCompactList}\item 
+\hypertarget{classclassifyImages_a5e6aa99e69271c26a65886f98575a96f}{
+void \hyperlink{classclassifyImages_a5e6aa99e69271c26a65886f98575a96f}{init} (float theNoise, float theLength, \hyperlink{classfeatureExtractor_a84a8847c4124b284d1d5ae20bc9be583}{featureExtractor::FEATURE} theFeature, \hyperlink{classgaussianProcess_a9255dbcbf2dc6ef9723b538659acd491}{gaussianProcess::kernelFunction} theKFunction=\&gaussianProcess::sqexp, bool fromFolder=true, bool store=true, bool toUseGT=false)}
+\label{classclassifyImages_a5e6aa99e69271c26a65886f98575a96f}
+
+\begin{DoxyCompactList}\small\item\em Initialize the options for the Gaussian Process regression. \item\end{DoxyCompactList}\item 
+\hypertarget{classclassifyImages_af9c8000367d65a5b122d28b3a644524d}{
+void \hyperlink{classclassifyImages_af9c8000367d65a5b122d28b3a644524d}{evaluate} (std::deque$<$ \hyperlink{structgaussianProcess_1_1prediction}{gaussianProcess::prediction} $>$ predictionsSin, std::deque$<$ \hyperlink{structgaussianProcess_1_1prediction}{gaussianProcess::prediction} $>$ predictionsCos, float \&error, float \&normError, float \&meanDiff)}
+\label{classclassifyImages_af9c8000367d65a5b122d28b3a644524d}
+
+\begin{DoxyCompactList}\small\item\em Evaluate one prediction versus its target. \item\end{DoxyCompactList}\item 
+\hypertarget{classclassifyImages_a9ce049acd6facc12e25b5a93b594c8be}{
+void \hyperlink{classclassifyImages_a9ce049acd6facc12e25b5a93b594c8be}{crossValidation} (unsigned k, unsigned fold, bool onTrain=false)}
+\label{classclassifyImages_a9ce049acd6facc12e25b5a93b594c8be}
+
+\begin{DoxyCompactList}\small\item\em Do k-\/fold cross-\/validation by splitting the training folder into training-\/set and validation-\/set. \item\end{DoxyCompactList}\item 
+\hypertarget{classclassifyImages_a43f25d339fca753436874bcbbe1fcd9b}{
+float \hyperlink{classclassifyImages_a43f25d339fca753436874bcbbe1fcd9b}{runCrossValidation} (unsigned k, int colorSp=CV\_\-BGR2Lab, bool onTrain=false)}
+\label{classclassifyImages_a43f25d339fca753436874bcbbe1fcd9b}
+
+\begin{DoxyCompactList}\small\item\em Does the cross-\/validation and computes the average error over all folds. \item\end{DoxyCompactList}\item 
+\hypertarget{classclassifyImages_ad2677b8124cb8786b2010e8dae88669a}{
+void \hyperlink{classclassifyImages_ad2677b8124cb8786b2010e8dae88669a}{runTest} (int colorSp=CV\_\-BGR2Lab)}
+\label{classclassifyImages_ad2677b8124cb8786b2010e8dae88669a}
+
+\begin{DoxyCompactList}\small\item\em Runs the final evaluation (test). \item\end{DoxyCompactList}\item 
+\hypertarget{classclassifyImages_aad3c0217620ac5b8e8fa3590e0e2d119}{
+float \hyperlink{classclassifyImages_aad3c0217620ac5b8e8fa3590e0e2d119}{optimizePrediction} (\hyperlink{structgaussianProcess_1_1prediction}{gaussianProcess::prediction} predictionsSin, \hyperlink{structgaussianProcess_1_1prediction}{gaussianProcess::prediction} predictionsCos)}
+\label{classclassifyImages_aad3c0217620ac5b8e8fa3590e0e2d119}
+
+\begin{DoxyCompactList}\small\item\em Try to optimize the prediction of the angle considering the variance of sin and cos. \item\end{DoxyCompactList}\item 
+\hypertarget{classclassifyImages_a2ed910a41a307f926f5d48e3d8a0c584}{
+void \hyperlink{classclassifyImages_a2ed910a41a307f926f5d48e3d8a0c584}{resetFeatures} (std::string dir, std::string imStr, int colorSp)}
+\label{classclassifyImages_a2ed910a41a307f926f5d48e3d8a0c584}
+
+\begin{DoxyCompactList}\small\item\em Reset the features object when the training and testing might have different calibration, background models... \item\end{DoxyCompactList}\end{DoxyCompactItemize}
 \subsection*{Protected Attributes}
 \begin{DoxyCompactItemize}
 \item 
-\hypertarget{classclassifyImages_a5eee69bc11357b80cf106af7aecd8203}{
-\hyperlink{classfeatureDetector}{featureDetector} $\ast$ \hyperlink{classclassifyImages_a5eee69bc11357b80cf106af7aecd8203}{testFeatures}}
-\label{classclassifyImages_a5eee69bc11357b80cf106af7aecd8203}
+\hypertarget{classclassifyImages_a6b54c7d82e1d89ae7994a88ce0c6889b}{
+\hyperlink{classpeopleDetector}{peopleDetector} $\ast$ \hyperlink{classclassifyImages_a6b54c7d82e1d89ae7994a88ce0c6889b}{features}}
+\label{classclassifyImages_a6b54c7d82e1d89ae7994a88ce0c6889b}
 
-\begin{DoxyCompactList}\small\item\em An instance of {\ttfamily \hyperlink{classfeatureDetector}{featureDetector}} class. \item\end{DoxyCompactList}\item 
-\hypertarget{classclassifyImages_a2ed3a786aec67ed0e79adc115bdd000d}{
-\hyperlink{classfeatureDetector}{featureDetector} $\ast$ \hyperlink{classclassifyImages_a2ed3a786aec67ed0e79adc115bdd000d}{trainFeatures}}
-\label{classclassifyImages_a2ed3a786aec67ed0e79adc115bdd000d}
-
-\begin{DoxyCompactList}\small\item\em An instance of {\ttfamily \hyperlink{classfeatureDetector}{featureDetector}} class. \item\end{DoxyCompactList}\item 
+\begin{DoxyCompactList}\small\item\em An instance of {\ttfamily \hyperlink{classpeopleDetector}{peopleDetector}} class. \item\end{DoxyCompactList}\item 
 \hypertarget{classclassifyImages_a0aa55d034e03263d29eb56b0df841f45}{
 cv::Mat \hyperlink{classclassifyImages_a0aa55d034e03263d29eb56b0df841f45}{trainData}}
 \label{classclassifyImages_a0aa55d034e03263d29eb56b0df841f45}
@@ -52,4 +100,114 @@ std::string \hyperlink{classclassifyImages_aa132c49ad63d508ac2a4c0503e22f089}{tr
 std::string \hyperlink{classclassifyImages_a7373134549cfc434db469f7e07e10f85}{testFolder}}
 \label{classclassifyImages_a7373134549cfc434db469f7e07e10f85}
 
-\begin{DoxyCompactList}\small\item\em The folder containing the test images. \item\end{DoxyCompactList}\end{DoxyCompactItemize}
+\begin{DoxyCompactList}\small\item\em The folder containing the test images. \item\end{DoxyCompactList}\item 
+\hypertarget{classclassifyImages_a7bfaf90f554b20da1af2371af3d44978}{
+std::string \hyperlink{classclassifyImages_a7bfaf90f554b20da1af2371af3d44978}{annotationsTrain}}
+\label{classclassifyImages_a7bfaf90f554b20da1af2371af3d44978}
+
+\begin{DoxyCompactList}\small\item\em The file contains the annotations for the training images. \item\end{DoxyCompactList}\item 
+\hypertarget{classclassifyImages_a6980fddf5eb36bf6793a00f24307236d}{
+std::string \hyperlink{classclassifyImages_a6980fddf5eb36bf6793a00f24307236d}{annotationsTest}}
+\label{classclassifyImages_a6980fddf5eb36bf6793a00f24307236d}
+
+\begin{DoxyCompactList}\small\item\em The file contains the annotations for the test images. \item\end{DoxyCompactList}\item 
+\hypertarget{classclassifyImages_ad5d2ac462795640203cc13c4d4c5d9d3}{
+cv::Mat \hyperlink{classclassifyImages_ad5d2ac462795640203cc13c4d4c5d9d3}{trainTargets}}
+\label{classclassifyImages_ad5d2ac462795640203cc13c4d4c5d9d3}
+
+\begin{DoxyCompactList}\small\item\em The column matrix containing the train annotation data (targets). \item\end{DoxyCompactList}\item 
+\hypertarget{classclassifyImages_a217fb270099a15dcccf13182fd6dd0e4}{
+cv::Mat \hyperlink{classclassifyImages_a217fb270099a15dcccf13182fd6dd0e4}{testTargets}}
+\label{classclassifyImages_a217fb270099a15dcccf13182fd6dd0e4}
+
+\begin{DoxyCompactList}\small\item\em The column matrix containing the test annotation data (targets). \item\end{DoxyCompactList}\item 
+\hypertarget{classclassifyImages_abff6b85e214c69747627c68c933bdb92}{
+\hyperlink{classgaussianProcess}{gaussianProcess} {\bfseries gpCos}}
+\label{classclassifyImages_abff6b85e214c69747627c68c933bdb92}
+
+\item 
+\hypertarget{classclassifyImages_a3d991dfedc74a07397e4bd4a6c34e143}{
+\hyperlink{classgaussianProcess}{gaussianProcess} {\bfseries gpSin}}
+\label{classclassifyImages_a3d991dfedc74a07397e4bd4a6c34e143}
+
+\item 
+\hypertarget{classclassifyImages_a5f275402fe7e3f672eab8b802e8913ca}{
+float \hyperlink{classclassifyImages_a5f275402fe7e3f672eab8b802e8913ca}{noise}}
+\label{classclassifyImages_a5f275402fe7e3f672eab8b802e8913ca}
+
+\begin{DoxyCompactList}\small\item\em The noise level of the data. \item\end{DoxyCompactList}\item 
+\hypertarget{classclassifyImages_af9d495c1655d813d553030485d00fea7}{
+float \hyperlink{classclassifyImages_af9d495c1655d813d553030485d00fea7}{length}}
+\label{classclassifyImages_af9d495c1655d813d553030485d00fea7}
+
+\begin{DoxyCompactList}\small\item\em The length in the Gaussian Process. \item\end{DoxyCompactList}\item 
+\hypertarget{classclassifyImages_a8bdc4bd1a948123887fff4e6cce31147}{
+\hyperlink{classgaussianProcess_a9255dbcbf2dc6ef9723b538659acd491}{gaussianProcess::kernelFunction} \hyperlink{classclassifyImages_a8bdc4bd1a948123887fff4e6cce31147}{kFunction}}
+\label{classclassifyImages_a8bdc4bd1a948123887fff4e6cce31147}
+
+\begin{DoxyCompactList}\small\item\em The kernel function in the Gaussian Process. \item\end{DoxyCompactList}\item 
+\hypertarget{classclassifyImages_a54c048cb58bd1fa076182d199e23d927}{
+\hyperlink{classfeatureExtractor_a84a8847c4124b284d1d5ae20bc9be583}{featureExtractor::FEATURE} \hyperlink{classclassifyImages_a54c048cb58bd1fa076182d199e23d927}{feature}}
+\label{classclassifyImages_a54c048cb58bd1fa076182d199e23d927}
+
+\begin{DoxyCompactList}\small\item\em Feature to be extracted. \item\end{DoxyCompactList}\item 
+\hypertarget{classclassifyImages_aceb82a88f2fac81efd120c8aae663026}{
+bool \hyperlink{classclassifyImages_aceb82a88f2fac81efd120c8aae663026}{readFromFolder}}
+\label{classclassifyImages_aceb82a88f2fac81efd120c8aae663026}
+
+\begin{DoxyCompactList}\small\item\em If the images are read from folder or from a file with image names. \item\end{DoxyCompactList}\item 
+\hypertarget{classclassifyImages_aeec5f75ad89527ac01d0e5f7ffa156e3}{
+std::deque$<$ std::string $>$ \hyperlink{classclassifyImages_aeec5f75ad89527ac01d0e5f7ffa156e3}{imageList}}
+\label{classclassifyImages_aeec5f75ad89527ac01d0e5f7ffa156e3}
+
+\begin{DoxyCompactList}\small\item\em All images are stored in this list for cross-\/validation. \item\end{DoxyCompactList}\item 
+\hypertarget{classclassifyImages_af6d04360d7d143aab8e258c5559e47e9}{
+std::deque$<$ std::string $>$ \hyperlink{classclassifyImages_af6d04360d7d143aab8e258c5559e47e9}{annoList}}
+\label{classclassifyImages_af6d04360d7d143aab8e258c5559e47e9}
+
+\begin{DoxyCompactList}\small\item\em All annotations for all images are stored in this list for cross-\/validation. \item\end{DoxyCompactList}\item 
+\hypertarget{classclassifyImages_ace5a069d7244c608ae2d2e29fc567c24}{
+unsigned \hyperlink{classclassifyImages_ace5a069d7244c608ae2d2e29fc567c24}{foldSize}}
+\label{classclassifyImages_ace5a069d7244c608ae2d2e29fc567c24}
+
+\begin{DoxyCompactList}\small\item\em The size of one fold in cross-\/validation. \item\end{DoxyCompactList}\item 
+\hypertarget{classclassifyImages_a0b4d9fa519372eeb192297c3d9521d3f}{
+bool \hyperlink{classclassifyImages_a0b4d9fa519372eeb192297c3d9521d3f}{storeData}}
+\label{classclassifyImages_a0b4d9fa519372eeb192297c3d9521d3f}
+
+\begin{DoxyCompactList}\small\item\em If data is stored locally or not. \item\end{DoxyCompactList}\item 
+\hypertarget{classclassifyImages_adefaf64a0bbe772b9463fa2a9cba904e}{
+std::string \hyperlink{classclassifyImages_adefaf64a0bbe772b9463fa2a9cba904e}{modelName}}
+\label{classclassifyImages_adefaf64a0bbe772b9463fa2a9cba904e}
+
+\begin{DoxyCompactList}\small\item\em The name of the model the be loaded/saved. \item\end{DoxyCompactList}\item 
+\hypertarget{classclassifyImages_a9e23cf1c143525bef9b6b2422417cea9}{
+\hyperlink{classclassifyImages_a7fab19a2fed8c0c376fdb8f7c16abb6b}{classifyImages::USES} \hyperlink{classclassifyImages_a9e23cf1c143525bef9b6b2422417cea9}{what}}
+\label{classclassifyImages_a9e23cf1c143525bef9b6b2422417cea9}
+
+\begin{DoxyCompactList}\small\item\em What should the class be used for. \item\end{DoxyCompactList}\item 
+\hypertarget{classclassifyImages_a3fb484b2bbea1ba4fd18d6d9473fd133}{
+std::string \hyperlink{classclassifyImages_a3fb484b2bbea1ba4fd18d6d9473fd133}{testDir}}
+\label{classclassifyImages_a3fb484b2bbea1ba4fd18d6d9473fd133}
+
+\begin{DoxyCompactList}\small\item\em Directory in which to look for the test images \& other files. \item\end{DoxyCompactList}\item 
+\hypertarget{classclassifyImages_a01c33fc39dc8933a8ef92c6e58fc3ebc}{
+std::string \hyperlink{classclassifyImages_a01c33fc39dc8933a8ef92c6e58fc3ebc}{testImgString}}
+\label{classclassifyImages_a01c33fc39dc8933a8ef92c6e58fc3ebc}
+
+\begin{DoxyCompactList}\small\item\em The letters in the image names for the test data. \item\end{DoxyCompactList}\item 
+\hypertarget{classclassifyImages_a0d75c20b8a5563520ebbe3ca3726bbc3}{
+std::string \hyperlink{classclassifyImages_a0d75c20b8a5563520ebbe3ca3726bbc3}{trainDir}}
+\label{classclassifyImages_a0d75c20b8a5563520ebbe3ca3726bbc3}
+
+\begin{DoxyCompactList}\small\item\em Directory in which to look for the train images \& other files. \item\end{DoxyCompactList}\item 
+\hypertarget{classclassifyImages_aad03618ffce6a569626a45a7d23218d8}{
+std::string \hyperlink{classclassifyImages_aad03618ffce6a569626a45a7d23218d8}{trainImgString}}
+\label{classclassifyImages_aad03618ffce6a569626a45a7d23218d8}
+
+\begin{DoxyCompactList}\small\item\em The letters in the image names for the train data. \item\end{DoxyCompactList}\item 
+\hypertarget{classclassifyImages_a22a0fec885724c49f9a0ed4f2c46d818}{
+bool \hyperlink{classclassifyImages_a22a0fec885724c49f9a0ed4f2c46d818}{useGroundTruth}}
+\label{classclassifyImages_a22a0fec885724c49f9a0ed4f2c46d818}
+
+\begin{DoxyCompactList}\small\item\em Use the annotations' positions or use the tracker. \item\end{DoxyCompactList}\end{DoxyCompactItemize}

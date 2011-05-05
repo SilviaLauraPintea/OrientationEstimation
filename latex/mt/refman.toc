@@ -3,13 +3,23 @@
 \contentsline {section}{\numberline {1.2}annotationsHandle Class Reference}{1}{section.1.2}
 \contentsline {subsection}{\numberline {1.2.1}Member Function Documentation}{3}{subsection.1.2.1}
 \contentsline {subsubsection}{\numberline {1.2.1.1}runAnn}{3}{subsubsection.1.2.1.1}
-\contentsline {subsubsection}{\numberline {1.2.1.2}runEvaluation}{3}{subsubsection.1.2.1.2}
-\contentsline {subsection}{\numberline {1.2.2}Field Documentation}{3}{subsection.1.2.2}
-\contentsline {subsubsection}{\numberline {1.2.2.1}image}{3}{subsubsection.1.2.2.1}
-\contentsline {section}{\numberline {1.3}annotationsHandle::ASSIGNED Struct Reference}{3}{section.1.3}
-\contentsline {section}{\numberline {1.4}classifyImages Class Reference}{4}{section.1.4}
-\contentsline {section}{\numberline {1.5}featureDetector Class Reference}{4}{section.1.5}
-\contentsline {subsection}{\numberline {1.5.1}Member Function Documentation}{6}{subsection.1.5.1}
-\contentsline {subsubsection}{\numberline {1.5.1.1}getGabor}{6}{subsubsection.1.5.1.1}
-\contentsline {section}{\numberline {1.6}annotationsHandle::FULL\_\discretionary {-}{}{}ANNOTATIONS Struct Reference}{7}{section.1.6}
-\contentsline {section}{\numberline {1.7}featureDetector::people Struct Reference}{7}{section.1.7}
+\contentsline {subsubsection}{\numberline {1.2.1.2}runEvaluation}{4}{subsubsection.1.2.1.2}
+\contentsline {subsection}{\numberline {1.2.2}Field Documentation}{4}{subsection.1.2.2}
+\contentsline {subsubsection}{\numberline {1.2.2.1}image}{4}{subsubsection.1.2.2.1}
+\contentsline {section}{\numberline {1.3}annotationsHandle::ASSIGNED Struct Reference}{4}{section.1.3}
+\contentsline {section}{\numberline {1.4}cholesky Class Reference}{4}{section.1.4}
+\contentsline {section}{\numberline {1.5}classifyImages Class Reference}{5}{section.1.5}
+\contentsline {section}{\numberline {1.6}compareImg Struct Reference}{8}{section.1.6}
+\contentsline {section}{\numberline {1.7}featureExtractor Class Reference}{8}{section.1.7}
+\contentsline {subsection}{\numberline {1.7.1}Member Function Documentation}{10}{subsection.1.7.1}
+\contentsline {subsubsection}{\numberline {1.7.1.1}initSIFT}{10}{subsubsection.1.7.1.1}
+\contentsline {section}{\numberline {1.8}annotationsHandle::FULL\_\discretionary {-}{}{}ANNOTATIONS Struct Reference}{10}{section.1.8}
+\contentsline {section}{\numberline {1.9}gaussianProcess Class Reference}{11}{section.1.9}
+\contentsline {section}{\numberline {1.10}featureExtractor::keyDescr Struct Reference}{12}{section.1.10}
+\contentsline {section}{\numberline {1.11}onScanline Struct Reference}{12}{section.1.11}
+\contentsline {section}{\numberline {1.12}featureExtractor::people Struct Reference}{13}{section.1.12}
+\contentsline {section}{\numberline {1.13}peopleDetector Class Reference}{13}{section.1.13}
+\contentsline {subsection}{\numberline {1.13.1}Field Documentation}{16}{subsection.1.13.1}
+\contentsline {subsubsection}{\numberline {1.13.1.1}data}{16}{subsubsection.1.13.1.1}
+\contentsline {section}{\numberline {1.14}gaussianProcess::prediction Struct Reference}{16}{section.1.14}
+\contentsline {section}{\numberline {1.15}featureExtractor::templ Struct Reference}{16}{section.1.15}
