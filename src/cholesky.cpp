@@ -1,6 +1,8 @@
 /* cholesky.cpp
  * Original code: Dr Gwenn Englebienne
  * Modified by: Silvia-Laura Pintea
+ * Copyright (c) 2010-2011 Silvia-Laura Pintea. All rights reserved.
+ * Feel free to use this code, but please retain the above copyright notice.
  */
 #include "cholesky.h"
 #include <iostream>

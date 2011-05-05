@@ -1,5 +1,7 @@
 /* peopleDetector.cpp
  * Author: Silvia-Laura Pintea
+ * Copyright (c) 2010-2011 Silvia-Laura Pintea. All rights reserved.
+ * Feel free to use this code, but please retain the above copyright notice.
  */
 #include <boost/thread.hpp>
 #include <boost/version.hpp>
@@ -1031,7 +1033,7 @@ float peopleDetector::rotationAngle(cv::Point2f headLocation,cv::Point2f feetLoc
 int main(int argc, char **argv){
 	peopleDetector feature(argc,argv,true,false);
 	feature.init(std::string(argv[1])+"/annotated_train",\
-		std::string(argv[1])+"/annotated_train.txt",featureExtractor::EDGES,true);
+		std::string(argv[1])+"/annotated_train.txt",featureExtractor::IPOINTS,true);
 	feature.start(true, false);
 }
 */

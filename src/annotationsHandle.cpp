@@ -1,5 +1,7 @@
 /* annotationsHandle.cpp
  * Author: Silvia-Laura Pintea
+ * Copyright (c) 2010-2011 Silvia-Laura Pintea. All rights reserved.
+ * Feel free to use this code, but please retain the above copyright notice.
  */
 #include "annotationsHandle.h"
 #include <err.h>

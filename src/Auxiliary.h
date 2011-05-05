@@ -1,5 +1,7 @@
 /* Auxiliary.h
  * Author: Silvia-Laura Pintea
+ * Copyright (c) 2010-2011 Silvia-Laura Pintea. All rights reserved.
+ * Feel free to use this code, but please retain the above copyright notice.
  */
 #ifndef AUXILIARY_H_
 #define AUXILIARY_H_

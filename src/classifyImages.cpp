@@ -1,5 +1,7 @@
 /* classifyImages.cpp
  * Author: Silvia-Laura Pintea
+ * Copyright (c) 2010-2011 Silvia-Laura Pintea. All rights reserved.
+ * Feel free to use this code, but please retain the above copyright notice.
  */
 #include "classifyImages.h"
 #include <iostream>
@@ -314,7 +316,6 @@ void classifyImages::evaluate(std::deque<gaussianProcess::prediction>\
 predictionsSin, std::deque<gaussianProcess::prediction> predictionsCos,\
 float &error,float &normError,float &meanDiff){
 	error = 0.0; normError = 0.0; meanDiff = 0.0;
-	unsigned ignored = 0;
 	for(int y=0; y<this->testTargets.rows; y++){
 		float targetAngle = std::atan2(this->testTargets.at<float>(y,0),\
 								this->testTargets.at<float>(y,1));
@@ -335,10 +336,10 @@ float &error,float &normError,float &meanDiff){
 		meanDiff  += absDiff;
 	}
 
-	std::cout<<"Number of people: "<<this->testTargets.rows-ignored<<std::endl;
-	error     = std::sqrt(error/(this->testTargets.rows-ignored));
-	normError = std::sqrt(normError/(this->testTargets.rows-ignored));
-	meanDiff  = meanDiff/(this->testTargets.rows-ignored);
+	std::cout<<"Number of people: "<<this->testTargets.rows<<std::endl;
+	error     = std::sqrt(error/(this->testTargets.rows));
+	normError = std::sqrt(normError/(this->testTargets.rows));
+	meanDiff  = meanDiff/(this->testTargets.rows);
 
 	std::cout<<"RMS-error normalized: "<<normError<<std::endl;
 	std::cout<<"RMS-accuracy normalized: "<<(1-normError)<<std::endl;
@@ -500,7 +501,11 @@ float classifyImages::runCrossValidation(unsigned k, int colorSp, bool onTrain){
 		predictionsSin.clear();
 		predictionsCos.clear();
 		*/
+//-----------------------------REMOVE-------------------------------------------
+		return finalNormErrorLong;
 	}
+//-----------------------------REMOVE-------------------------------------------
+
 	finalErrorLong /= static_cast<float>(k);
 	finalNormErrorLong /= static_cast<float>(k);
 	finalMeanDiffLong /= static_cast<float>(k);
@@ -665,35 +670,34 @@ int main(int argc, char **argv){
  	classi.runTest(CV_BGR2Luv);
 */
 
-  	// evaluate
+/*
+	// evaluate
  	classifyImages classi(argc, argv, classifyImages::EVALUATE);
-	classi.init(0.1,50.0,featureExtractor::EDGES,&gaussianProcess::sqexp,\
+	classi.init(0.1,50.0,featureExtractor::IPOINTS,&gaussianProcess::sqexp,\
 			false, true, true);
 	classi.runCrossValidation(5,CV_BGR2XYZ,false);
+*/
 
-
-/*
   	std::ofstream train, test;
 	train.open("train.txt", std::ios::out);
 	test.open("test.txt", std::ios::out);
 	classifyImages classi(argc, argv, classifyImages::EVALUATE);
-	for(float v=1.8; v<5; v+=0.2){
-		for(float l=65; l<125; l+=10){
+	for(float v=0.1; v<5; v+=0.2){
+		for(float l=1; l<125; l+=10){
 			// evaluate
-			classi.init(v,l,featureExtractor::EDGES,&gaussianProcess::sqexp,\
-					false, true, true);
-			float errorTrain = classi.runCrossValidation(5,CV_BGR2Luv,true);
+			classi.init(v,l,featureExtractor::HOG,&gaussianProcess::sqexp,\
+				false, true, true);
+			float errorTrain = classi.runCrossValidation(5,CV_BGR2RGB,true);
 			train<<v<<" "<<l<<" "<<errorTrain<<std::endl;
 
-			classi.init(v,l,featureExtractor::EDGES,&gaussianProcess::sqexp,\
-					false, true, true);
-			float errorTest = classi.runCrossValidation(5,CV_BGR2Luv,false);
+			classi.init(v,l,featureExtractor::HOG,&gaussianProcess::sqexp,\
+				false, true, true);
+			float errorTest = classi.runCrossValidation(5,CV_BGR2RGB,false);
 			test<<v<<" "<<l<<" "<<errorTest<<std::endl;
 		}
 	}
 	train.close();
 	test.close();
-*/
 
 /*
 	// BUILD THE SIFT DICTIONARY
