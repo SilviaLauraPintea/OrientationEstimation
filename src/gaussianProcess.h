@@ -19,16 +19,26 @@ class gaussianProcess {
 		/** A structure used to define predictions.
 		 */
 		struct prediction {
-		  std::deque<float> mean;
-		  std::deque<float> variance;
-		  ~prediction(){
-			  if(!this->mean.empty()){
-				  this->mean.clear();
+			public:
+			  std::deque<float> mean;
+			  std::deque<float> variance;
+			  prediction(){};
+			  ~prediction(){
+				  if(!this->mean.empty()){
+					  this->mean.clear();
+				  }
+				  if(!this->variance.empty()){
+					  this->variance.clear();
+				  }
 			  }
-			  if(!this->variance.empty()){
-				  this->variance.clear();
-			  }
-		  }
+			prediction(const prediction &pred){
+				this->mean = pred.mean;
+				this->variance = pred.variance;
+			}
+			void operator=(const prediction &pred){
+				this->mean = pred.mean;
+				this->variance = pred.variance;
+			}
 		};
 
 		/** All available distributions for the functions.
@@ -135,5 +145,8 @@ class gaussianProcess {
 		bool _norm_fast;
 		float _norm_next,_norm_max;
 		int rand_x, rand_y;
+		//======================================================================
+	private:
+	  DISALLOW_COPY_AND_ASSIGN(gaussianProcess);
 };
 #endif /* GAUSSIANPROCESS_H_ */

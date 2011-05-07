@@ -207,6 +207,10 @@ class classifyImages {
 		 * Use the annotations' positions or use the tracker.
 		 */
 		bool useGroundTruth;
+		//======================================================================
+	private:
+		DISALLOW_COPY_AND_ASSIGN(classifyImages);
+
 };
 
 #endif /* CLASSIFYIMAGES_H_ */

@@ -3,7 +3,6 @@
  * Copyright (c) 2010-2011 Silvia-Laura Pintea. All rights reserved.
  * Feel free to use this code, but please retain the above copyright notice.
  */
-#include "classifyImages.h"
 #include <iostream>
 #include <fstream>
 #include <string>
@@ -14,6 +13,7 @@
 #include "eigenbackground/src/Tracker.hh"
 #include "eigenbackground/src/Helpers.hh"
 #include "eigenbackground/src/defines.hh"
+#include "classifyImages.h"
 //==============================================================================
 classifyImages::classifyImages(int argc, char **argv, classifyImages::USES use){
 	// DEAFAULT INITIALIZATION
@@ -501,10 +501,10 @@ float classifyImages::runCrossValidation(unsigned k, int colorSp, bool onTrain){
 		predictionsSin.clear();
 		predictionsCos.clear();
 		*/
-//-----------------------------REMOVE-------------------------------------------
+//-----REMOVE-------------------------------------------------------------------
 		return finalNormErrorLong;
 	}
-//-----------------------------REMOVE-------------------------------------------
+//-----REMOVE-------------------------------------------------------------------
 
 	finalErrorLong /= static_cast<float>(k);
 	finalNormErrorLong /= static_cast<float>(k);
@@ -519,6 +519,7 @@ float classifyImages::runCrossValidation(unsigned k, int colorSp, bool onTrain){
 	std::cout<<"LATITUDE>>> final-RMS-error:"<<finalErrorLat<<std::endl;
 	std::cout<<"LATITUDE>>> final-RMS-normalized-error:"<<finalNormErrorLat<<std::endl;
 	std::cout<<"LATITUDE>>> final-avg-difference:"<<finalMeanDiffLat<<std::endl;
+	return finalNormErrorLong;
 }
 //==============================================================================
 /** Do k-fold cross-validation by splitting the training folder into training-set
@@ -670,20 +671,19 @@ int main(int argc, char **argv){
  	classi.runTest(CV_BGR2Luv);
 */
 
-/*
 	// evaluate
  	classifyImages classi(argc, argv, classifyImages::EVALUATE);
-	classi.init(0.1,50.0,featureExtractor::IPOINTS,&gaussianProcess::sqexp,\
-			false, true, true);
-	classi.runCrossValidation(5,CV_BGR2XYZ,false);
-*/
+	classi.init(0.85,85.0,featureExtractor::PIXELS,&gaussianProcess::sqexp,\
+		false, true, true);
+	classi.runCrossValidation(7,CV_BGR2XYZ,false);
 
+/*
   	std::ofstream train, test;
 	train.open("train.txt", std::ios::out);
 	test.open("test.txt", std::ios::out);
 	classifyImages classi(argc, argv, classifyImages::EVALUATE);
-	for(float v=0.1; v<5; v+=0.2){
-		for(float l=1; l<125; l+=10){
+	for(float v=0.1; v<5; v+=0.1){
+		for(float l=1; l<125; l+=1){
 			// evaluate
 			classi.init(v,l,featureExtractor::HOG,&gaussianProcess::sqexp,\
 				false, true, true);
@@ -698,7 +698,7 @@ int main(int argc, char **argv){
 	}
 	train.close();
 	test.close();
-
+*/
 /*
 	// BUILD THE SIFT DICTIONARY
   	classifyImages classi(argc, argv, classifyImages::BUILD_DICTIONARY);

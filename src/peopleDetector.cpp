@@ -17,9 +17,9 @@
 #include <err.h>
 #include <exception>
 #include "eigenbackground/src/Helpers.hh"
-#include "peopleDetector.h"
 #include "Auxiliary.h"
 #include "cmn/FastMath.hh"
+#include "peopleDetector.h"
 //======================================================================
 peopleDetector::peopleDetector(int argc,char** argv, bool extract,\
 bool buildBg):Tracker(argc, argv, 20, buildBg, true){
@@ -29,7 +29,7 @@ bool buildBg):Tracker(argc, argv, 20, buildBg, true){
 		if(datasetPath[dataPath.size()-1]!='/'){
 			dataPath += "/";
 		}
-		this->plot           = false;
+		this->plot           = true;
 		this->print          = true;
 		this->useGroundTruth = true;
 		this->lastIndex      = 0;
@@ -79,8 +79,15 @@ struct compareImg{
 											const_cast<char*>(image.c_str()),'/');
 			this->imgName = parts[parts.size()-1];
 		}
+		virtual ~compareImg(){};
 		bool operator()(annotationsHandle::FULL_ANNOTATIONS anno)const{
 			return (anno.imgFile == this->imgName);
+		}
+		compareImg(const compareImg &comp){
+			this->imgName = comp.imgName;
+		}
+		void operator=(const compareImg &comp){
+			this->imgName = comp.imgName;
 		}
 };
 //==============================================================================
@@ -161,8 +168,8 @@ std::vector<cv::Point2f> templ){
 //==============================================================================
 /** Returns the size of a window around a template centered in a given point.
  */
-void peopleDetector::templateWindow(cv::Size imgSize, int &minX, int &maxX,\
-int &minY, int &maxY, featureExtractor::templ aTempl, int tplBorder){
+void peopleDetector::templateWindow(IplImage* img, cv::Size imgSize, int &minX,\
+int &maxX,int &minY, int &maxY, featureExtractor::templ aTempl, int tplBorder){
 	// TRY TO ADD BORDERS TO MAKE IT 100
 	minX = aTempl.extremes[0];
 	maxX = aTempl.extremes[1];
@@ -170,26 +177,36 @@ int &minY, int &maxY, featureExtractor::templ aTempl, int tplBorder){
 	maxY = aTempl.extremes[3];
 	int diffX = (tplBorder - (maxX-minX))/2;
 	int diffY = (tplBorder - (maxY-minY))/2;
-	minY = std::max(minY-diffY,0);
-	maxY = std::min(maxY+diffY,imgSize.height);
-	minX = std::max(minX-diffX,0);
-	maxX = std::min(maxX+diffX,imgSize.width);
 
-	if(maxX-minX!=tplBorder){
-		int diffX2 = tplBorder-(maxX-minX);
-		if(minX>diffX2){
-			minX -= diffX2;
-		}else if(maxX<imgSize.width-diffX2){
-			maxX += diffX2;
-		}
+	int left=0, right=0, top=0, bottom=0;
+	minY = std::max(minY-diffY,0);
+	if(minY-diffY<0){
+		top = std::abs(minY-diffY);
 	}
-	if(maxY-minY!=tplBorder){
-		int diffY2 = tplBorder-(maxY-minY);
-		if(minY>diffY2){
-			minY -= diffY2;
-		}else if(maxY<imgSize.height-diffY2){
-			maxY += diffY2;
-		}
+	maxY = std::min(maxY+diffY,imgSize.height);
+	if(maxY+diffY>imgSize.height){
+		bottom = std::abs(imgSize.height-(maxY+diffY));
+	}
+	minX = std::max(minX-diffX,0);
+	if(minX-diffX<0){
+		left = std::abs(minX-diffX);
+	}
+	maxX = std::min(maxX+diffX,imgSize.width);
+	if(maxX+diffX>imgSize.width){
+		right = std::abs(imgSize.width-(maxX+diffX));
+	}
+
+	if(top!=0 || bottom!= 0 || left!=0 || right!=0){
+		IplImage* tmp = cvCreateImage(cvSize(img->width+left+right,\
+						img->height+top+bottom),img->depth,img->nChannels );
+		cvCopyMakeBorder(img,tmp,cv::Point(top,left),IPL_BORDER_REPLICATE,cvScalarAll(0));
+//		cvCopyMakeBorder(img,tmp,top,bottom,left,right,cv::BORDER_REPLICATE);
+
+		cvShowImage("withborder",tmp);
+		cvWaitKey(0);
+		cvReleaseImage(&img);
+		cvCopy(tmp,img);
+		cvReleaseImage(&tmp);
 	}
 }
 //==============================================================================
@@ -201,7 +218,6 @@ int k, cv::Mat thresh, cv::Mat &colorRoi, float tmplHeight){
 	for(unsigned x=0; x<maxX-minX; x++){
 		for(unsigned y=0; y<maxY-minY; y++){
 			if((int)(thresh.at<uchar>((int)(y+minY),(int)(x+minX)))>0){
-
 				// IF THE PIXEL IS NOT INSIDE OF THE TEMPLATE
 				if(!featureExtractor::isInTemplate((x+minX),(y+minY),\
 				this->templates[k].points) && this->templates.size()>1){
@@ -225,7 +241,7 @@ int k, cv::Mat thresh, cv::Mat &colorRoi, float tmplHeight){
 					}
 
 					// IF THE PIXEL HAS A DIFFERENT LABEL THEN THE CURR TEMPL
-					if(label != k || minDist>=tmplHeight){
+					if(label != k || minDist>=tmplHeight/2){
 						colorRoi.at<cv::Vec3b>((int)y,(int)x) = cv::Vec3b(0,0,0);
 					}
 				}
@@ -266,8 +282,8 @@ void peopleDetector::allForegroundPixels(std::deque<featureExtractor::people>\
 		cv::threshold(thrsh, thrsh, threshold, 255, cv::THRESH_BINARY);
 		cv::dilate(thrsh,thrsh,cv::Mat(),cv::Point(-1,-1),2);
 	}
-
 	cv::Mat foregr(this->current->img);
+
 	// FOR EACH EXISTING TEMPLATE LOOK ON AN AREA OF 100 PIXELS AROUND IT
 	for(unsigned k=0; k<existing.size();k++){
 		cv::Point2f center       = this->cvPoint(existing[k]);
@@ -278,7 +294,7 @@ void peopleDetector::allForegroundPixels(std::deque<featureExtractor::people>\
 
 		// GET THE 100X100 WINDOW ON THE TEMPLATE
 		int minY=foregr.rows, maxY=0, minX=foregr.cols, maxX=0;
-		this->templateWindow(cv::Size(foregr.cols,foregr.rows),minX, maxX,\
+		this->templateWindow(this->current->img,cv::Size(foregr.cols,foregr.rows),minX, maxX,\
 				minY, maxY, this->templates[k]);
 		int width  = maxX-minX;
 		int height = maxY-minY;
@@ -292,8 +308,10 @@ void peopleDetector::allForegroundPixels(std::deque<featureExtractor::people>\
 		// FOR MULTIPLE DISCONNECTED BLOBS KEEP THE CLOSEST TO CENTER
 			this->pixels2Templates(maxX,minX,maxY,minY,k,thrsh,colorRoi,tmplHeight);
 			cv::cvtColor(colorRoi, thrshRoi, CV_BGR2GRAY);
-			this->keepLargestBlob(thrshRoi,cv::Point2f(center.x-minX,center.y-minY),
-					tmplArea);
+			cv::Point templateMid = cv::Point2f((this->templates[k].head.x+\
+				this->templates[k].center.x)/2 - minX,(this->templates[k].head.y+\
+				this->templates[k].center.y)/2 - minY);
+			this->keepLargestBlob(thrshRoi,templateMid,tmplArea);
 			colorRoi.copyTo(allPeople[k].pixels,thrshRoi);
 		}
 		// SAVE IT IN THE STRUCTURE OF FOREGOUND IMAGES
@@ -324,11 +342,9 @@ float tmplArea){
 	cv::findContours(thresh,contours,CV_RETR_EXTERNAL,CV_CHAIN_APPROX_SIMPLE);
 	cv::drawContours(thresh,contours,-1,cv::Scalar(255,255,255),CV_FILLED);
 	std::cout<<"Number of contours: "<<contours.size()<<std::endl;
-
 	if(contours.size() == 1){
 		return;
 	}
-
 	int contourIdx =-1;
 	float minDist = thresh.cols*thresh.rows;
 	for(size_t i=0; i<contours.size(); i++){
@@ -342,7 +358,7 @@ float tmplArea){
 		}
 		float ptDist = dist(center,cv::Point2f((maxX+minX)/2,(maxY+minY)/2));
 		float area   = (maxX-minX)*(maxY-minY);
-		if(ptDist<minDist && area>=tmplArea){
+		if(ptDist<minDist && area>=tmplArea/2){
 			contourIdx = i;
 			minDist    = ptDist;
 		}
@@ -379,7 +395,7 @@ void peopleDetector::extractDataRow(std::deque<unsigned> &existing, IplImage *bg
 			featureExtractor::people());
 	this->allForegroundPixels(allPeople, existing, bg, 7.0);
 
-	//GET ONLY THE IMAGE NAME OUT THE CURRENT IMAGE'S NAME
+	// GET ONLY THE IMAGE NAME OUT THE CURRENT IMAGE'S NAME
 	unsigned pos1       = (this->current->sourceName).find_last_of("/\\");
 	std::string imgName = (this->current->sourceName).substr(pos1+1);
 	unsigned pos2       = imgName.find_last_of(".");
@@ -406,6 +422,7 @@ void peopleDetector::extractDataRow(std::deque<unsigned> &existing, IplImage *bg
 			allPeople[i].pixels.rows/2.0+allPeople[i].borders[2]);
 		this->extractor->rotate2Zero(rotAngle,cv::Mat(),rotBorders,absRotCenter,\
 			featureExtractor::TEMPLATE,this->templates[i].points);
+
 		// RESET THE POSITION OF THE HEAD IN THE ROATED TEMPLATE
 		this->templates[i].head = cv::Point2f((this->templates[i].points[12].x+\
 			this->templates[i].points[14].x)/2,(this->templates[i].points[12].y+\
@@ -625,9 +642,10 @@ std::deque<unsigned> peopleDetector::fixLabels(std::deque<unsigned> existing){
 			if(!genTemplate2((*index).annos[position].location,persHeight,camHeight,templ)){
 				continue;
 			}
-			finExisting.push_back(width*points[k].y + points[k].x);
 			cv::Point2f feet = (*index).annos[position].location;
 			cv::Point2f head = this->headLocation(feet);
+//			finExisting.push_back(width*points[k].y + points[k].x);
+			finExisting.push_back(width*feet.y + feet.x);
 
 			// SAVE THE TARGET LABEL
 			cv::Mat tmp = cv::Mat::zeros(1,4,CV_32FC1);
@@ -712,7 +730,8 @@ const FLOAT logBGProb,const vnl_vector<FLOAT> &logSumPixelBGProb){
 
 	// DILATE A BIT THE BACKGROUND SO THE BACKGROUND NOISE GOES NICELY
 	IplImage *bg = vec2img((imgVec-bgVec).apply(fabs));
-	cvErode(bg,bg,NULL,2);
+	cvErode(bg,bg,NULL,3);
+	cvDilate(bg,bg,NULL,3);
 
 	//7') EXTRACT FEATURES FOR THE CURRENTLY DETECTED LOCATIONS
 	cout<<"Number of templates: "<<existing.size()<<endl;
@@ -801,6 +820,20 @@ float offsetY){
 				}
 			}
 		}
+		for(unsigned i=0; i<this->templates[k].points.size(); i++){
+			if(this->templates[k].points[i].x-offsetX>maxX){
+				this->templates[k].points[i].x = maxX+offsetX;
+			}
+			if(this->templates[k].points[i].x-offsetX<minX){
+				this->templates[k].points[i].x = minX+offsetX;
+			}
+			if(this->templates[k].points[i].y-offsetY>maxY){
+				this->templates[k].points[i].y = maxY+offsetY;
+			}
+			if(this->templates[k].points[i].y-offsetY<minY){
+				this->templates[k].points[i].y = minY+offsetY;
+			}
+		}
 	}else{
 		minX = this->templates[k].extremes[0]-offsetX;
 		maxX = this->templates[k].extremes[1]-offsetX;
@@ -811,6 +844,7 @@ float offsetY){
 	float middleTop = (minX+maxX)*percent;
 	float middleBot = (minX+maxX)*percent;
 	if((middleTop-minX)<minsize){
+		this->templates[k].extremes = this->templateExtremes(this->templates[k].points);
 		return;
 	}
 	if(!thresholded.empty()){
@@ -828,10 +862,10 @@ float offsetY){
 	// CHANGE TEMPLATE
 	for(unsigned i=0; i<this->templates[k].points.size(); i++){
 		if(this->featurePart == peopleDetector::TOP &&\
-		(this->templates[k].points[i].x-offsetX)>=middleTop){
+		(this->templates[k].points[i].x-offsetX)>middleTop){
 			this->templates[k].points[i].x = middleTop+offsetX;
 		}else if(this->featurePart==peopleDetector::BOTTOM &&\
-		(this->templates[k].points[i].x-offsetX)<=middleBot){
+		(this->templates[k].points[i].x-offsetX)<middleBot){
 			this->templates[k].points[i].x = middleBot+offsetX;
 		}
 	}

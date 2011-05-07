@@ -16,48 +16,90 @@ class featureExtractor {
 		/** Structure for storing keypoints and descriptors.
 		 */
 		struct keyDescr {
-			cv::KeyPoint keys;
-			std::deque<float> descr;
-			~keyDescr(){
-				if(!this->descr.empty()){
-					this->descr.clear();
+			public:
+				cv::KeyPoint keys;
+				std::deque<float> descr;
+				keyDescr(){};
+				~keyDescr(){
+					if(!this->descr.empty()){
+						this->descr.clear();
+					}
 				}
-			}
+				keyDescr(const keyDescr &kdescr){
+					this->keys  = kdescr.keys;
+					this->descr = kdescr.descr;
+				}
+				void operator=(const keyDescr &kdescr){
+					this->keys  = kdescr.keys;
+					this->descr = kdescr.descr;
+				}
 		};
 		/** Structure containing images of the size of the detected people.
 		 */
 		struct people{
-			cv::Point2f absoluteLoc;
-			cv::Point2f relativeLoc;
-			std::deque<unsigned> borders;
-			cv::Mat_<cv::Vec3b> pixels;
-			people(){
-				this->absoluteLoc = cv::Point2f(0,0);
-				this->relativeLoc = cv::Point2f(0,0);
-			}
-			~people(){
-				if(!this->borders.empty()){
-					this->borders.clear();
+			public:
+				cv::Point2f absoluteLoc;
+				cv::Point2f relativeLoc;
+				std::deque<unsigned> borders;
+				cv::Mat_<cv::Vec3b> pixels;
+				people(){
+					this->absoluteLoc = cv::Point2f(0,0);
+					this->relativeLoc = cv::Point2f(0,0);
 				}
-				if(!this->pixels.empty()){
-					this->pixels.release();
+				~people(){
+					if(!this->borders.empty()){
+						this->borders.clear();
+					}
+					if(!this->pixels.empty()){
+						this->pixels.release();
+					}
 				}
-			}
+				people(const people &person){
+					this->absoluteLoc = person.absoluteLoc;
+					this->relativeLoc = person.relativeLoc;
+					this->borders     = person.borders;
+					if(!this->pixels.empty()){
+						this->pixels.release();
+					}
+					person.pixels.copyTo(this->pixels);
+				}
+				void operator=(const people &person){
+					this->absoluteLoc = person.absoluteLoc;
+					this->relativeLoc = person.relativeLoc;
+					this->borders     = person.borders;
+					if(!this->pixels.empty()){
+						this->pixels.release();
+					}
+					person.pixels.copyTo(this->pixels);
+				}
 		};
 		/** Structure to store templates so they don't get recomputed all the time.
 		 */
 		struct templ{
-			cv::Point2f center;
-			cv::Point2f head;
-			std::deque<float> extremes;
-			std::vector<cv::Point2f> points;
-			templ(cv::Point theCenter){
-				this->center = theCenter;
-			}
-			~templ(){
-				this->extremes.clear();
-				this->points.clear();
-			}
+			public:
+				cv::Point2f center;
+				cv::Point2f head;
+				std::deque<float> extremes;
+				std::vector<cv::Point2f> points;
+				templ(cv::Point theCenter){
+					this->center = theCenter;
+				}
+				~templ(){
+					this->extremes.clear();
+					this->points.clear();
+				}
+				templ(const templ &aTempl){
+					this->center   = aTempl.center;
+					this->head     = aTempl.head;
+					this->extremes = aTempl.extremes;
+					this->points   = aTempl.points;
+				}
+				void operator=(const templ &aTempl){
+					this->center   = aTempl.center;
+					this->head     = aTempl.head;
+					this->extremes = aTempl.extremes;
+					this->points   = aTempl.points;
+				}
 		};
 		/** All available feature types.
 		 */
@@ -196,6 +238,9 @@ class featureExtractor {
 		 * The SIFT dictionary loaded as from the file where is stored.
 		 */
 		cv::Mat dictionarySIFT;
+		//======================================================================
+	private:
+		DISALLOW_COPY_AND_ASSIGN(featureExtractor);
 };
 
 #endif /* FEATUREEXTRACTOR_H_ */

@@ -11,7 +11,6 @@
 #include "eigenbackground/src/Tracker.hh"
 #include "featureExtractor.h"
 #include "annotationsHandle.h"
-
 /** Class used for detecting useful features in the images that can be later
  * used for training and classifying.
  */
@@ -49,8 +48,8 @@ class peopleDetector:public Tracker{
 		std::deque<unsigned> fixLabels(std::deque<unsigned> existing);
 		/** Returns the size of a window around a template centered in a given point.
 		 */
-		void templateWindow(cv::Size imgSize, int &minX, int &maxX, int &minY,\
-			int &maxY, featureExtractor::templ aTempl, int tplBorder=100);
+		void templateWindow(IplImage *img,cv::Size imgSize,int &minX,int &maxX,\
+			int &minY,int &maxY,featureExtractor::templ aTempl,int tplBorder=150);
 		/** Initializes the parameters of the tracker.
 		 */
 		void init(std::string dataFolder, std::string theAnnotationsFile,\
@@ -171,5 +170,8 @@ class peopleDetector:public Tracker{
 		 * The string that appears in the name of the images.
 		 */
 		std::vector<featureExtractor::templ> templates;
+		//======================================================================
+	private:
+		DISALLOW_COPY_AND_ASSIGN(peopleDetector);
 };
 #endif /* PEOPLEDETECTOR_H_ */

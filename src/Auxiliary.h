@@ -5,7 +5,6 @@
  */
 #ifndef AUXILIARY_H_
 #define AUXILIARY_H_
-using namespace std;
 #include <opencv2/opencv.hpp>
 
 /** Converts a pointer to an IplImage to an OpenCV Mat.
@@ -20,23 +19,23 @@ IplImage* mat2ipl(cv::Mat image);
  */
 void normalizeMat(cv::Mat &matrix);
 
-/* Changes the values of the matrix to be between [-1,1].
+/** Changes the values of the matrix to be between [-1,1].
  */
 void range1Mat(cv::Mat &matrix);
 
-/* Write a 2D-matrix to a text file (first row is the dimension of the matrix).
+/** Write a 2D-matrix to a text file (first row is the dimension of the matrix).
  */
 void mat2TxtFile(cv::Mat matrix, char* fileName, bool append = false);
 
-/* Reads a 2D-matrix from a text file (first row is the dimension of the matrix).
+/** Reads a 2D-matrix from a text file (first row is the dimension of the matrix).
  */
 void txtFile2Mat(cv::Mat &matrix, char* fileName);
 
-/* Write a 2D-matrix to a binary file (first the dimension of the matrix).
+/** Write a 2D-matrix to a binary file (first the dimension of the matrix).
  */
 void mat2BinFile(cv::Mat matrix, char* fileName, bool append = false);
 
-/* Reads a 2D-matrix from a binary file (first the dimension of the matrix).
+/** Reads a 2D-matrix from a binary file (first the dimension of the matrix).
  */
 void binFile2mat(cv::Mat &matrix, char* fileName);
 /** Convert int to string.

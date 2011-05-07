@@ -4,11 +4,11 @@
  * Copyright (c) 2010-2011 Silvia-Laura Pintea. All rights reserved.
  * Feel free to use this code, but please retain the above copyright notice.
  */
-#include "cholesky.h"
 #include <iostream>
 #include <cmath>
 #include <err.h>
 #include <exception>
+#include "cholesky.h"
 //==============================================================================
 /** Checks to see if the decomposition was already done (returns true if it is
  * done).

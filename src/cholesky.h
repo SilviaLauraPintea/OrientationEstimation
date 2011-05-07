@@ -7,6 +7,7 @@
 #ifndef CHOLESKY_H_
 #define CHOLESKY_H_
 #include <opencv2/opencv.hpp>
+#include "eigenbackground/src/defines.hh"
 
 /** The \c Cholesky decomposition is used to solve Ax = b; if A is symmetric and
  * positive definite => we can decompose A = LL* and instead of solving Ax = b,
@@ -61,5 +62,8 @@ class cholesky {
 	public:
 		unsigned n;
 		cv::Mat covar;
+	//==========================================================================
+	private:
+		DISALLOW_COPY_AND_ASSIGN(cholesky);
 };
 #endif /* CHOLESKY_H_ */

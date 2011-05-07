@@ -4,8 +4,8 @@
  * Feel free to use this code, but please retain the above copyright notice.
  */
 #include "eigenbackground/src/Helpers.hh"
-#include "featureExtractor.h"
 #include "Auxiliary.h"
+#include "featureExtractor.h"
 //==============================================================================
 /** Checks to see if a pixel's x coordinate is on a scanline.
  */
@@ -13,8 +13,15 @@ struct onScanline{
 	public:
 		unsigned pixelY;
 		onScanline(const unsigned pixelY){this->pixelY=pixelY;}
+		virtual ~onScanline(){};
 		bool operator()(const scanline_t line)const{
 			return (line.line == this->pixelY);
+		}
+		onScanline(const onScanline &on){
+			this->pixelY = on.pixelY;
+		}
+		void operator=(const onScanline &on){
+			this->pixelY = on.pixelY;
 		}
 };
 //==============================================================================
@@ -191,11 +198,17 @@ aTempl, cv::Rect roi){
 	gray *= 255.0;
 	gray.convertTo(gray,CV_8UC1);
 	cv::medianBlur(gray, gray, 3);
+	if(this->plot){
+		cv::imshow("part",large);
+		cv::waitKey(0);
+	}
+
+	//
 
 	// MATCH SOME HEADS ON TOP AND GET THE RESULTS
 	int radius     = std::min(up.width,up.height)/2;
-	cv::Mat pixels = cv::Mat::zeros(cv::Size(5*30*30+2,1),CV_32FC1);
-	for(int i=0; i<4; i++){
+	cv::Mat pixels = cv::Mat::zeros(cv::Size(12*30*30+2,1),CV_32FC1);
+	for(int i=0; i<12; i++){
 		cv::Mat result,small,tmple,dummy,resized;
 		std::string imgName = "templates/templ"+int2string(i)+".jpg";
 		tmple               = cv::imread(imgName.c_str(),0);
@@ -355,7 +368,7 @@ cv::Mat featureExtractor::getPointsGrid(cv::Mat feature, cv::Rect roi,\
 featureExtractor::templ aTempl, cv::Mat test){
 	// GET THE GRID SIZE FROM THE TEMPLATE SIZE
 	unsigned no     = 10;
-	cv::Mat rowData = cv::Mat::zeros(cv::Size(no*no+1,1),CV_32FC1);
+	cv::Mat rowData = cv::Mat::zeros(cv::Size(no*no+2,1),CV_32FC1);
 	float rateX    = (aTempl.extremes[1]-aTempl.extremes[0])/static_cast<float>(no);
 	float rateY    = (aTempl.extremes[3]-aTempl.extremes[2])/static_cast<float>(no);
 
@@ -458,7 +471,7 @@ cv::Rect roi, cv::Size foregrSize, float rotAngle){
 	unsigned gaborNo    = std::ceil(feature.rows/height);
 	int gaborRows       = std::ceil(feature.rows/gaborNo);
 	unsigned resultCols = foregrSize.width*foregrSize.height;
-	cv::Mat result      = cv::Mat::zeros(cv::Size(2*resultCols+1,1),CV_32FC1);
+	cv::Mat result      = cv::Mat::zeros(cv::Size(gaborNo*resultCols+2,1),CV_32FC1);
 	cv::Point2f rotCenter(foregrSize.width/2+roi.x,foregrSize.height/2+roi.y);
 	std::vector<cv::Point2f> dummy;
 	for(unsigned i=0; i<gaborNo; i++){
@@ -770,7 +783,7 @@ cv::Mat featureExtractor::extractSURF(cv::Mat image){
 	// SORT THE REMAINING DESCRIPTORS SO WE DON'T NEED TO DO THAT LATER
 	std::sort(kD.begin(),kD.end(),(&featureExtractor::compareDescriptors));
 
-	// WRITE THEM IN THE MATRIX AS FOLLOWS:
+	// WRITE THEM IN THE MATRIX AS FOLLOWS (ADD x, y COORD ON THE LAST 2 COLS):
 	cv::Mat surfs = cv::Mat::zeros(cv::Size(aSURF.descriptorSize()+2,kD.size()),\
 					CV_32FC1);
 	for(std::size_t i=0; i<kD.size();i++){
@@ -1015,7 +1028,7 @@ cv::Rect roi){
 		aTempl.extremes[0],aTempl.extremes[3]-aTempl.extremes[2]);
 	cv::Mat tmp(pixels, up), large;
 	cv::resize(tmp,large,cv::Size(64,64),0,0,cv::INTER_CUBIC);
-	cv::HOGDescriptor hogD(large.size(),cv::Size(16,16),cv::Size(8,8),\
+	cv::HOGDescriptor hogD(large.size(),cv::Size(32,32),cv::Size(8,8),\
 		cv::Size(8,8),9,1,-1,cv::HOGDescriptor::L2Hys, 0.2, true);
 	std::vector<float> descriptors;
 

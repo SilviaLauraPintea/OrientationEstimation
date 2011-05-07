@@ -5,7 +5,6 @@
  */
 #ifndef ANNOTATIONSHANDLE_H_
 #define ANNOTATIONSHANDLE_H_
-using namespace std;
 #include <deque>
 #include <opencv2/opencv.hpp>
 #include <boost/thread.hpp>
@@ -22,45 +21,77 @@ class annotationsHandle {
 		/** A structure that stores a single annotation for a specific person.
  		 */
 		struct ANNOTATION {
-			short int id;
-			cv::Point2f location;
-			std::deque<unsigned int> poses;
-			ANNOTATION(){
-				this->id    = 0;
-				this->poses = std::deque<unsigned int>(5,0);
-			}
-			~ANNOTATION(){
-				if(!this->poses.empty()){
-					this->poses.clear();
+			public:
+				short int id;
+				cv::Point2f location;
+				std::deque<unsigned int> poses;
+				ANNOTATION(){
+					this->id    = 0;
+					this->poses = std::deque<unsigned int>(5,0);
 				}
-			}
+				~ANNOTATION(){
+					if(!this->poses.empty()){
+						this->poses.clear();
+					}
+				}
+				ANNOTATION(const ANNOTATION &anno){
+					this->id       = anno.id;
+					this->location = anno.location;
+					this->poses    = anno.poses;
+				}
+				void operator=(const ANNOTATION &anno){
+					this->id       = anno.id;
+					this->location = anno.location;
+					this->poses    = anno.poses;
+				}
 		};
 		/** Structure containing a vector of annotations for each image.
 		 */
 		struct FULL_ANNOTATIONS {
-			std::string imgFile;
-			std::deque<annotationsHandle::ANNOTATION> annos;
-			FULL_ANNOTATIONS(){
-				this->imgFile = "";
-			}
-			~FULL_ANNOTATIONS(){
-				if(!this->annos.empty()){
-					this->annos.clear();
+			public:
+				std::string imgFile;
+				std::deque<annotationsHandle::ANNOTATION> annos;
+				FULL_ANNOTATIONS(){
+					this->imgFile = "";
 				}
-			}
+				~FULL_ANNOTATIONS(){
+					if(!this->annos.empty()){
+						this->annos.clear();
+					}
+				}
+				FULL_ANNOTATIONS(const FULL_ANNOTATIONS &fanno){
+					this->imgFile = fanno.imgFile;
+					this->annos   = fanno.annos;
+				}
+				void operator=(const FULL_ANNOTATIONS &fanno){
+					this->imgFile = fanno.imgFile;
+					this->annos   = fanno.annos;
+				}
 		};
 		/** Shows which id from the old annotations is assigned to which id from
 		 * the new annotations based on what minimal distance.
 		 */
 		struct ASSIGNED {
-			short int id;
-			short int to;
-			float dist;
-			ASSIGNED(){
-				this->id   = 0;
-				this->to   = 0;
-				this->dist = 0.0;
-			}
+			public:
+				short int id;
+				short int to;
+				float dist;
+				ASSIGNED(){
+					this->id   = 0;
+					this->to   = 0;
+					this->dist = 0.0;
+				}
+				virtual ~ASSIGNED(){};
+				ASSIGNED(const ASSIGNED &assig){
+					this->id   = assig.id;
+					this->to   = assig.to;
+					this->dist = assig.dist;
+				}
+				void operator=(const ASSIGNED &assig){
+					this->id   = assig.id;
+					this->to   = assig.to;
+					this->dist = assig.dist;
+				}
 		};
 		//======================================================================
 		annotationsHandle(){
@@ -206,6 +237,9 @@ class annotationsHandle {
 		 * The strings corresponding to the names of the poses
 		 */
 		static std::deque<std::string> poseNames;
+		//======================================================================
+	private:
+		DISALLOW_COPY_AND_ASSIGN(annotationsHandle);
 };
 
 #endif /* ANNOTATIONSHANDLE_H_ */

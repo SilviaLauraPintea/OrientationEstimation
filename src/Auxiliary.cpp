@@ -3,7 +3,6 @@
  * Copyright (c) 2010-2011 Silvia-Laura Pintea. All rights reserved.
  * Feel free to use this code, but please retain the above copyright notice.
  */
-#include "Auxiliary.h"
 #include <vector>
 #include <string>
 #include <sstream>
@@ -13,12 +12,9 @@
 #include <dirent.h>
 #include <iostream>
 #include <fstream>
-#include <data/XmlFile.hh>
-#include <boost/date_time/posix_time/ptime.hpp>
-#include <boost/date_time/posix_time/time_parsers.hpp>
-#include <boost/date_time/posix_time/time_formatters.hpp>
-#include "eigenbackground/src/Helpers.hh"
 #include "eigenbackground/src/defines.hh"
+#include "eigenbackground/src/Helpers.hh"
+#include "Auxiliary.h"
 //==============================================================================
 /** Converts a pointer to an IplImage to an OpenCV Mat.
  */
@@ -55,7 +51,7 @@ void normalizeMat(cv::Mat &matrix){
 	}
 }
 //==============================================================================
-/* Changes the values of the matrix to be between [-1,1].
+/** Changes the values of the matrix to be between [-1,1].
  */
 void range1Mat(cv::Mat &matrix){
 	normalizeMat(matrix);
@@ -63,7 +59,7 @@ void range1Mat(cv::Mat &matrix){
 	matrix *= 2.0;
 }
 //==============================================================================
-/* Write a 2D-matrix to a text file (first row is the dimension of the matrix).
+/** Write a 2D-matrix to a text file (first row is the dimension of the matrix).
  */
 void mat2TxtFile(cv::Mat matrix, char* fileName, bool append){
 	std::ofstream dictOut;
@@ -90,7 +86,7 @@ void mat2TxtFile(cv::Mat matrix, char* fileName, bool append){
 	dictOut.close();
 }
 //==============================================================================
-/* Reads a 2D-matrix from a text file (first row is the dimension of the matrix).
+/** Reads a 2D-matrix from a text file (first row is the dimension of the matrix).
  */
 void txtFile2Mat(cv::Mat &matrix, char* fileName){
 	std::ifstream dictFile(fileName);
@@ -132,7 +128,7 @@ void txtFile2Mat(cv::Mat &matrix, char* fileName){
 	matrix.convertTo(matrix, CV_32FC1);
 }
 //==============================================================================
-/* Write a 2D-matrix to a binary file (first the dimension of the matrix).
+/** Write a 2D-matrix to a binary file (first the dimension of the matrix).
  */
 void mat2BinFile(cv::Mat matrix, char* fileName, bool append){
 	std::ofstream mxFile;
@@ -164,7 +160,7 @@ void mat2BinFile(cv::Mat matrix, char* fileName, bool append){
 	mxFile.close();
 }
 //==============================================================================
-/* Reads a 2D-matrix from a binary file (first the dimension of the matrix).
+/** Reads a 2D-matrix from a binary file (first the dimension of the matrix).
  */
 void binFile2mat(cv::Mat &matrix, char* fileName){
 	if(!file_exists(fileName)){

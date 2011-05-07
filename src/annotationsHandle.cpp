@@ -3,7 +3,6 @@
  * Copyright (c) 2010-2011 Silvia-Laura Pintea. All rights reserved.
  * Feel free to use this code, but please retain the above copyright notice.
  */
-#include "annotationsHandle.h"
 #include <err.h>
 #include <iostream>
 #include <exception>
@@ -20,9 +19,10 @@
 	#include <boost/thread/detail/lock.hpp>
 #endif
 #include <boost/thread/xtime.hpp>
-#include "eigenbackground/src/Annotate.hh"
 #include "eigenbackground/src/Helpers.hh"
+#include "eigenbackground/src/Annotate.hh"
 #include "Auxiliary.h"
+#include "annotationsHandle.h"
 //==============================================================================
 /** Initializes all the values of the class variables.
  */
