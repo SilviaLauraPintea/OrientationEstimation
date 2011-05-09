@@ -175,6 +175,10 @@ class peopleDetector:public Tracker{
 		 * The string that appears in the name of the images.
 		 */
 		std::vector<featureExtractor::templ> templates;
+		/** @var dataMotionVectors
+		 * The motion vectors for all the images in the data matrix
+		 */
+		std::deque<float> dataMotionVectors;
 		//======================================================================
 	private:
 		DISALLOW_COPY_AND_ASSIGN(peopleDetector);

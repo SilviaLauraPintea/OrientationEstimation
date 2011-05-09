@@ -16,7 +16,7 @@ class classifyImages {
 		//======================================================================
 		/** All available uses of this class.
 		 */
-		enum USES {EVALUATE, BUILD_DICTIONARY, TEST};
+		enum USES {EVALUATE, BUILD_DICTIONARY, TEST, BUILD_DATA};
 		/** Constructor & destructor of the class.
 		 */
 		classifyImages(int argc, char **argv, classifyImages::USES use = \
@@ -30,27 +30,25 @@ class classifyImages {
 		/** Creates the training data (according to the options), the labels and
 		 * trains the a \c GaussianProcess on the data.
 		 */
-		void trainGP(annotationsHandle::POSE what);
+		void trainGP(annotationsHandle::POSE what,bool fromFolder);
 
 		/** Creates the test data and applies \c GaussianProcess prediction on the test
 		 * data.
 		 */
-		void predictGP(std::deque<gaussianProcess::prediction> &predictionsSin,\
-			std::deque<gaussianProcess::prediction> &predictionsCos,\
-			annotationsHandle::POSE what);
+		std::deque<float> predictGP(std::deque<gaussianProcess::prediction>\
+			&predictionsSin,std::deque<gaussianProcess::prediction> &predictionsCos,\
+			annotationsHandle::POSE what,bool fromFolder);
 
 		/** Initialize the options for the Gaussian Process regression.
 		 */
 		void init(float theNoise, float theLength, featureExtractor::FEATURE \
 			theFeature, gaussianProcess::kernelFunction theKFunction = \
-			&gaussianProcess::sqexp, bool fromFolder=true, bool store=true,\
-			bool toUseGT = false);
+			&gaussianProcess::sqexp, bool toUseGT = false);
 
 		/** Evaluate one prediction versus its target.
 		 */
-		void evaluate(std::deque<gaussianProcess::prediction> predictionsSin,\
-			std::deque<gaussianProcess::prediction> predictionsCos,\
-			float &error, float &normError, float &meanDiff);
+		void evaluate(std::deque<float> prediAngles,float &error,float &normError,\
+			float &meanDiff);
 
 		/** Do k-fold cross-validation by splitting the training folder into
 		 * training-set and validation-set.
@@ -59,15 +57,14 @@ class classifyImages {
 
 		/** Does the cross-validation and computes the average error over all folds.
 		 */
-		float runCrossValidation(unsigned k, int colorSp = CV_BGR2Lab,\
-			bool onTrain = false);
-
+		float runCrossValidation(unsigned k,annotationsHandle::POSE what,\
+			int colorSp = CV_BGR2Lab,bool onTrain = false);
 		/** Runs the final evaluation (test).
 		 */
-		void runTest(int colorSp = CV_BGR2Lab);
-
-		/** Try to optimize the prediction of the angle considering the variance of sin
-		 * and cos.
+		std::deque<float> runTest(int colorSp,annotationsHandle::POSE what,\
+			float &normError);
+		/** Try to optimize the prediction of the angle considering the variance
+		 * of sin and cos.
 		 */
 		float optimizePrediction(gaussianProcess::prediction predictionsSin,\
 			gaussianProcess::prediction predictionsCos);
@@ -79,7 +76,17 @@ class classifyImages {
 		 * datasets by adding the the new data rows at the end to the stored
 		 * matrix.
 		 */
-		void buildDataMatrix();
+		void buildDataMatrix(int colorSp);
+		/** Run over multiple settings of the parameters to find the best ones.
+		 */
+		friend void parameterSetting(std::string errorsOnTrain,std::string errorsOnTest,\
+			classifyImages &classi,int argc,char** argv,featureExtractor::FEATURE feat,\
+			int colorSp,bool useGt,annotationsHandle::POSE what);
+		/** Combine the output of multiple classifiers (only on testing, no multiple
+		 * predictions).
+		 */
+		friend void multipleClassifier(int colorSp,bool load,annotationsHandle::POSE what,\
+			classifyImages &classi);
 		//======================================================================
 	protected:
 		/** @var features
@@ -180,7 +187,7 @@ class classifyImages {
 		/** @var storeData
 		 * If data is stored locally or not.
 		 */
-		bool storeData;
+		bool loadData;
 
 		/** @var modelName
 		 * The name of the model the be loaded/saved.

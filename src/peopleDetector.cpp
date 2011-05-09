@@ -26,7 +26,7 @@ bool buildBg):Tracker(argc, argv, 20, buildBg, true){
 	if(argc == 3){
 		std::string dataPath  = std::string(argv[1]);
 		std::string imgString = std::string(argv[2]);
-		if(datasetPath[dataPath.size()-1]!='/'){
+		if(dataPath[dataPath.size()-1]!='/'){
 			dataPath += "/";
 		}
 		this->plot           = false;
@@ -72,6 +72,7 @@ peopleDetector::~peopleDetector(){
 		cvReleaseImage(&this->borderedIpl);
 		this->borderedIpl = NULL;
 	}
+	this->dataMotionVectors.clear();
 }
 //==============================================================================
 /** Checks the image name (used to find the corresponding labels for each image).
@@ -100,6 +101,7 @@ struct compareImg{
  */
 void peopleDetector::init(std::string dataFolder, std::string theAnnotationsFile,\
 featureExtractor::FEATURE feat, bool readFromFolder){
+	this->dataMotionVectors.clear();
 	this->initProducer(readFromFolder, const_cast<char*>(dataFolder.c_str()));
 	if(this->borderedIpl){
 		cvReleaseImage(&this->borderedIpl);
@@ -123,7 +125,8 @@ featureExtractor::FEATURE feat, bool readFromFolder){
 			(theAnnotationsFile.c_str()), this->targetAnno);
 	}
 	this->lastIndex = 0;
-	if(feat==featureExtractor::SIFT_DICT || feat==featureExtractor::SIFT){
+	if(feat==featureExtractor::SIFT_DICT || (feat==featureExtractor::SIFT &&\
+	!this->onlyExtract)){
 		this->extractor->initSIFT(this->datasetPath+"SIFT_"+this->imageString+".bin");
 	}
 	if(feat==featureExtractor::SIFT_DICT){
@@ -386,9 +389,6 @@ unsigned border){
 			IPL_BORDER_REPLICATE,cvScalarAll(0));
 	}
 
-//cvShowImage("withborder",this->borderedIpl);
-//cvWaitKey(0);
-
 	// FIX THE LABELS TO CORRESPOND TO THE PEOPLE DETECTED IN THE IMAGE
 	if(!this->targetAnno.empty() && !this->useGroundTruth){
 		existing = this->fixLabels(existing);
@@ -467,11 +467,14 @@ unsigned border){
 
 		// ANF FINALLY EXTRACT THE DATA ROW
 		cv::Mat dataRow = this->extractor->getDataRow(cv::Mat(this->borderedIpl),\
-							this->templates[i],roi,allPeople[i],thresholded,keys,\
-							imgName,absRotCenter,rotBorders,rotAngle);
+			this->templates[i],roi,allPeople[i],thresholded,keys,imgName,\
+			absRotCenter,rotBorders,rotAngle);
+		float direction = this->motionVector(this->templates[i].head,\
+			this->templates[i].center);
+		this->dataMotionVectors.push_back(direction);
+
 		if(this->tracking && !this->entireNext.empty()){
-			dataRow.at<float>(0,dataRow.cols-1) = this->motionVector(\
-				this->templates[i].head,this->templates[i].center);
+			dataRow.at<float>(0,dataRow.cols-1) = direction;
 			cv::Mat nextImg(this->entireNext,roi);
 			nextImg = this->extractor->rotate2Zero(rotAngle,nextImg.clone(),\
 					rotBorders,absRotCenter,featureExtractor::MATRIX,keys);
@@ -742,45 +745,48 @@ const FLOAT logBGProb,const vnl_vector<FLOAT> &logSumPixelBGProb,unsigned border
 	//5) UPDATE THE TRACKS (WHERE ALL THE INFORMATION IS STORED FOR ALL IMAGES)
 	this->updateTracks(imgNum, existing);
 
-	//6) PLOT TRACKS FOR THE FIRST IMAGE
-	if(this->plot){
-		for(unsigned i=0; i<tracks.size(); ++i){
-			if(this->tracks[i].imgID.size() > MIN_TRACKLEN){
-				if(imgNum-this->tracks[i].imgID.back() < 2){
-					this->plotTrack(src,tracks[i],i,(unsigned)1);
-				}
-			}
-		}
-	}
-
 	// DILATE A BIT THE BACKGROUND SO THE BACKGROUND NOISE GOES NICELY
 	IplImage *bg = vec2img((imgVec-bgVec).apply(fabs));
 	cvErode(bg,bg,NULL,3);
-	cvDilate(bg,bg,NULL,3);
+	cvDilate(bg,bg,NULL,4);
 
-	//7') EXTRACT FEATURES FOR THE CURRENTLY DETECTED LOCATIONS
+	//7) SHOW THE FOREGROUND POSSIBLE LOCATIONS AND PLOT THE TEMPLATES
+	cerr<<"no. of detected people: "<<existing.size()<<endl;
+	if(this->plot){
+		IplImage *tmpBg, *tmpSrc;
+		tmpBg  = cvCloneImage(bg);
+		tmpSrc = cvCloneImage(src);
+		// PLOT HULL
+		this->plotHull(bg, this->priorHull);
+		// PLOT TRACKS FOR THE FIRST IMAGE
+		for(unsigned i=0; i<tracks.size(); ++i){
+			if(this->tracks[i].imgID.size() > MIN_TRACKLEN){
+				if(imgNum-this->tracks[i].imgID.back() < 2){
+					this->plotTrack(tmpSrc,tracks[i],i,(unsigned)1);
+				}
+			}
+		}
+		// PLOT DETECTIONS
+		for(unsigned i=0; i!=existing.size(); ++i){
+			cv::Point2f pt = this->cvPoint(existing[i],this->current->img->width);
+			plotTemplate2(tmpBg, pt, persHeight, camHeight, CV_RGB(255,255,255));
+			plotScanLines(tmpSrc, mask, CV_RGB(0,255,0), 0.3);
+		}
+		cvShowImage("bg", tmpBg);
+		cvShowImage("image",tmpSrc);
+		cvWaitKey(0);
+		cvReleaseImage(&tmpBg);
+		cvReleaseImage(&tmpSrc);
+	}
+
+	//8) EXTRACT FEATURES FOR THE CURRENTLY DETECTED LOCATIONS
 	cout<<"Number of templates: "<<existing.size()<<endl;
 	cvCopyMakeBorder(this->current->img,this->borderedIpl,cv::Point\
 		(border/2,border/2),IPL_BORDER_REPLICATE,cvScalarAll(0));
 	this->extractDataRow(existing, bg);
 	cout<<"Number of templates afterwards: "<<existing.size()<<endl;
 
-	//7) SHOW THE FOREGROUND POSSIBLE LOCATIONS AND PLOT THE TEMPLATES
-	cerr<<"no. of detected people: "<<existing.size()<<endl;
-	if(this->plot){
-		this->plotHull(bg, this->priorHull);
-		for(unsigned i=0; i!=existing.size(); ++i){
-			cv::Point2f pt = this->cvPoint(existing[i],this->current->img->width);
-			plotTemplate2(bg, pt, persHeight, camHeight, CV_RGB(255,255,255));
-			plotScanLines(src, mask, CV_RGB(0,255,0), 0.3);
-		}
-		cvShowImage("bg", bg);
-		cvShowImage("image",src);
-		cvWaitKey(0);
-	}
-
-
-	//8) WHILE NOT q WAS PRESSED PROCESS THE NEXT IMAGES
+	//9) WHILE NOT q WAS PRESSED PROCESS THE NEXT IMAGES
 	cvReleaseImage(&bg);
 	return this->imageProcessingMenu();
 }
@@ -961,7 +967,6 @@ void peopleDetector::start(bool readFromFolder, bool useGT, unsigned border){
 		unsigned index    = 0;
 		this->borderedIpl = cvCreateImage(cvSize(img->width+border,\
 			img->height+border), img->depth, img->nChannels);
-
 		while((this->current->img = this->producer->getFrame())){
 			this->current->sourceName = this->producer->getSource(-1);
 			this->current->index      = index;
@@ -1101,11 +1106,11 @@ float peopleDetector::rotationAngle(cv::Point2f headLocation,cv::Point2f feetLoc
 	return rotAngle;
 }
 //==============================================================================
-/*
+
 int main(int argc, char **argv){
 	peopleDetector feature(argc,argv,true,false);
 	feature.init(std::string(argv[1])+"/annotated_train",\
-		std::string(argv[1])+"/annotated_train.txt",featureExtractor::IPOINTS,true);
-	feature.start(true, false);
+		std::string(argv[1])+"/annotated_train.txt",featureExtractor::SIFT,true);
+	feature.start(true, true, 150);
 }
-*/
+

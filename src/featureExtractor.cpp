@@ -365,7 +365,7 @@ std::vector<cv::Point2f> &indices, cv::Rect roi, cv::Mat test){
 cv::Mat featureExtractor::getPointsGrid(cv::Mat feature, cv::Rect roi,\
 featureExtractor::templ aTempl, cv::Mat test){
 	// GET THE GRID SIZE FROM THE TEMPLATE SIZE
-	unsigned no     = 10;
+	unsigned no     = 30;
 	cv::Mat rowData = cv::Mat::zeros(cv::Size(no*no+2,1),CV_32FC1);
 	float rateX    = (aTempl.extremes[1]-aTempl.extremes[0])/static_cast<float>(no);
 	float rateY    = (aTempl.extremes[3]-aTempl.extremes[2])/static_cast<float>(no);
@@ -523,7 +523,7 @@ cv::Rect roi, cv::Size foregrSize, float rotAngle, int aheight){
 cv::Mat featureExtractor::getSIFT(cv::Mat feature,std::vector<cv::Point2f> templ,
 std::vector<cv::Point2f> &indices, cv::Rect roi, cv::Mat test){
 	// KEEP ONLY THE SIFT FEATURES THAT ARE WITHIN THE TEMPLATE
-	cv::Mat tmp = cv::Mat::zeros(cv::Size(feature.cols-2,feature.rows),CV_32FC1);
+	cv::Mat tmp      = cv::Mat::zeros(cv::Size(feature.cols-2,feature.rows),CV_32FC1);
 	unsigned counter = 0;
 	for(int y=0; y<feature.rows; y++){
 		float ptX = feature.at<float>(y,feature.cols-2);
@@ -890,7 +890,7 @@ cv::Rect roi){
 	aSIFT(gray, cv::Mat(), keypoints);
 
 	// WE USE THE SAME FUNCTION TO BUILD THE DICTIONARY ALSO
-	if(templ.size()!=0){
+	if(this->featureType==featureExtractor::SIFT_DICT){
 		sift = cv::Mat::zeros(keypoints.size(),aSIFT.descriptorSize(),CV_32FC1);
 		std::vector<cv::KeyPoint> goodKP;
 		for(std::size_t i=0; i<keypoints.size();i++){
@@ -907,9 +907,8 @@ cv::Rect roi){
 			cv::imshow("SIFT_DICT", image);
 			cv::waitKey(0);
 		}
-
 	// IF WE ONLY WANT TO STORE THE SIFT FEATURE WE NEED TO ADD THE x-S AND y-S
-	}else{
+	}else if(this->featureType == featureExtractor::SIFT){
 		sift = cv::Mat::zeros(keypoints.size(),aSIFT.descriptorSize()+2,CV_32FC1);
 		cv::Mat dummy1 = sift.colRange(0,aSIFT.descriptorSize());
 		cv::Mat dummy2;
@@ -937,7 +936,7 @@ cv::Rect roi){
 	}
 
 	// IF WE WANT TO STORE THE SIFT FEATURES THEN WE NEED TO STORE x AND y
-	if(templ.size()==0){
+	if(this->featureType==featureExtractor::SIFT){
 		for(std::size_t i=0; i<keypoints.size();i++){
 			sift.at<float>(i,aSIFT.descriptorSize())   = keypoints[i].pt.x;
 			sift.at<float>(i,aSIFT.descriptorSize()+1) = keypoints[i].pt.y;

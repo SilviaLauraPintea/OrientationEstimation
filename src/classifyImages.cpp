@@ -21,14 +21,13 @@ classifyImages::classifyImages(int argc, char **argv, classifyImages::USES use){
 	this->testFolder       = "";
 	this->annotationsTrain = "";
 	this->annotationsTest  = "";
-	this->readFromFolder   = true;
 	this->noise            = 0.01;
 	this->length           = 1.0;
 	this->kFunction        = &gaussianProcess::sqexp;
 	this->feature          = featureExtractor::EDGES;
 	this->features         = NULL;
 	this->foldSize		   = 5;
-	this->storeData 	   = true;
+	this->loadData 	       = false;
 	this->modelName        = "";
 	this->what             = use;
 	this->useGroundTruth   = false;
@@ -103,7 +102,12 @@ classifyImages::classifyImages(int argc, char **argv, classifyImages::USES use){
 			}
 		}
 
-		this->modelName = this->trainDir+"models/";
+		if(use == classifyImages::TEST){
+			this->loadData  = true;
+			this->modelName = "data/TEST/";
+		}else if(use == classifyImages::EVALUATE){
+			this->modelName = "data/EVALUATE/";
+		}
 		file_exists(this->modelName.c_str(), true);
 	}
 }
@@ -131,39 +135,41 @@ classifyImages::~classifyImages(){
  */
 void classifyImages::init(float theNoise, float theLength,\
 featureExtractor::FEATURE theFeature, gaussianProcess::kernelFunction theKFunction,\
-bool fromFolder, bool store, bool toUseGT){
+bool toUseGT){
 	this->noise          = theNoise;
 	this->length         = theLength;
 	this->kFunction      = theKFunction;
 	this->feature        = theFeature;
-	this->readFromFolder = fromFolder;
-	this->storeData      = store;
 	this->useGroundTruth = toUseGT;
 	switch(this->feature){
 		case(featureExtractor::IPOINTS):
-			this->modelName = this->trainDir+"models/"+"IPOINTS/";
+			this->modelName = "data/models/IPOINTS/";
 			file_exists(this->modelName.c_str(), true);
 			break;
 		case(featureExtractor::EDGES):
 			this->useGroundTruth = false;
-			this->modelName      = this->trainDir+"models/"+"EDGES/";
+			this->modelName      = "data/models/EDGES/";
 			file_exists(this->modelName.c_str(), true);
 			break;
 		case(featureExtractor::SURF):
-			this->modelName = this->trainDir+"models/"+"SURF/";
+			this->modelName = "data/models/SURF/";
 			file_exists(this->modelName.c_str(), true);
 			break;
 		case(featureExtractor::GABOR):
 			this->useGroundTruth = false;
-			this->modelName = this->trainDir+"models/"+"GABOR/";
+			this->modelName = "data/models/GABOR/";
 			file_exists(this->modelName.c_str(), true);
 			break;
 		case(featureExtractor::SIFT):
-			this->modelName = this->trainDir+"models/"+"SIFT/";
+			this->modelName = "data/models/SIFT/";
 			file_exists(this->modelName.c_str(), true);
 			break;
 		case(featureExtractor::PIXELS):
-			this->modelName = this->trainDir+"models/"+"PIXELS/";
+			this->modelName = "data/models/PIXELS/";
+			file_exists(this->modelName.c_str(), true);
+			break;
+		case(featureExtractor::HOG):
+			this->modelName = "data/models/HOG/";
 			file_exists(this->modelName.c_str(), true);
 			break;
 	}
@@ -172,7 +178,7 @@ bool fromFolder, bool store, bool toUseGT){
 /** Creates the training data (according to the options), the labels and
  * trains the a \c GaussianProcess on the data.
  */
-void classifyImages::trainGP(annotationsHandle::POSE what){
+void classifyImages::trainGP(annotationsHandle::POSE what, bool fromFolder){
 	if(!this->trainData.empty()){
 		this->trainData.release();
 	}
@@ -182,15 +188,14 @@ void classifyImages::trainGP(annotationsHandle::POSE what){
 	this->gpSin.init(this->kFunction);
 	this->gpCos.init(this->kFunction);
 
-	// WE ASSUME THAT IF WE DO NOT WANT TO STORE DATA THEN WE WANT TO LOAD DATA
+	// IF WE CANNOT LOAD DATA, THEN WE BUILD IT
 	std::string modelNameData   = this->modelName+"Data.bin";
 	std::string modelNameLabels = this->modelName+"Labels.bin";
-
-	if(this->storeData || !file_exists(modelNameData.c_str()) || \
+	if(this->loadData || !file_exists(modelNameData.c_str()) || \
 	!file_exists(modelNameLabels.c_str())){
 		this->features->init(this->trainFolder,this->annotationsTrain,\
-			this->feature,this->readFromFolder);
-		this->features->start(this->readFromFolder,this->useGroundTruth);
+			this->feature,fromFolder);
+		this->features->start(fromFolder,this->useGroundTruth);
 		this->features->data.copyTo(this->trainData);
 		this->features->targets.copyTo(this->trainTargets);
 
@@ -199,15 +204,6 @@ void classifyImages::trainGP(annotationsHandle::POSE what){
 
 		this->trainData.convertTo(this->trainData, CV_32FC1);
 		this->trainTargets.convertTo(this->trainTargets, CV_32FC1);
-
-		//IF WE WANT TO STORE DATA, THEN WE STORE IT
-		if(!this->modelName.empty()){
-			file_exists(this->modelName.c_str(), true);
-			mat2BinFile(this->trainData,const_cast<char*>((this->modelName+\
-				"Data.bin").c_str()),false);
-			mat2BinFile(this->trainTargets,const_cast<char*>((this->modelName+\
-				"Labels.bin").c_str()),false);
-		}
 	}else if(!this->modelName.empty()){
 		// WE JUST LOAD THE DATA AND TRAIN AND PREDICT
 		binFile2mat(this->trainData,const_cast<char*>((this->modelName+\
@@ -234,7 +230,10 @@ void classifyImages::trainGP(annotationsHandle::POSE what){
 /** Just build data matrix and store it; it can be called over multiple datasets
  * by adding the the new data rows at the end to the stored matrix.
  */
-void classifyImages::buildDataMatrix(){
+void classifyImages::buildDataMatrix(int colorSp){
+	// SET THE CALIBRATION AND OTHER FEATURE SETTINGS
+	this->resetFeatures(this->trainDir, this->trainImgString, colorSp);
+
 	if(!this->trainData.empty()){
 		this->trainData.release();
 	}
@@ -248,47 +247,73 @@ void classifyImages::buildDataMatrix(){
 
 	// LOAD THE DATA AND TARGET MATRIX FROM THE FILE IF IT'S THERE
 	cv::Mat tmpData1, tmpTargets1, tmpData2, tmpTargets2;
-	binFile2mat(tmpData1, const_cast<char*>(modelNameData.c_str()));
-	binFile2mat(tmpTargets1, const_cast<char*>(modelNameLabels.c_str()));
+	if(file_exists(modelNameData.c_str())){
+		binFile2mat(tmpData1, const_cast<char*>(modelNameData.c_str()));
+	}else{
+		tmpData1 = cv::Mat();
+	}
+	if(file_exists(modelNameLabels.c_str())){
+		binFile2mat(tmpTargets1, const_cast<char*>(modelNameLabels.c_str()));
+	}else{
+		tmpTargets1 = cv::Mat();
+	}
 
 	// NOW CREATE NEW DATA AND TARGETS AND ADD THEM TO THE OLD ONES
 	this->features->init(this->trainFolder,this->annotationsTrain,\
-			this->feature,this->readFromFolder);
-	this->features->start(this->readFromFolder,this->useGroundTruth);
+		this->feature,true);
+	this->features->start(true,this->useGroundTruth);
 	this->features->data.copyTo(tmpData2);
 	this->features->targets.copyTo(tmpTargets2);
 
 	// NOW COPY THEM TOGETHER INTO A FINAL MATRIX AND STORE IT.
-	if(tmpData1.cols!=tmpData2.cols){
-		std::cerr<<"The sizes of the stored data matrix and the newly generated "\
-			<<"data matrix do not agree: "<<tmpData1.size()<<" VS. "<<\
-			tmpData2.size()<<std::endl;
-		exit(1);
+	if(!tmpData1.empty()){
+		if(tmpData1.cols!=tmpData2.cols){
+			std::cerr<<"The sizes of the stored data matrix and the newly generated "\
+				<<"data matrix do not agree: "<<tmpData1.size()<<" VS. "<<\
+				tmpData2.size()<<std::endl;
+			exit(1);
+		}
 	}
 	cv::Mat dumData1, dumData2, dumTargets1, dumTargets2;
-	this->trainData = cv::Mat::zeros(cv::Size(tmpData1.cols,tmpData1.rows+\
-						tmpData2.rows), CV_32FC1);
-	dumData1 = this->trainData.rowRange(0,tmpData1.rows);
-	tmpData1.copyTo(dumData1);
+	this->trainData = cv::Mat::zeros(cv::Size(tmpData2.cols,tmpData1.rows+\
+		tmpData2.rows), CV_32FC1);
+	this->trainTargets = cv::Mat::zeros(cv::Size(tmpTargets2.cols,tmpTargets1.rows+\
+		tmpTargets2.rows), CV_32FC1);
+	if(!tmpData1.empty()){
+		dumData1 = this->trainData.rowRange(0,tmpData1.rows);
+		tmpData1.copyTo(dumData1);
+		dumTargets1 = this->trainTargets.rowRange(0,tmpTargets1.rows);
+		tmpTargets1.copyTo(dumTargets1);
+	}
+
 	dumData2 = this->trainData.rowRange(tmpData1.rows,tmpData1.rows+tmpData2.rows);
 	tmpData2.copyTo(dumData2);
-	dumTargets1 = this->trainTargets.rowRange(0,tmpTargets1.rows);
-	tmpTargets1.copyTo(dumTargets1);
 	dumTargets2 = this->trainTargets.rowRange(tmpTargets1.rows,tmpTargets1.rows+\
-					tmpTargets2.rows);
+		tmpTargets2.rows);
 	tmpTargets2.copyTo(dumTargets2);
 
 	// WRITE THE FINAL MATRIX TO THE FILES
 	mat2BinFile(this->trainData, const_cast<char*>(modelNameData.c_str()), false);
 	mat2BinFile(this->trainTargets, const_cast<char*>(modelNameLabels.c_str()), false);
+	std::cout<<"Data stored to: "<<modelNameData<<" and "<<modelNameLabels<<std::endl;
+
+	// RELEASE THE BILLION OF ALLOCATED MATRIXES
+	dumData1.release();
+	dumData2.release();
+	dumTargets1.release();
+	dumTargets2.release();
+	tmpData1.release();
+	tmpTargets1.release();
+	tmpData2.release();
+	tmpTargets2.release();
 }
 //==============================================================================
 /** Creates the test data and applies \c GaussianProcess prediction on the test
  * data.
  */
-void classifyImages::predictGP(std::deque<gaussianProcess::prediction> &predictionsSin,\
-std::deque<gaussianProcess::prediction> &predictionsCos,\
-annotationsHandle::POSE what){
+std::deque<float> classifyImages::predictGP(std::deque<gaussianProcess::prediction>\
+&predictionsSin,std::deque<gaussianProcess::prediction> &predictionsCos,\
+annotationsHandle::POSE what,bool fromFolder){
 	if(!this->testData.empty()){
 		this->testData.release();
 	}
@@ -296,58 +321,29 @@ annotationsHandle::POSE what){
 		this->testTargets.release();
 	}
 
-	// WE ASSUME THAT IF WE DO NOT WANT TO STORE DATA THEN WE WANT TO LOAD DATA
+	// FOR TESTING WE ALWAYS BUILT THE DATA (THERE IS NOT SAVED MODEL)
 	std::string modelNameData   = this->modelName+"Data.bin";
 	std::string modelNameLabels = this->modelName+"Labels.bin";
+	this->features->init(this->testFolder, this->annotationsTest,\
+		this->feature,fromFolder);
+	this->features->start(fromFolder,this->useGroundTruth);
+	this->features->data.copyTo(this->testData);
 
-	if(this->storeData || !file_exists(modelNameData.c_str()) || \
-	!file_exists(modelNameLabels.c_str())){
-		this->features->init(this->testFolder, this->annotationsTest,\
-			this->feature,this->readFromFolder);
-		this->features->start(this->readFromFolder,this->useGroundTruth);
-		this->features->data.copyTo(this->testData);
-
-		// GET ONLY THE ANGLES YOU NEED
-		if(what == annotationsHandle::LONGITUDE){
-			cv::Mat dum = this->features->targets.colRange(0,2);
-			dum.copyTo(this->testTargets);
-			dum.release();
-		}else if(what == annotationsHandle::LATITUDE){
-			cv::Mat dum = this->features->targets.colRange(2,4);
-			dum.copyTo(this->testTargets);
-			dum.release();
-		}
-		this->testData.convertTo(this->testData, CV_32FC1);
-		this->testTargets.convertTo(this->testTargets, CV_32FC1);
-
-		//IF WE WANT TO STORE DATA, THEN WE STORE IT
-		if(!this->modelName.empty()){
-			file_exists(this->modelName.c_str(), true);
-			mat2BinFile(this->testData,const_cast<char*>((this->modelName+\
-				"Data.bin").c_str()),false);
-			mat2BinFile(this->testTargets,const_cast<char*>((this->modelName+\
-				"Labels.bin").c_str()),false);
-		}
-	}else if(!this->modelName.empty()){
-		// WE JUST LOAD THE TEST DATA AND TEST
-		binFile2mat(this->testData,const_cast<char*>((this->modelName+\
-			"Data.bin").c_str()));
-		cv::Mat tmp;
-		binFile2mat(tmp,const_cast<char*>((this->modelName+\
-			"Labels.bin").c_str()));
-		if(what == annotationsHandle::LONGITUDE){
-			cv::Mat dum = tmp.colRange(0,2);
-			dum.copyTo(this->testTargets);
-			dum.release();
-		}else if(what == annotationsHandle::LATITUDE){
-			cv::Mat dum = tmp.colRange(2,4);
-			dum.copyTo(this->testTargets);
-			dum.release();
-		}
-		tmp.release();
+	// GET ONLY THE ANGLES YOU NEED
+	if(what == annotationsHandle::LONGITUDE){
+		cv::Mat dum = this->features->targets.colRange(0,2);
+		dum.copyTo(this->testTargets);
+		dum.release();
+	}else if(what == annotationsHandle::LATITUDE){
+		cv::Mat dum = this->features->targets.colRange(2,4);
+		dum.copyTo(this->testTargets);
+		dum.release();
 	}
+	this->testData.convertTo(this->testData, CV_32FC1);
+	this->testTargets.convertTo(this->testTargets, CV_32FC1);
 
 	// FOR EACH ROW IN THE TEST MATRIX PREDICT
+	std::deque<float> predictions;
 	for(int i=0; i<this->testData.rows; i++){
 		gaussianProcess::prediction prediSin;
 		this->gpSin.predict(this->testData.row(i), prediSin, this->length);
@@ -355,30 +351,28 @@ annotationsHandle::POSE what){
 		this->gpCos.predict(this->testData.row(i), prediCos, this->length);
 		predictionsSin.push_back(prediSin);
 		predictionsCos.push_back(prediCos);
+		predictions.push_back(this->optimizePrediction(prediSin,prediCos));
 		prediSin.mean.clear();
 		prediSin.variance.clear();
 		prediCos.mean.clear();
 		prediCos.variance.clear();
 	}
+	return predictions;
 }
 //==============================================================================
 /** Evaluate one prediction versus its target.
  */
-void classifyImages::evaluate(std::deque<gaussianProcess::prediction>\
-predictionsSin, std::deque<gaussianProcess::prediction> predictionsCos,\
-float &error,float &normError,float &meanDiff){
+void classifyImages::evaluate(std::deque<float> prediAngles,float &error,\
+float &normError,float &meanDiff){
 	error = 0.0; normError = 0.0; meanDiff = 0.0;
 	for(int y=0; y<this->testTargets.rows; y++){
 		float targetAngle = std::atan2(this->testTargets.at<float>(y,0),\
 								this->testTargets.at<float>(y,1));
-		float prediAngle = this->optimizePrediction(predictionsSin[y],\
-							predictionsCos[y]);
 		angle0to360(targetAngle);
-		angle0to360(prediAngle);
 
 		std::cout<<"Target: "<<targetAngle<<"("<<(targetAngle*180.0/M_PI)<<\
-			") VS "<<prediAngle<<"("<<(prediAngle*180.0/M_PI)<<")"<<std::endl;
-		float absDiff = std::abs(targetAngle-prediAngle);
+			") VS "<<prediAngles[y]<<"("<<(prediAngles[y]*180.0/M_PI)<<")"<<std::endl;
+		float absDiff = std::abs(targetAngle-prediAngles[y]);
 		if(absDiff > M_PI){
 			absDiff = 2*M_PI - absDiff;
 		}
@@ -404,10 +398,11 @@ float &error,float &normError,float &meanDiff){
  */
 float classifyImages::optimizePrediction(gaussianProcess::prediction \
 predictionsSin, gaussianProcess::prediction predictionsCos){
-	float y = predictionsSin.mean[0];
-	float x = predictionsCos.mean[0];
-	return std::atan2(y,x);
-
+	float y          = predictionsSin.mean[0];
+	float x          = predictionsCos.mean[0];
+	float prediction = std::atan2(y,x);
+	angle0to360(prediction);
+	return prediction;
 /*
 	float betaS = 1.0/(predictionsSin.variance[0]);
 	float betaC = 1.0/(predictionsCos.variance[0]);
@@ -468,8 +463,8 @@ void classifyImages::buildDictionary(int colorSp, bool toUseGT){
 
 	// EXTRACT THE SIFT FEATURES AND CONCATENATE THEM
 	this->features->init(this->trainFolder,this->annotationsTrain,\
-		featureExtractor::SIFT_DICT,this->readFromFolder);
-	this->features->start(this->readFromFolder, toUseGT);
+		featureExtractor::SIFT_DICT,true);
+	this->features->start(true,toUseGT);
 	cv::Mat dictData;
 	this->features->data.copyTo(dictData);
 
@@ -495,11 +490,9 @@ void classifyImages::buildDictionary(int colorSp, bool toUseGT){
 //==============================================================================
 /** Does the cross-validation and computes the average error over all folds.
  */
-float classifyImages::runCrossValidation(unsigned k, int colorSp, bool onTrain){
-	this->readFromFolder = false;
-	float finalErrorLong=0.0, finalNormErrorLong=0.0;
-	float finalErrorLat=0.0, finalNormErrorLat=0.0;
-	float finalMeanDiffLat=0.0, finalMeanDiffLong=0.0;
+float classifyImages::runCrossValidation(unsigned k,annotationsHandle::POSE what,\
+int colorSp,bool onTrain){
+	float finalError=0.0, finalNormError=0.0, finalMeanDiff=0.0;
 
 	// SET THE CALIBRATION ONLY ONCE (ALL IMAGES ARE READ FROM THE SAME DIR)
 	this->resetFeatures(this->trainDir, this->trainImgString, colorSp);
@@ -509,69 +502,58 @@ float classifyImages::runCrossValidation(unsigned k, int colorSp, bool onTrain){
 		// SPLIT TRAINING AND TESTING ACCORDING TO THE CURRENT FOLD
 		std::deque<gaussianProcess::prediction> predictionsSin;
 		std::deque<gaussianProcess::prediction> predictionsCos;
+		std::deque<float> predicted;
 		this->crossValidation(k,i,onTrain);
 		//______________________________________________________________________
-	  	//LONGITUDE TRAINING AND PREDICTING
-		std::cout<<"Longitude >>> "<<i<<"___________________________________"<<\
-			"_____________________________________________________"<<std::endl;
-		this->modelName += ("trainLong/"+int2string(i));
-		this->trainGP(annotationsHandle::LONGITUDE);
-		this->modelName = this->modelName.substr(0,this->modelName.size()-11);
+		if(what == annotationsHandle::LONGITUDE){
+			//LONGITUDE TRAINING AND PREDICTING
+			std::cout<<"Longitude >>> "<<i<<"___________________________________"<<\
+				"_____________________________________________________"<<std::endl;
+			this->trainGP(annotationsHandle::LONGITUDE,false);
 
-		// PREDICT ON THE REST OF THE IMAGES
-		this->modelName += ("evalLong/"+int2string(i));
-		this->predictGP(predictionsSin,predictionsCos,annotationsHandle::LONGITUDE);
-		this->modelName = this->modelName.substr(0,this->modelName.size()-10);
-		float errorLong, normErrorLong, meanDiffLong;
-		this->evaluate(predictionsSin, predictionsCos, errorLong, normErrorLong,\
-				meanDiffLong);
-		finalErrorLong += errorLong;
-		finalNormErrorLong += normErrorLong;
-		finalMeanDiffLong += meanDiffLong;
-		predictionsSin.clear();
-		predictionsCos.clear();
+			// PREDICT ON THE REST OF THE IMAGES
+			predicted = this->predictGP(predictionsSin,predictionsCos,\
+				annotationsHandle::LONGITUDE,false);
 
+			// EVALUATE PREDICITONS
+			float errorLong, normErrorLong, meanDiffLong;
+			this->evaluate(predicted,errorLong,normErrorLong,meanDiffLong);
+			finalError     += errorLong;
+			finalNormError += normErrorLong;
+			finalMeanDiff  += meanDiffLong;
+			predictionsSin.clear();
+			predictionsCos.clear();
+			predicted.clear();
 		//______________________________________________________________________
-	  	//LATITUDE TRAINING AND PREDICTING
-		/*
-		std::cout<<"Latitude >>> "<<i<<"____________________________________"<<\
-			"_____________________________________________________"<<std::endl;
-		this->modelName += ("trainLat/"+int2string(i));
-		this->trainGP(annotationsHandle::LATITUDE);
-		this->modelName = this->modelName.substr(0,this->modelName.size()-10);
+		}else if(what == annotationsHandle::LATITUDE){
+			//LATITUDE TRAINING AND PREDICTING
+			std::cout<<"Latitude >>> "<<i<<"____________________________________"<<\
+				"_____________________________________________________"<<std::endl;
+			this->trainGP(annotationsHandle::LATITUDE,false);
 
-		// PREDICT ON THE REST OF THE IMAGES
-		this->modelName += ("evalLat/"+int2string(i));
-		this->predictGP(predictionsSin,predictionsCos,annotationsHandle::LATITUDE);
-		this->modelName = this->modelName.substr(0,this->modelName.size()-9);
-		float errorLat, normErrorLat, meanDiffLat;
-		this->evaluate(predictionsSin, predictionsCos, errorLat, normErrorLat,\
-			meanDiffLat);
-		finalErrorLat += errorLat;
-		finalNormErrorLat += normErrorLat;
-		finalMeanDiffLat += meanDiffLat;
-		predictionsSin.clear();
-		predictionsCos.clear();
-		*/
-//-----REMOVE-------------------------------------------------------------------
-		return finalNormErrorLong;
+			// PREDICT ON THE REST OF THE IMAGES
+			predicted = this->predictGP(predictionsSin,predictionsCos,\
+				annotationsHandle::LATITUDE,false);
+
+			// EVALUATE PREDICITONS
+			float errorLat, normErrorLat, meanDiffLat;
+			this->evaluate(predicted,errorLat,normErrorLat,meanDiffLat);
+			finalError     += errorLat;
+			finalNormError += normErrorLat;
+			finalMeanDiff  += meanDiffLat;
+			predictionsSin.clear();
+			predictionsCos.clear();
+			predicted.clear();
+		}
 	}
-//-----REMOVE-------------------------------------------------------------------
 
-	finalErrorLong /= static_cast<float>(k);
-	finalNormErrorLong /= static_cast<float>(k);
-	finalMeanDiffLong /= static_cast<float>(k);
-	std::cout<<"LONGITUDE>>> final-RMS-error:"<<finalErrorLong<<std::endl;
-	std::cout<<"LONGITUDE>>> final-RMS-normalized-error:"<<finalNormErrorLong<<std::endl;
-	std::cout<<"LONGITUDE>>> final-avg-difference:"<<finalMeanDiffLong<<std::endl;
-
-	finalErrorLat /= static_cast<float>(k);
-	finalNormErrorLat /= static_cast<float>(k);
-	finalMeanDiffLat /= static_cast<float>(k);
-	std::cout<<"LATITUDE>>> final-RMS-error:"<<finalErrorLat<<std::endl;
-	std::cout<<"LATITUDE>>> final-RMS-normalized-error:"<<finalNormErrorLat<<std::endl;
-	std::cout<<"LATITUDE>>> final-avg-difference:"<<finalMeanDiffLat<<std::endl;
-	return finalNormErrorLong;
+	finalError     /= static_cast<float>(k);
+	finalNormError /= static_cast<float>(k);
+	finalMeanDiff  /= static_cast<float>(k);
+	std::cout<<">>> final-RMS-error:"<<finalError<<std::endl;
+	std::cout<<">>> final-RMS-normalized-error:"<<finalNormError<<std::endl;
+	std::cout<<">>> final-avg-difference:"<<finalMeanDiff<<std::endl;
+	return finalNormError;
 }
 //==============================================================================
 /** Do k-fold cross-validation by splitting the training folder into training-set
@@ -670,92 +652,190 @@ void classifyImages::resetFeatures(std::string dir,std::string imStr,int colorSp
 //==============================================================================
 /** Runs the final evaluation (test).
  */
-void classifyImages::runTest(int colorSp){
+std::deque<float> classifyImages::runTest(int colorSp,annotationsHandle::POSE what,\
+float &normError){
+	// LONGITUDE TRAINING AND PREDICTING
 	std::deque<gaussianProcess::prediction> predictionsSin;
 	std::deque<gaussianProcess::prediction> predictionsCos;
+	std::deque<float> predicted;
+	if(what == annotationsHandle::LONGITUDE){
+		std::cout<<"Longitude >>> ______________________________________________"<<\
+			"_____________________________________________________"<<std::endl;
+		// BEFORE TRAINING CAMERA CALIBRATION AND OTHER SETTINGS MIGHT NEED TO BE RESET
+		this->resetFeatures(this->trainDir,this->trainImgString,colorSp);
+		this->trainGP(annotationsHandle::LONGITUDE,true);
 
-  	// LONGITUDE TRAINING AND PREDICTING
-	std::cout<<"Longitude >>> ______________________________________________"<<\
-		"_____________________________________________________"<<std::endl;
-	// BEFORE TRAINING CAMERA CALIBRATION AND OTHER SETTINGS MIGHT NEED TO BE RESET
-	this->resetFeatures(this->trainDir,this->trainImgString,colorSp);
-	this->modelName += ("modelLong/");
-	this->trainGP(annotationsHandle::LONGITUDE);
-	this->modelName = this->modelName.substr(0,this->modelName.size()-10);
+		// BEFORE TESTING CAMERA CALIBRATION AND OTHER SETTINGS MIGHT NEED TO BE RESET
+		this->resetFeatures(this->testDir,this->testImgString,colorSp);
+		predicted = this->predictGP(predictionsSin,predictionsCos,\
+			annotationsHandle::LONGITUDE,true);
 
-	// BEFORE TESTING CAMERA CALIBRATION AND OTHER SETTINGS MIGHT NEED TO BE RESET
-	this->resetFeatures(this->testDir,this->testImgString,colorSp);
-	this->modelName += ("testLong/");
-	this->predictGP(predictionsSin,predictionsCos,annotationsHandle::LONGITUDE);
-	this->modelName = this->modelName.substr(0,this->modelName.size()-9);
-	float errorLong, normErrorLong, meanDiffLong;
-	this->evaluate(predictionsSin, predictionsCos, errorLong, normErrorLong,\
-			meanDiffLong);
-	predictionsSin.clear();
-	predictionsCos.clear();
+		// EVALUATE PREDICTIONS
+		float errorLong, normErrorLong, meanDiffLong;
+		this->evaluate(predicted,errorLong,normErrorLong,meanDiffLong);
+		normError = normErrorLong;
+	}else if(what == annotationsHandle::LATITUDE){
+		//__________________________________________________________________________
+		// LATITUDE TRAINING AND PREDICTING
+		std::cout<<"Latitude >>> _______________________________________________"<<\
+			"_____________________________________________________"<<std::endl;
+		// BEFORE TRAINING CAMERA CALIBRATION AND OTHER SETTINGS MIGHT NEED TO BE RESET
+		this->resetFeatures(this->trainDir,this->trainImgString,colorSp);
+		this->trainGP(annotationsHandle::LATITUDE,true);
 
-	//__________________________________________________________________________
-  	// LATITUDE TRAINING AND PREDICTING
-	std::cout<<"Latitude >>> _______________________________________________"<<\
-		"_____________________________________________________"<<std::endl;
-	// BEFORE TRAINING CAMERA CALIBRATION AND OTHER SETTINGS MIGHT NEED TO BE RESET
-	this->resetFeatures(this->trainDir,this->trainImgString,colorSp);
-	this->modelName += ("modelLat/");
-	this->trainGP(annotationsHandle::LATITUDE);
-	this->modelName = this->modelName.substr(0,this->modelName.size()-9);
+		// BEFORE TESTING CAMERA CALIBRATION AND OTHER SETTINGS MIGHT NEED TO BE RESET
+		this->resetFeatures(this->testDir,this->testImgString,colorSp);
+		predicted = this->predictGP(predictionsSin,predictionsCos,\
+			annotationsHandle::LATITUDE,true);
 
-	// BEFORE TESTING CAMERA CALIBRATION AND OTHER SETTINGS MIGHT NEED TO BE RESET
-	this->resetFeatures(this->testDir,this->testImgString,colorSp);
-	this->modelName += ("testLat/");
-	this->predictGP(predictionsSin,predictionsCos,annotationsHandle::LATITUDE);
-	this->modelName = this->modelName.substr(0,this->modelName.size()-8);
-	float errorLat, normErrorLat,meanDiffLat;
-	this->evaluate(predictionsSin, predictionsCos, errorLat, normErrorLat,\
-		meanDiffLat);
+		// EVALUATE PREDICTIONS
+		float errorLat, normErrorLat,meanDiffLat;
+		this->evaluate(predicted,errorLat,normErrorLat,meanDiffLat);
+		normError = normErrorLat;
+	}
+	return predicted;
 }
 //==============================================================================
-int main(int argc, char **argv){
-/*
-	// test
-	classifyImages classi(argc, argv, classifyImages::TEST);
-	classi.init(1e-3,70.0,featureExtractor::EDGES,&gaussianProcess::sqexp,\
-		true, true, false);
- 	classi.runTest(CV_BGR2Luv);
-*/
+/** Combine the output of multiple classifiers (only on testing, no multiple
+ * predictions).
+ */
+void multipleClassifier(int colorSp,bool load,annotationsHandle::POSE what,\
+classifyImages &classi){
+	std::deque<std::deque<float> > predictions;
+	std::deque<float> tmpPrediction;
+	float dummy = 0;
+	switch(classi.feature){
+		case(featureExtractor::IPOINTS):
+			classi.feature = featureExtractor::IPOINTS;
+			tmpPrediction  = classi.runTest(colorSp,what,dummy);
+			predictions.push_back(tmpPrediction);
+			tmpPrediction.clear();
+		case(featureExtractor::EDGES):
+			classi.feature = featureExtractor::EDGES;
+			tmpPrediction  = classi.runTest(colorSp,what,dummy);
+			predictions.push_back(tmpPrediction);
+			tmpPrediction.clear();
+		case(featureExtractor::SURF):
+			classi.feature = featureExtractor::SURF;
+			tmpPrediction  = classi.runTest(colorSp,what,dummy);
+			predictions.push_back(tmpPrediction);
+			tmpPrediction.clear();
+		case(featureExtractor::GABOR):
+			classi.feature = featureExtractor::GABOR;
+			tmpPrediction  = classi.runTest(colorSp,what,dummy);
+			predictions.push_back(tmpPrediction);
+			tmpPrediction.clear();
+		case(featureExtractor::SIFT):
+			classi.feature = featureExtractor::SIFT;
+			tmpPrediction  = classi.runTest(colorSp,what,dummy);
+			predictions.push_back(tmpPrediction);
+			tmpPrediction.clear();
+		case(featureExtractor::PIXELS):
+			classi.feature = featureExtractor::PIXELS;
+			tmpPrediction  = classi.runTest(colorSp,what,dummy);
+			predictions.push_back(tmpPrediction);
+			tmpPrediction.clear();
+		case(featureExtractor::HOG):
+			classi.feature = featureExtractor::HOG;
+			tmpPrediction  = classi.runTest(colorSp,what,dummy);
+			predictions.push_back(tmpPrediction);
+			tmpPrediction.clear();
+	}
+	// HOW TO COMBINE THEM?BIN VOTES EVERY 20DEGREES AND AVERAGE THE WINNING BIN
+	std::deque<float> finalPreds(predictions[0].size(),0.0);
+	for(std::size_t j=0; j<predictions[0].size();j++){
+		std::deque<unsigned> votes(9,0);
+		std::deque<float> bins(9,0.0);
+		unsigned winningLabel      = 0;
+		unsigned winningNoVotes    = 0;
+		// FOR EACH IMAGE LOOP OVER ALL PREDICTIONS
+		for(std::size_t i=0; i<predictions.size();i++){
+			float angleMin = classi.features->dataMotionVectors[j]-M_PI/2.0;
+			angle0to360(angleMin);
+			float angleMax = classi.features->dataMotionVectors[j]+M_PI/2.0;
+			angle0to360(angleMax);
+			if(predictions[i][j]>=angleMin || predictions[i][j]<=angleMax){
+				unsigned label = static_cast<unsigned>(predictions[i][j])/20;
+				votes[label]++;
+				bins[label] += predictions[i][j];
+				if(votes[label]>winningNoVotes){
+					winningNoVotes = votes[label];
+					winningLabel   = label;
+				}
+			}
+		}
+		// STORE THE FINAL PREDICTIONS
+		finalPreds.push_back(bins[winningLabel]/static_cast<float>(votes[winningLabel]));
+	}
 
-	// evaluate
- 	classifyImages classi(argc, argv, classifyImages::EVALUATE);
-	classi.init(0.85,85.0,featureExtractor::PIXELS,&gaussianProcess::sqexp,\
-		false, true, true);
-	classi.runCrossValidation(7,CV_BGR2XYZ,false);
-
-/*
+	// FINALLY EVALUATE THE FINAL PREDICTIONS
+	float error = 0.0, normError=0.0, meanDiff=0.0;
+	classi.evaluate(finalPreds,error,normError,meanDiff);
+}
+//==============================================================================
+/** Run over multiple settings of the parameters to find the best ones.
+ */
+void parameterSetting(std::string errorsOnTrain,std::string errorsOnTest,\
+classifyImages &classi,int argc,char** argv,featureExtractor::FEATURE feat,\
+int colorSp,bool useGt,annotationsHandle::POSE what){
   	std::ofstream train, test;
-	train.open("train.txt", std::ios::out);
-	test.open("test.txt", std::ios::out);
-	classifyImages classi(argc, argv, classifyImages::EVALUATE);
+	train.open(errorsOnTrain.c_str(),std::ios::out);
+	test.open(errorsOnTest.c_str(),std::ios::out);
 	for(float v=0.1; v<5; v+=0.1){
 		for(float l=1; l<125; l+=1){
-			// evaluate
-			classi.init(v,l,featureExtractor::HOG,&gaussianProcess::sqexp,\
-				false, true, true);
-			float errorTrain = classi.runCrossValidation(5,CV_BGR2RGB,true);
+			classi.init(v,l,feat,&gaussianProcess::sqexp,useGt);
+			float errorTrain;
+			classi.runTest(colorSp,what,errorTrain);
 			train<<v<<" "<<l<<" "<<errorTrain<<std::endl;
-
-			classi.init(v,l,featureExtractor::HOG,&gaussianProcess::sqexp,\
-				false, true, true);
-			float errorTest = classi.runCrossValidation(5,CV_BGR2RGB,false);
+			classi.init(v,l,feat,&gaussianProcess::sqexp,useGt);
+			float errorTest;
+			classi.runTest(colorSp,what,errorTest);
 			test<<v<<" "<<l<<" "<<errorTest<<std::endl;
 		}
 	}
 	train.close();
 	test.close();
+}
+//==============================================================================
+int main(int argc, char **argv){
+/*
+	// test
+	classifyImages classi(argc,argv,classifyImages::TEST);
+	classi.init(1e-3,70.0,featureExtractor::EDGES,&gaussianProcess::sqexp,false);
+ 	classi.runTest(CV_BGR2Luv,annotationsHandle::LONGITUDE);
 */
+	//--------------------------------------------------------------------------
+/*
+	// build data matrix
+ 	classifyImages classi(argc,argv,classifyImages::EVALUATE);
+	classi.init(0.85,85.0,featureExtractor::PIXELS,&gaussianProcess::sqexp,true);
+	classi.buildDataMatrix(CV_BGR2Luv);
+*/
+	//--------------------------------------------------------------------------
+/*
+	// evaluate
+ 	classifyImages classi(argc,argv,classifyImages::TEST);
+	classi.init(0.85,85.0,featureExtractor::PIXELS,&gaussianProcess::sqexp,true);
+	classi.runCrossValidation(7,annotationsHandle::LONGITUDE,CV_BGR2XYZ,false);
+*/
+	//--------------------------------------------------------------------------
 /*
 	// BUILD THE SIFT DICTIONARY
-  	classifyImages classi(argc, argv, classifyImages::BUILD_DICTIONARY);
-	classi.buildDictionary(CV_BGR2Luv, true);
+  	classifyImages classi(argc,argv,classifyImages::BUILD_DICTIONARY);
+	classi.buildDictionary(CV_BGR2Luv,true);
 */
+	//--------------------------------------------------------------------------
+/*
+	classifyImages classi(argc,argv,classifyImages::TEST);
+	parameterSetting("train.txt","text.txt",classi,argc,argv,featureExtractor::HOG,\
+		CV_BGR2Luv,true,annotationsHandle::LONGITUDE);
+*/
+	//--------------------------------------------------------------------------
+
+	// test
+	classifyImages classi(argc,argv,classifyImages::TEST);
+	multipleClassifier(CV_BGR2Luv,true,annotationsHandle::LONGITUDE,classi);
+
 }
 
 
