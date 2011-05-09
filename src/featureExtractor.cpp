@@ -203,8 +203,6 @@ aTempl, cv::Rect roi){
 		cv::waitKey(0);
 	}
 
-	//
-
 	// MATCH SOME HEADS ON TOP AND GET THE RESULTS
 	int radius     = std::min(up.width,up.height)/2;
 	cv::Mat pixels = cv::Mat::zeros(cv::Size(12*30*30+2,1),CV_32FC1);
@@ -467,8 +465,8 @@ cv::Mat featureExtractor::createGabor(float *params){
  * returns the response image.
  */
 cv::Mat featureExtractor::getGabor(cv::Mat feature, cv::Mat thresholded,\
-cv::Rect roi, cv::Size foregrSize, float rotAngle){
-	unsigned gaborNo    = std::ceil(feature.rows/height);
+cv::Rect roi, cv::Size foregrSize, float rotAngle, int aheight){
+	unsigned gaborNo    = std::ceil(feature.rows/aheight);
 	int gaborRows       = std::ceil(feature.rows/gaborNo);
 	unsigned resultCols = foregrSize.width*foregrSize.height;
 	cv::Mat result      = cv::Mat::zeros(cv::Size(gaborNo*resultCols+2,1),CV_32FC1);
@@ -985,7 +983,7 @@ cv::Point2f rotBorders, float rotAngle){
 			toRead = (this->featureFile+"GABOR/"+imgName+".bin");
 			binFile2mat(feature, const_cast<char*>(toRead.c_str()));
 			dataRow = this->getGabor(feature,thresholded,roi,person.pixels.size(),\
-						rotAngle);
+						rotAngle,image.rows);
 			break;
 		case featureExtractor::SIFT_DICT:
 			dictImage = cv::Mat(image, roi);

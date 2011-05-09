@@ -168,7 +168,7 @@ class featureExtractor {
 		 * returns the response image.
 		 */
 		cv::Mat getGabor(cv::Mat feature, cv::Mat thresholded, cv::Rect roi,\
-			cv::Size foregrSize, float rotAngle);
+			cv::Size foregrSize, float rotAngle, int aheight);
 		/** Creates a gabor with the parameters given by the parameter vector.
 		 */
 		cv::Mat createGabor(float *params = NULL);

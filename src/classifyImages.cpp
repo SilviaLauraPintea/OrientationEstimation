@@ -231,6 +231,58 @@ void classifyImages::trainGP(annotationsHandle::POSE what){
 	}
 }
 //==============================================================================
+/** Just build data matrix and store it; it can be called over multiple datasets
+ * by adding the the new data rows at the end to the stored matrix.
+ */
+void classifyImages::buildDataMatrix(){
+	if(!this->trainData.empty()){
+		this->trainData.release();
+	}
+	if(!this->trainTargets.empty()){
+		this->trainTargets.release();
+	}
+
+	// CHECK TO SEE IF THE FOLDER IS ALREADY CREATED
+	std::string modelNameData   = this->modelName+"Data.bin";
+	std::string modelNameLabels = this->modelName+"Labels.bin";
+
+	// LOAD THE DATA AND TARGET MATRIX FROM THE FILE IF IT'S THERE
+	cv::Mat tmpData1, tmpTargets1, tmpData2, tmpTargets2;
+	binFile2mat(tmpData1, const_cast<char*>(modelNameData.c_str()));
+	binFile2mat(tmpTargets1, const_cast<char*>(modelNameLabels.c_str()));
+
+	// NOW CREATE NEW DATA AND TARGETS AND ADD THEM TO THE OLD ONES
+	this->features->init(this->trainFolder,this->annotationsTrain,\
+			this->feature,this->readFromFolder);
+	this->features->start(this->readFromFolder,this->useGroundTruth);
+	this->features->data.copyTo(tmpData2);
+	this->features->targets.copyTo(tmpTargets2);
+
+	// NOW COPY THEM TOGETHER INTO A FINAL MATRIX AND STORE IT.
+	if(tmpData1.cols!=tmpData2.cols){
+		std::cerr<<"The sizes of the stored data matrix and the newly generated "\
+			<<"data matrix do not agree: "<<tmpData1.size()<<" VS. "<<\
+			tmpData2.size()<<std::endl;
+		exit(1);
+	}
+	cv::Mat dumData1, dumData2, dumTargets1, dumTargets2;
+	this->trainData = cv::Mat::zeros(cv::Size(tmpData1.cols,tmpData1.rows+\
+						tmpData2.rows), CV_32FC1);
+	dumData1 = this->trainData.rowRange(0,tmpData1.rows);
+	tmpData1.copyTo(dumData1);
+	dumData2 = this->trainData.rowRange(tmpData1.rows,tmpData1.rows+tmpData2.rows);
+	tmpData2.copyTo(dumData2);
+	dumTargets1 = this->trainTargets.rowRange(0,tmpTargets1.rows);
+	tmpTargets1.copyTo(dumTargets1);
+	dumTargets2 = this->trainTargets.rowRange(tmpTargets1.rows,tmpTargets1.rows+\
+					tmpTargets2.rows);
+	tmpTargets2.copyTo(dumTargets2);
+
+	// WRITE THE FINAL MATRIX TO THE FILES
+	mat2BinFile(this->trainData, const_cast<char*>(modelNameData.c_str()), false);
+	mat2BinFile(this->trainTargets, const_cast<char*>(modelNameLabels.c_str()), false);
+}
+//==============================================================================
 /** Creates the test data and applies \c GaussianProcess prediction on the test
  * data.
  */

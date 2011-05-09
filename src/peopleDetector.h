@@ -27,7 +27,8 @@ class peopleDetector:public Tracker{
 		 */
 		bool doFindPerson(unsigned imgNum, IplImage *src,\
 			const vnl_vector<FLOAT> &imgVec, vnl_vector<FLOAT> &bgVec,\
-			const FLOAT logBGProb,const vnl_vector<FLOAT> &logSumPixelBGProb);
+			const FLOAT logBGProb,const vnl_vector<FLOAT> &logSumPixelBGProb,\
+			unsigned border = 150);
 		/** Simple "menu" for skipping to the next image or quitting the processing.
 		 */
 		bool imageProcessingMenu();
@@ -41,15 +42,16 @@ class peopleDetector:public Tracker{
 		/** Creates on data row in the final data matrix by getting the feature
 		 * descriptors.
 		 */
-		void extractDataRow(std::deque<unsigned> &existing, IplImage *bg);
+		void extractDataRow(std::deque<unsigned> &existing, IplImage *oldBg,\
+			unsigned border=150);
 		/** For each row added in the data matrix (each person detected for which we
 		 * have extracted some features) find the corresponding label.
 		 */
 		std::deque<unsigned> fixLabels(std::deque<unsigned> existing);
 		/** Returns the size of a window around a template centered in a given point.
 		 */
-		void templateWindow(IplImage *img,cv::Size imgSize,int &minX,int &maxX,\
-			int &minY,int &maxY,featureExtractor::templ aTempl,int tplBorder=150);
+		void templateWindow(cv::Size imgSize,int &minX,int &maxX,\
+		int &minY,int &maxY,featureExtractor::templ aTempl,int tplBorder=150);
 		/** Initializes the parameters of the tracker.
 		 */
 		void init(std::string dataFolder, std::string theAnnotationsFile,\
@@ -90,7 +92,7 @@ class peopleDetector:public Tracker{
 		std::deque<unsigned> readLocations();
 		/** Starts running something (either the tracker or just mimics it).
 		 */
-		void start(bool readFromFolder, bool useGT);
+		void start(bool readFromFolder, bool useGT, unsigned border=150);
 		/** Adds a templates to the vector of templates at detected positions.
 		 */
 		void add2Templates(std::deque<unsigned> existing);
@@ -104,6 +106,9 @@ class peopleDetector:public Tracker{
 		/** Return rotation angle given the head and feet position.
 		 */
 		float rotationAngle(cv::Point2f headLocation,cv::Point2f feetLocation);
+		/** Adds a border to an IPLImage.
+		 */
+		IplImage* addBorder4IplImage(IplImage *img,unsigned border);
 		//======================================================================
 	public:
 		/** @var print

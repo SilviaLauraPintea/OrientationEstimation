@@ -29,11 +29,12 @@ bool buildBg):Tracker(argc, argv, 20, buildBg, true){
 		if(datasetPath[dataPath.size()-1]!='/'){
 			dataPath += "/";
 		}
-		this->plot           = true;
+		this->plot           = false;
 		this->print          = true;
 		this->useGroundTruth = true;
 		this->lastIndex      = 0;
 		this->producer       = NULL;
+		this->borderedIpl    = NULL;
 		this->colorspaceCode = CV_BGR2Lab;
 		this->featurePart    = peopleDetector::WHOLE;
 		this->tracking 	     = 0;
@@ -67,6 +68,10 @@ peopleDetector::~peopleDetector(){
 		this->entireNext.release();
 	}
 	this->templates.clear();
+	if(this->borderedIpl){
+		cvReleaseImage(&this->borderedIpl);
+		this->borderedIpl = NULL;
+	}
 }
 //==============================================================================
 /** Checks the image name (used to find the corresponding labels for each image).
@@ -96,6 +101,10 @@ struct compareImg{
 void peopleDetector::init(std::string dataFolder, std::string theAnnotationsFile,\
 featureExtractor::FEATURE feat, bool readFromFolder){
 	this->initProducer(readFromFolder, const_cast<char*>(dataFolder.c_str()));
+	if(this->borderedIpl){
+		cvReleaseImage(&this->borderedIpl);
+		this->borderedIpl = NULL;
+	}
 	if(!this->entireNext.empty()){
 		this->entireNext.release();
 	}
@@ -168,8 +177,8 @@ std::vector<cv::Point2f> templ){
 //==============================================================================
 /** Returns the size of a window around a template centered in a given point.
  */
-void peopleDetector::templateWindow(IplImage* img, cv::Size imgSize, int &minX,\
-int &maxX,int &minY, int &maxY, featureExtractor::templ aTempl, int tplBorder){
+void peopleDetector::templateWindow(cv::Size imgSize,int &minX,int &maxX,\
+int &minY,int &maxY,featureExtractor::templ aTempl,int tplBorder){
 	// TRY TO ADD BORDERS TO MAKE IT 100
 	minX = aTempl.extremes[0];
 	maxX = aTempl.extremes[1];
@@ -178,35 +187,28 @@ int &maxX,int &minY, int &maxY, featureExtractor::templ aTempl, int tplBorder){
 	int diffX = (tplBorder - (maxX-minX))/2;
 	int diffY = (tplBorder - (maxY-minY))/2;
 
-	int left=0, right=0, top=0, bottom=0;
+	// WILL ALWAYS FIT BECAUSE WE ADDED THE BORDER
 	minY = std::max(minY-diffY,0);
-	if(minY-diffY<0){
-		top = std::abs(minY-diffY);
-	}
 	maxY = std::min(maxY+diffY,imgSize.height);
-	if(maxY+diffY>imgSize.height){
-		bottom = std::abs(imgSize.height-(maxY+diffY));
-	}
 	minX = std::max(minX-diffX,0);
-	if(minX-diffX<0){
-		left = std::abs(minX-diffX);
-	}
 	maxX = std::min(maxX+diffX,imgSize.width);
-	if(maxX+diffX>imgSize.width){
-		right = std::abs(imgSize.width-(maxX+diffX));
+
+	// MAKE SUTE WE ARE NOT MISSING A PIXEL OR SO
+	if(maxX-minX!=tplBorder){
+		int diffX2 = tplBorder-(maxX-minX);
+		if(minX>diffX2){
+			minX -= diffX2;
+		}else if(maxX<imgSize.width-diffX2){
+			maxX += diffX2;
+		}
 	}
-
-	if(top!=0 || bottom!= 0 || left!=0 || right!=0){
-		IplImage* tmp = cvCreateImage(cvSize(img->width+left+right,\
-						img->height+top+bottom),img->depth,img->nChannels );
-		cvCopyMakeBorder(img,tmp,cv::Point(top,left),IPL_BORDER_REPLICATE,cvScalarAll(0));
-//		cvCopyMakeBorder(img,tmp,top,bottom,left,right,cv::BORDER_REPLICATE);
-
-		cvShowImage("withborder",tmp);
-		cvWaitKey(0);
-		cvReleaseImage(&img);
-		cvCopy(tmp,img);
-		cvReleaseImage(&tmp);
+	if(maxY-minY!=tplBorder){
+		int diffY2 = tplBorder-(maxY-minY);
+		if(minY>diffY2){
+			minY -= diffY2;
+		}else if(maxY<imgSize.height-diffY2){
+			maxY += diffY2;
+		}
 	}
 }
 //==============================================================================
@@ -257,7 +259,7 @@ int k, cv::Mat thresh, cv::Mat &colorRoi, float tmplHeight){
 void peopleDetector::add2Templates(std::deque<unsigned> existing){
 	this->templates.clear();
 	for(unsigned i=0; i<existing.size(); i++){
-		cv::Point2f center = this->cvPoint(existing[i]);
+		cv::Point2f center = this->cvPoint(existing[i],this->borderedIpl->width);
 		featureExtractor::templ aTempl(center);
 		genTemplate2(aTempl.center, persHeight, camHeight, aTempl.points);
 		aTempl.head = cv::Point2f((aTempl.points[12].x+aTempl.points[14].x)/2,\
@@ -282,11 +284,11 @@ void peopleDetector::allForegroundPixels(std::deque<featureExtractor::people>\
 		cv::threshold(thrsh, thrsh, threshold, 255, cv::THRESH_BINARY);
 		cv::dilate(thrsh,thrsh,cv::Mat(),cv::Point(-1,-1),2);
 	}
-	cv::Mat foregr(this->current->img);
+	cv::Mat foregr(this->borderedIpl);
 
 	// FOR EACH EXISTING TEMPLATE LOOK ON AN AREA OF 100 PIXELS AROUND IT
 	for(unsigned k=0; k<existing.size();k++){
-		cv::Point2f center       = this->cvPoint(existing[k]);
+		cv::Point2f center       = this->cvPoint(existing[k],this->borderedIpl->width);
 		allPeople[k].absoluteLoc = center;
 		float tmplHeight = dist(this->templates[k].head,this->templates[k].center);
 		float tmplArea   = tmplHeight*dist(this->templates[k].points[0],\
@@ -294,12 +296,12 @@ void peopleDetector::allForegroundPixels(std::deque<featureExtractor::people>\
 
 		// GET THE 100X100 WINDOW ON THE TEMPLATE
 		int minY=foregr.rows, maxY=0, minX=foregr.cols, maxX=0;
-		this->templateWindow(this->current->img,cv::Size(foregr.cols,foregr.rows),minX, maxX,\
+		this->templateWindow(cv::Size(foregr.cols,foregr.rows),minX, maxX,\
 				minY, maxY, this->templates[k]);
-		int width  = maxX-minX;
-		int height = maxY-minY;
+		int awidth  = maxX-minX;
+		int aheight = maxY-minY;
 		cv::Mat colorRoi = cv::Mat(foregr.clone(),cv::Rect(cv::Point2f(minX,minY),\
-							cv::Size(width,height)));
+							cv::Size(awidth,aheight)));
 		//IF THERE IS NO BACKGROUND THEN JUST COPY THE ROI
 		cv::Mat thrshRoi;
 		if(!bg){
@@ -373,15 +375,36 @@ float tmplArea){
 /** Creates on data row in the final data matrix by getting the feature
  * descriptors.
  */
-void peopleDetector::extractDataRow(std::deque<unsigned> &existing, IplImage *bg){
+void peopleDetector::extractDataRow(std::deque<unsigned> &existing, IplImage *oldBg,\
+unsigned border){
+	// ADD A BORDER AROUND THE BACKGROUND TO HAVE THE TEMPLATES CENTERED
+	IplImage *bg = NULL;
+	if(oldBg){
+		bg = cvCreateImage(cvSize(oldBg->width+border,oldBg->height+border),\
+			oldBg->depth,oldBg->nChannels);
+		cvCopyMakeBorder(oldBg,bg,cv::Point(border/2,border/2),\
+			IPL_BORDER_REPLICATE,cvScalarAll(0));
+	}
+
+//cvShowImage("withborder",this->borderedIpl);
+//cvWaitKey(0);
+
 	// FIX THE LABELS TO CORRESPOND TO THE PEOPLE DETECTED IN THE IMAGE
 	if(!this->targetAnno.empty() && !this->useGroundTruth){
 		existing = this->fixLabels(existing);
 	}
 
+	// FIX THE LOCATIONS TO CORRESPOND TO THE BORDERED IMAGE:
+	for(size_t i=0;i<existing.size();i++){
+		cv::Point pt = this->cvPoint(existing[i],width);
+		pt.x += border/2;
+		pt.y += border/2;
+		existing[i] = pt.x + this->borderedIpl->width*pt.y;
+	}
+
 	// PROCESS THE REST OF THE IMAGES
 	this->lastIndex = this->data.rows;
-	cv::Mat image(this->current->img);
+	cv::Mat image(this->borderedIpl);
 	cv::cvtColor(image, image, this->colorspaceCode);
 	if(this->tracking && this->current->index+1<this->producer->filelist.size()){
 		this->entireNext = cv::imread(this->producer->filelist\
@@ -443,7 +466,7 @@ void peopleDetector::extractDataRow(std::deque<unsigned> &existing, IplImage *bg
 		}
 
 		// ANF FINALLY EXTRACT THE DATA ROW
-		cv::Mat dataRow = this->extractor->getDataRow(cv::Mat(this->current->img),\
+		cv::Mat dataRow = this->extractor->getDataRow(cv::Mat(this->borderedIpl),\
 							this->templates[i],roi,allPeople[i],thresholded,keys,\
 							imgName,absRotCenter,rotBorders,rotAngle);
 		if(this->tracking && !this->entireNext.empty()){
@@ -467,8 +490,11 @@ void peopleDetector::extractDataRow(std::deque<unsigned> &existing, IplImage *bg
 		}else{
 			this->data.push_back(dataRow);
 		}
-		thresholded.release();
+		if(!thresholded.empty()){thresholded.release();}
 		dataRow.release();
+	}
+	if(bg){
+		cvReleaseImage(&bg);
 	}
 }
 //==============================================================================
@@ -591,7 +617,7 @@ std::deque<unsigned> peopleDetector::fixLabels(std::deque<unsigned> existing){
 	std::vector<cv::Point2f> points;
 	float templateWidth = 0;
 	for(std::size_t i=0; i<existing.size(); i++){
-		cv::Point2f center = this->cvPoint(existing[i]);
+		cv::Point2f center = this->cvPoint(existing[i],this->current->img->width);
 		if(!templateWidth){
 			std::vector<cv::Point2f> templ;
 			if(!genTemplate2(center,persHeight,camHeight,templ)){
@@ -644,8 +670,7 @@ std::deque<unsigned> peopleDetector::fixLabels(std::deque<unsigned> existing){
 			}
 			cv::Point2f feet = (*index).annos[position].location;
 			cv::Point2f head = this->headLocation(feet);
-//			finExisting.push_back(width*points[k].y + points[k].x);
-			finExisting.push_back(width*feet.y + feet.x);
+			finExisting.push_back(this->current->img->width*feet.y + feet.x);
 
 			// SAVE THE TARGET LABEL
 			cv::Mat tmp = cv::Mat::zeros(1,4,CV_32FC1);
@@ -683,7 +708,7 @@ std::deque<unsigned> peopleDetector::fixLabels(std::deque<unsigned> existing){
  */
 bool peopleDetector::doFindPerson(unsigned imgNum, IplImage *src,\
 const vnl_vector<FLOAT> &imgVec, vnl_vector<FLOAT> &bgVec,\
-const FLOAT logBGProb,const vnl_vector<FLOAT> &logSumPixelBGProb){
+const FLOAT logBGProb,const vnl_vector<FLOAT> &logSumPixelBGProb,unsigned border){
 	std::cout<<this->current->index<<") Image... "<<this->current->sourceName<<std::endl;
 
 	//1) START THE TIMER & INITIALIZE THE PROBABLITIES, THE VECTOR OF POSITIONS
@@ -735,12 +760,9 @@ const FLOAT logBGProb,const vnl_vector<FLOAT> &logSumPixelBGProb){
 
 	//7') EXTRACT FEATURES FOR THE CURRENTLY DETECTED LOCATIONS
 	cout<<"Number of templates: "<<existing.size()<<endl;
-	if(this->onlyExtract){
-		this->extractor->extractFeatures(cv::Mat(this->current->img),\
-			this->current->sourceName,this->colorspaceCode);
-	}else{
-		this->extractDataRow(existing, bg);
-	}
+	cvCopyMakeBorder(this->current->img,this->borderedIpl,cv::Point\
+		(border/2,border/2),IPL_BORDER_REPLICATE,cvScalarAll(0));
+	this->extractDataRow(existing, bg);
 	cout<<"Number of templates afterwards: "<<existing.size()<<endl;
 
 	//7) SHOW THE FOREGROUND POSSIBLE LOCATIONS AND PLOT THE TEMPLATES
@@ -748,7 +770,7 @@ const FLOAT logBGProb,const vnl_vector<FLOAT> &logSumPixelBGProb){
 	if(this->plot){
 		this->plotHull(bg, this->priorHull);
 		for(unsigned i=0; i!=existing.size(); ++i){
-			cv::Point2f pt = this->cvPoint(existing[i]);
+			cv::Point2f pt = this->cvPoint(existing[i],this->current->img->width);
 			plotTemplate2(bg, pt, persHeight, camHeight, CV_RGB(255,255,255));
 			plotScanLines(src, mask, CV_RGB(0,255,0), 0.3);
 		}
@@ -904,7 +926,7 @@ float peopleDetector::motionVector(cv::Point2f head, cv::Point2f center){
 		}
 
 		if(this->plot){
-			cv::Mat tmp(this->current->img);
+			cv::Mat tmp(this->borderedIpl);
 			cv::line(tmp,prev,center,cv::Scalar(50,100,255),1,8,0);
 			cv::imshow("tracks",tmp);
 		}
@@ -919,7 +941,7 @@ float peopleDetector::motionVector(cv::Point2f head, cv::Point2f center){
 //==============================================================================
 /** Starts running something (either the tracker or just mimics it).
  */
-void peopleDetector::start(bool readFromFolder, bool useGT){
+void peopleDetector::start(bool readFromFolder, bool useGT, unsigned border){
 	this->useGroundTruth = useGT;
 	// ((useGT & !GABOR & !EDGES) | EXTRACT) & ANNOS
 	if(!this->targetAnno.empty() && (this->onlyExtract || this->useGroundTruth)){
@@ -935,14 +957,23 @@ void peopleDetector::start(bool readFromFolder, bool useGT){
 		halfresX      = width/2;
 		halfresY      = height/2;
 		this->producer->backward(1);
-		this->current = new Image_t();
-		unsigned index = 0;
+		this->current     = new Image_t();
+		unsigned index    = 0;
+		this->borderedIpl = cvCreateImage(cvSize(img->width+border,\
+			img->height+border), img->depth, img->nChannels);
+
 		while((this->current->img = this->producer->getFrame())){
 			this->current->sourceName = this->producer->getSource(-1);
 			this->current->index      = index;
 			std::cout<<index<<") Image... "<<this->current->sourceName<<std::endl;
+
+			// ALLOCATE THE BORDER MATRIX FOR NOW
+			cvCopyMakeBorder(this->current->img,this->borderedIpl,cv::Point\
+				(border/2,border/2),IPL_BORDER_REPLICATE,cvScalarAll(0));
+
+			// EXTRACT FEATURES OD TRAINING/TESTING DATA
 			if(this->onlyExtract){
-				this->extractor->extractFeatures(cv::Mat(this->current->img),\
+				this->extractor->extractFeatures(cv::Mat(this->borderedIpl),\
 					this->current->sourceName, this->colorspaceCode);
 			}else{
 				// READ THE LOCATION AT WICH THERE ARE PEOPLE
@@ -952,14 +983,21 @@ void peopleDetector::start(bool readFromFolder, bool useGT){
 			}
 			index++;
 		}
-		cvReleaseImage(&this->current->img);
-		this->current->img = NULL;
-		delete this->current;
-		this->current = NULL;
+		// RELEASE THE IMAGE AND THE BORDERED IMAGE
+		if(this->borderedIpl){
+			cvReleaseImage(&this->borderedIpl);
+			this->borderedIpl = NULL;
+		}
+		if(this->current){
+			cvReleaseImage(&this->current->img);
+			this->current->img = NULL;
+			delete this->current;
+			this->current = NULL;
+		}
 	}else{
 		// FOR THE EDGES AND GABOR I NEED A BACKGROUND MODEL EVEN IF I ONLY EXTRACT
 		this->useGroundTruth = false;
-		this->run(readFromFolder);
+		this->run(readFromFolder,border);
 	}
 }
 //==============================================================================
@@ -1001,7 +1039,7 @@ std::deque<unsigned> peopleDetector::readLocations(){
 		// point.x + width*point.y
 		cv::Point2f feet = (*index).annos[l].location;
 		cv::Point2f head = this->headLocation(feet);
-		unsigned location = feet.x + width*feet.y;
+		unsigned location = feet.x + this->current->img->width*feet.y;
 		locations.push_back(location);
 
 		// STORE THE LABELS FOR ALL THE LOCATIONS
@@ -1035,7 +1073,7 @@ std::deque<unsigned> peopleDetector::readLocations(){
 	// SEE THE ANNOTATED LOCATIONS IN THE IMAGE
 	if(this->plot){
 		for(std::size_t i=0; i<locations.size(); i++){
-			cv::Point2f center = this->cvPoint(locations[i]);
+			cv::Point2f center = this->cvPoint(locations[i],this->current->img->width);
 			std::vector<cv::Point2f> templ;
 			plotTemplate2(this->current->img, center, persHeight,\
 				camHeight, cv::Scalar(255,0,0),templ);

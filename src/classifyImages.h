@@ -75,6 +75,11 @@ class classifyImages {
 		 * calibration, background models...
 		 */
 		void resetFeatures(std::string dir, std::string imStr, int colorSp);
+		/** Just build data matrix and store it; it can be called over multiple
+		 * datasets by adding the the new data rows at the end to the stored
+		 * matrix.
+		 */
+		void buildDataMatrix();
 		//======================================================================
 	protected:
 		/** @var features
