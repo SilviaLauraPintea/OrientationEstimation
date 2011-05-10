@@ -20,7 +20,7 @@ class featureExtractor {
 				cv::KeyPoint keys;
 				std::deque<float> descr;
 				keyDescr(){};
-				~keyDescr(){
+				virtual ~keyDescr(){
 					if(!this->descr.empty()){
 						this->descr.clear();
 					}
@@ -29,9 +29,11 @@ class featureExtractor {
 					this->keys  = kdescr.keys;
 					this->descr = kdescr.descr;
 				}
-				void operator=(const keyDescr &kdescr){
+				keyDescr& operator=(const keyDescr &kdescr){
+					if(this == &kdescr) return *this;
 					this->keys  = kdescr.keys;
 					this->descr = kdescr.descr;
+					return *this;
 				}
 		};
 		/** Structure containing images of the size of the detected people.
@@ -46,7 +48,7 @@ class featureExtractor {
 					this->absoluteLoc = cv::Point2f(0,0);
 					this->relativeLoc = cv::Point2f(0,0);
 				}
-				~people(){
+				virtual ~people(){
 					if(!this->borders.empty()){
 						this->borders.clear();
 					}
@@ -63,7 +65,8 @@ class featureExtractor {
 					}
 					person.pixels.copyTo(this->pixels);
 				}
-				void operator=(const people &person){
+				people& operator=(const people &person){
+					if(this == &person) return *this;
 					this->absoluteLoc = person.absoluteLoc;
 					this->relativeLoc = person.relativeLoc;
 					this->borders     = person.borders;
@@ -71,6 +74,7 @@ class featureExtractor {
 						this->pixels.release();
 					}
 					person.pixels.copyTo(this->pixels);
+					return *this;
 				}
 		};
 		/** Structure to store templates so they don't get recomputed all the time.
@@ -84,7 +88,7 @@ class featureExtractor {
 				templ(cv::Point theCenter){
 					this->center = theCenter;
 				}
-				~templ(){
+				virtual ~templ(){
 					this->extremes.clear();
 					this->points.clear();
 				}
@@ -94,11 +98,13 @@ class featureExtractor {
 					this->extremes = aTempl.extremes;
 					this->points   = aTempl.points;
 				}
-				void operator=(const templ &aTempl){
+				templ& operator=(const templ &aTempl){
+					if(this == &aTempl) return *this;
 					this->center   = aTempl.center;
 					this->head     = aTempl.head;
 					this->extremes = aTempl.extremes;
 					this->points   = aTempl.points;
+					return *this;
 				}
 		};
 		/** All available feature types.

@@ -76,7 +76,7 @@ class peopleDetector:public Tracker{
 		void templatePart(cv::Mat &thresholded,int k,float offsetX,float offsetY);
 		/** Computes the motion vector for the current image given the tracks so far.
 		 */
-		float motionVector(cv::Point2f head, cv::Point2f center);
+		float motionVector(cv::Point2f head,cv::Point2f center,bool &moved);
 		/** Compute the dominant direction of the SIFT or SURF features.
 		 */
 		float opticalFlow(cv::Mat currentImg, cv::Mat nextImg,\
@@ -106,9 +106,11 @@ class peopleDetector:public Tracker{
 		/** Return rotation angle given the head and feet position.
 		 */
 		float rotationAngle(cv::Point2f headLocation,cv::Point2f feetLocation);
-		/** Adds a border to an IPLImage.
+		/** Fixes the existing/detected locations of people and updates the tracks and
+		 * creates the bordered image.
 		 */
-		IplImage* addBorder4IplImage(IplImage *img,unsigned border);
+		void fixLocationsTracksBorderes(std::deque<unsigned> &existing,\
+			unsigned border);
 		//======================================================================
 	public:
 		/** @var print

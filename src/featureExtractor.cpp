@@ -20,8 +20,10 @@ struct onScanline{
 		onScanline(const onScanline &on){
 			this->pixelY = on.pixelY;
 		}
-		void operator=(const onScanline &on){
+		onScanline& operator=(const onScanline &on){
+			if(this == &on) return *this;
 			this->pixelY = on.pixelY;
+			return *this;
 		}
 };
 //==============================================================================
@@ -65,7 +67,11 @@ void featureExtractor::initSIFT(std::string dictName, unsigned means, unsigned s
 	this->meanSize     = size;
 
 	// ASSUME THAT THERE IS ALREADY A SIFT DICTIONARY AVAILABLE
-	if(this->dictionarySIFT.empty()){
+
+std::cout<<"build dict: "<<this->featureType<<" "<<\
+		(this->featureType==featureExtractor::SIFT_DICT)<<std::endl;
+
+	if(this->dictionarySIFT.empty() && this->featureType!=featureExtractor::SIFT_DICT){
 		binFile2mat(this->dictionarySIFT, const_cast<char*>(this->dictFilename.c_str()));
 	}
 }

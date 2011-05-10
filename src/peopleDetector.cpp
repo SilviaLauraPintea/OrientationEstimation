@@ -92,8 +92,10 @@ struct compareImg{
 		compareImg(const compareImg &comp){
 			this->imgName = comp.imgName;
 		}
-		void operator=(const compareImg &comp){
+		compareImg& operator=(const compareImg &comp){
+			if(this == &comp) return *this;
 			this->imgName = comp.imgName;
+			return *this;
 		}
 };
 //==============================================================================
@@ -125,6 +127,7 @@ featureExtractor::FEATURE feat, bool readFromFolder){
 			(theAnnotationsFile.c_str()), this->targetAnno);
 	}
 	this->lastIndex = 0;
+	this->extractor->init(feat,this->datasetPath+"features/");
 	if(feat==featureExtractor::SIFT_DICT || (feat==featureExtractor::SIFT &&\
 	!this->onlyExtract)){
 		this->extractor->initSIFT(this->datasetPath+"SIFT_"+this->imageString+".bin");
@@ -134,7 +137,6 @@ featureExtractor::FEATURE feat, bool readFromFolder){
 	}else if(feat==featureExtractor::PIXELS || feat==featureExtractor::HOG){
 		this->featurePart = peopleDetector::TOP;
 	}
-	this->extractor->init(feat,this->datasetPath+"features/");
 	this->templates.clear();
 }
 //==============================================================================
@@ -263,6 +265,9 @@ void peopleDetector::add2Templates(std::deque<unsigned> existing){
 	this->templates.clear();
 	for(unsigned i=0; i<existing.size(); i++){
 		cv::Point2f center = this->cvPoint(existing[i],this->borderedIpl->width);
+
+std::cout<<"Existing "<<center;
+
 		featureExtractor::templ aTempl(center);
 		genTemplate2(aTempl.center, persHeight, camHeight, aTempl.points);
 		aTempl.head = cv::Point2f((aTempl.points[12].x+aTempl.points[14].x)/2,\
@@ -375,11 +380,60 @@ float tmplArea){
 	}
 }
 //==============================================================================
+/** Fixes the existing/detected locations of people and updates the tracks and
+ * creates the bordered image.
+ */
+void peopleDetector::fixLocationsTracksBorderes(std::deque<unsigned> &existing,\
+unsigned border){
+	//1) FIRST GET THE CORRECT LOCATIONS ON THE ORIGINAL IMAGE
+	if(this->useGroundTruth){
+		existing = this->readLocations();
+	}else{
+		if(this->targetAnno.empty()){
+			std::cerr<<"Annotations not loaded! "<<std::endl;
+			std::abort();
+		}
+		existing = this->fixLabels(existing);
+	}
+
+	//2) THEN CREATE THE BORDERED IMAGE
+	cvCopyMakeBorder(this->current->img,this->borderedIpl,cv::Point\
+		(border/2,border/2),IPL_BORDER_REPLICATE,cvScalarAll(0));
+
+	//3) FIX THE LOCATIONS TO CORRESPOND TO THE BORDERED IMAGE:
+	for(size_t i=0;i<existing.size();i++){
+		cv::Point pt = this->cvPoint(existing[i],width);
+		pt.x += border/2;
+		pt.y += border/2;
+		existing[i] = pt.x + this->borderedIpl->width*pt.y;
+	}
+
+	//4) UPDATE THE TRACKS (ON THE MODIFIED DETECTED LOCATIONS)
+	this->updateTracks(this->current->index, existing, this->borderedIpl->width);
+
+	if(this->plot){
+		IplImage *tmpSrc;
+		tmpSrc = cvCloneImage(this->borderedIpl);
+		for(unsigned i=0; i<tracks.size(); ++i){
+			if(this->tracks[i].imgID.size() > MIN_TRACKLEN){
+				if(this->current->index-this->tracks[i].imgID.back()<2){
+					this->plotTrack(tmpSrc,tracks[i],i,(unsigned)1);
+				}
+			}
+		}
+		cvShowImage("tracks",tmpSrc);
+		cvWaitKey(0);
+		cvReleaseImage(&tmpSrc);
+	}
+}
+//==============================================================================
 /** Creates on data row in the final data matrix by getting the feature
  * descriptors.
  */
-void peopleDetector::extractDataRow(std::deque<unsigned> &existing, IplImage *oldBg,\
+void peopleDetector::extractDataRow(std::deque<unsigned> &existing,IplImage *oldBg,\
 unsigned border){
+	this->fixLocationsTracksBorderes(existing,border);
+
 	// ADD A BORDER AROUND THE BACKGROUND TO HAVE THE TEMPLATES CENTERED
 	IplImage *bg = NULL;
 	if(oldBg){
@@ -387,19 +441,6 @@ unsigned border){
 			oldBg->depth,oldBg->nChannels);
 		cvCopyMakeBorder(oldBg,bg,cv::Point(border/2,border/2),\
 			IPL_BORDER_REPLICATE,cvScalarAll(0));
-	}
-
-	// FIX THE LABELS TO CORRESPOND TO THE PEOPLE DETECTED IN THE IMAGE
-	if(!this->targetAnno.empty() && !this->useGroundTruth){
-		existing = this->fixLabels(existing);
-	}
-
-	// FIX THE LOCATIONS TO CORRESPOND TO THE BORDERED IMAGE:
-	for(size_t i=0;i<existing.size();i++){
-		cv::Point pt = this->cvPoint(existing[i],width);
-		pt.x += border/2;
-		pt.y += border/2;
-		existing[i] = pt.x + this->borderedIpl->width*pt.y;
 	}
 
 	// PROCESS THE REST OF THE IMAGES
@@ -469,8 +510,12 @@ unsigned border){
 		cv::Mat dataRow = this->extractor->getDataRow(cv::Mat(this->borderedIpl),\
 			this->templates[i],roi,allPeople[i],thresholded,keys,imgName,\
 			absRotCenter,rotBorders,rotAngle);
+
+		// CHECK THE DIRECTION OF THE MOVEMENT
+		bool moved;
 		float direction = this->motionVector(this->templates[i].head,\
-			this->templates[i].center);
+			this->templates[i].center,moved);
+		if(!moved){direction = -1.0;}
 		this->dataMotionVectors.push_back(direction);
 
 		if(this->tracking && !this->entireNext.empty()){
@@ -742,10 +787,7 @@ const FLOAT logBGProb,const vnl_vector<FLOAT> &logSumPixelBGProb,unsigned border
 		}
 	}
 
-	//5) UPDATE THE TRACKS (WHERE ALL THE INFORMATION IS STORED FOR ALL IMAGES)
-	this->updateTracks(imgNum, existing);
-
-	// DILATE A BIT THE BACKGROUND SO THE BACKGROUND NOISE GOES NICELY
+	//5) DILATE A BIT THE BACKGROUND SO THE BACKGROUND NOISE GOES NICELY
 	IplImage *bg = vec2img((imgVec-bgVec).apply(fabs));
 	cvErode(bg,bg,NULL,3);
 	cvDilate(bg,bg,NULL,4);
@@ -758,14 +800,7 @@ const FLOAT logBGProb,const vnl_vector<FLOAT> &logSumPixelBGProb,unsigned border
 		tmpSrc = cvCloneImage(src);
 		// PLOT HULL
 		this->plotHull(bg, this->priorHull);
-		// PLOT TRACKS FOR THE FIRST IMAGE
-		for(unsigned i=0; i<tracks.size(); ++i){
-			if(this->tracks[i].imgID.size() > MIN_TRACKLEN){
-				if(imgNum-this->tracks[i].imgID.back() < 2){
-					this->plotTrack(tmpSrc,tracks[i],i,(unsigned)1);
-				}
-			}
-		}
+
 		// PLOT DETECTIONS
 		for(unsigned i=0; i!=existing.size(); ++i){
 			cv::Point2f pt = this->cvPoint(existing[i],this->current->img->width);
@@ -778,15 +813,12 @@ const FLOAT logBGProb,const vnl_vector<FLOAT> &logSumPixelBGProb,unsigned border
 		cvReleaseImage(&tmpBg);
 		cvReleaseImage(&tmpSrc);
 	}
-
-	//8) EXTRACT FEATURES FOR THE CURRENTLY DETECTED LOCATIONS
+	//10) EXTRACT FEATURES FOR THE CURRENTLY DETECTED LOCATIONS
 	cout<<"Number of templates: "<<existing.size()<<endl;
-	cvCopyMakeBorder(this->current->img,this->borderedIpl,cv::Point\
-		(border/2,border/2),IPL_BORDER_REPLICATE,cvScalarAll(0));
-	this->extractDataRow(existing, bg);
+	this->extractDataRow(existing,bg,border);
 	cout<<"Number of templates afterwards: "<<existing.size()<<endl;
 
-	//9) WHILE NOT q WAS PRESSED PROCESS THE NEXT IMAGES
+	//11) WHILE NOT q WAS PRESSED PROCESS THE NEXT IMAGES
 	cvReleaseImage(&bg);
 	return this->imageProcessingMenu();
 }
@@ -915,15 +947,17 @@ float offsetY){
 //==============================================================================
 /** Computes the motion vector for the current image given the tracks so far.
  */
-float peopleDetector::motionVector(cv::Point2f head, cv::Point2f center){
+float peopleDetector::motionVector(cv::Point2f head,cv::Point2f center,bool &moved){
 	cv::Point2f prev = center;
-	float angle = 0;
+	float angle      = 0;
+	moved            = false;
 	if(this->tracks.size()>1){
 		for(unsigned i=0; i<this->tracks.size();i++){
 			if(this->tracks[i].positions[this->tracks[i].positions.size()-1].x ==\
 			center.x && this->tracks[i].positions[this->tracks[i].positions.size()-1].y\
 			== center.y){
 				if(this->tracks[i].positions.size()>1){
+					moved  = true;
 					prev.x = this->tracks[i].positions[this->tracks[i].positions.size()-2].x;
 					prev.y = this->tracks[i].positions[this->tracks[i].positions.size()-2].y;
 				}
@@ -936,6 +970,8 @@ float peopleDetector::motionVector(cv::Point2f head, cv::Point2f center){
 			cv::line(tmp,prev,center,cv::Scalar(50,100,255),1,8,0);
 			cv::imshow("tracks",tmp);
 		}
+	}
+	if(moved){
 		angle = std::atan2(center.y-prev.y,center.x-prev.x);
 	}
 
@@ -972,23 +1008,19 @@ void peopleDetector::start(bool readFromFolder, bool useGT, unsigned border){
 			this->current->index      = index;
 			std::cout<<index<<") Image... "<<this->current->sourceName<<std::endl;
 
-			// ALLOCATE THE BORDER MATRIX FOR NOW
-			cvCopyMakeBorder(this->current->img,this->borderedIpl,cv::Point\
-				(border/2,border/2),IPL_BORDER_REPLICATE,cvScalarAll(0));
-
-			// EXTRACT FEATURES OD TRAINING/TESTING DATA
+			//1) EXTRACT FEATURES OD TRAINING/TESTING DATA
 			if(this->onlyExtract){
+				cvCopyMakeBorder(this->current->img,this->borderedIpl,cv::Point\
+					(border/2,border/2),IPL_BORDER_REPLICATE,cvScalarAll(0));
 				this->extractor->extractFeatures(cv::Mat(this->borderedIpl),\
 					this->current->sourceName, this->colorspaceCode);
 			}else{
-				// READ THE LOCATION AT WICH THERE ARE PEOPLE
-				std::deque<unsigned> existing = this->readLocations();
-				cout<<"Number of templates: "<<existing.size()<<endl;
-				this->extractDataRow(existing,NULL);
+				std::deque<unsigned> existing;
+				this->extractDataRow(existing,NULL,border);
 			}
 			index++;
 		}
-		// RELEASE THE IMAGE AND THE BORDERED IMAGE
+		//5) RELEASE THE IMAGE AND THE BORDERED IMAGE
 		if(this->borderedIpl){
 			cvReleaseImage(&this->borderedIpl);
 			this->borderedIpl = NULL;
@@ -1086,9 +1118,6 @@ std::deque<unsigned> peopleDetector::readLocations(){
 		cvShowImage("AnnotatedLocations", this->current->img);
 		cvWaitKey(0);
 	}
-
-	// UPDATE THE TRACKS IN THE CASE WE WANT TO USE TRACKING
-	this->updateTracks(this->current->index, locations);
 	return locations;
 }
 //==============================================================================
@@ -1106,11 +1135,11 @@ float peopleDetector::rotationAngle(cv::Point2f headLocation,cv::Point2f feetLoc
 	return rotAngle;
 }
 //==============================================================================
-
+/*
 int main(int argc, char **argv){
 	peopleDetector feature(argc,argv,true,false);
 	feature.init(std::string(argv[1])+"/annotated_train",\
-		std::string(argv[1])+"/annotated_train.txt",featureExtractor::SIFT,true);
+		std::string(argv[1])+"/annotated_train.txt",featureExtractor::GABOR,true);
 	feature.start(true, true, 150);
 }
-
+*/

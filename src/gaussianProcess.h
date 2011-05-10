@@ -23,7 +23,7 @@ class gaussianProcess {
 			  std::deque<float> mean;
 			  std::deque<float> variance;
 			  prediction(){};
-			  ~prediction(){
+			  virtual ~prediction(){
 				  if(!this->mean.empty()){
 					  this->mean.clear();
 				  }
@@ -35,9 +35,11 @@ class gaussianProcess {
 				this->mean = pred.mean;
 				this->variance = pred.variance;
 			}
-			void operator=(const prediction &pred){
+			prediction& operator=(const prediction &pred){
+				if(this == &pred) return *this;
 				this->mean = pred.mean;
 				this->variance = pred.variance;
+				return *this;
 			}
 		};
 

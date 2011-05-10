@@ -77,16 +77,21 @@ class classifyImages {
 		 * matrix.
 		 */
 		void buildDataMatrix(int colorSp);
+		/** Concatenate the loaded data from the files to the currently computed data.
+		 */
+		void loadData(cv::Mat tmpData1,cv::Mat tmpTargets1);
 		/** Run over multiple settings of the parameters to find the best ones.
 		 */
 		friend void parameterSetting(std::string errorsOnTrain,std::string errorsOnTest,\
 			classifyImages &classi,int argc,char** argv,featureExtractor::FEATURE feat,\
-			int colorSp,bool useGt,annotationsHandle::POSE what);
+			int colorSp,bool useGt,annotationsHandle::POSE what,\
+			gaussianProcess::kernelFunction kernel);
 		/** Combine the output of multiple classifiers (only on testing, no multiple
 		 * predictions).
 		 */
-		friend void multipleClassifier(int colorSp,bool load,annotationsHandle::POSE what,\
-			classifyImages &classi);
+		friend void multipleClassifier(int colorSp,annotationsHandle::POSE what,\
+			classifyImages &classi,double noise,double length,\
+			gaussianProcess::kernelFunction kernel,bool useGT);
 		//======================================================================
 	protected:
 		/** @var features
@@ -183,11 +188,6 @@ class classifyImages {
 		 * The size of one fold in cross-validation.
 		 */
 		unsigned foldSize;
-
-		/** @var storeData
-		 * If data is stored locally or not.
-		 */
-		bool loadData;
 
 		/** @var modelName
 		 * The name of the model the be loaded/saved.

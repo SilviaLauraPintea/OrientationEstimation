@@ -29,7 +29,7 @@ class annotationsHandle {
 					this->id    = 0;
 					this->poses = std::deque<unsigned int>(5,0);
 				}
-				~ANNOTATION(){
+				virtual ~ANNOTATION(){
 					if(!this->poses.empty()){
 						this->poses.clear();
 					}
@@ -39,10 +39,12 @@ class annotationsHandle {
 					this->location = anno.location;
 					this->poses    = anno.poses;
 				}
-				void operator=(const ANNOTATION &anno){
+				ANNOTATION& operator=(const ANNOTATION &anno){
+					if(this == &anno) return *this;
 					this->id       = anno.id;
 					this->location = anno.location;
 					this->poses    = anno.poses;
+					return *this;
 				}
 		};
 		/** Structure containing a vector of annotations for each image.
@@ -54,7 +56,7 @@ class annotationsHandle {
 				FULL_ANNOTATIONS(){
 					this->imgFile = "";
 				}
-				~FULL_ANNOTATIONS(){
+				virtual ~FULL_ANNOTATIONS(){
 					if(!this->annos.empty()){
 						this->annos.clear();
 					}
@@ -63,9 +65,11 @@ class annotationsHandle {
 					this->imgFile = fanno.imgFile;
 					this->annos   = fanno.annos;
 				}
-				void operator=(const FULL_ANNOTATIONS &fanno){
+				FULL_ANNOTATIONS& operator=(const FULL_ANNOTATIONS &fanno){
+					if(this == &fanno) return *this;
 					this->imgFile = fanno.imgFile;
 					this->annos   = fanno.annos;
+					return *this;
 				}
 		};
 		/** Shows which id from the old annotations is assigned to which id from
@@ -87,10 +91,12 @@ class annotationsHandle {
 					this->to   = assig.to;
 					this->dist = assig.dist;
 				}
-				void operator=(const ASSIGNED &assig){
+				ASSIGNED& operator=(const ASSIGNED &assig){
+					if(this == &assig) return *this;
 					this->id   = assig.id;
 					this->to   = assig.to;
 					this->dist = assig.dist;
+					return *this;
 				}
 		};
 		//======================================================================

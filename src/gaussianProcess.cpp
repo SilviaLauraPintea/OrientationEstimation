@@ -138,7 +138,6 @@ void gaussianProcess::train(cv::Mat X,cv::Mat y,float (gaussianProcess::*fFuncti
 	}
 	X.convertTo(X, CV_32FC1);
 	y.convertTo(y, CV_32FC1);
-
 	this->chlsky.init();
 	this->kFunction = fFunction;
 	this->N         = X.rows; // NUMBER OF TRAINING DATA POINTS!
@@ -170,7 +169,6 @@ void gaussianProcess::train(cv::Mat X,cv::Mat y,float (gaussianProcess::*fFuncti
 			exit(1);
 		}
 	}
-
 	this->chlsky.solve(y, this->alpha);
 	this->alpha.convertTo(this->alpha, CV_32FC1);
 

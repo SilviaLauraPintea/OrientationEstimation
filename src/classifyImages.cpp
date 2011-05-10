@@ -27,7 +27,6 @@ classifyImages::classifyImages(int argc, char **argv, classifyImages::USES use){
 	this->feature          = featureExtractor::EDGES;
 	this->features         = NULL;
 	this->foldSize		   = 5;
-	this->loadData 	       = false;
 	this->modelName        = "";
 	this->what             = use;
 	this->useGroundTruth   = false;
@@ -103,7 +102,6 @@ classifyImages::classifyImages(int argc, char **argv, classifyImages::USES use){
 		}
 
 		if(use == classifyImages::TEST){
-			this->loadData  = true;
 			this->modelName = "data/TEST/";
 		}else if(use == classifyImages::EVALUATE){
 			this->modelName = "data/EVALUATE/";
@@ -175,42 +173,99 @@ bool toUseGT){
 	}
 }
 //==============================================================================
-/** Creates the training data (according to the options), the labels and
- * trains the a \c GaussianProcess on the data.
+/** Concatenate the loaded data from the files to the currently computed data.
  */
-void classifyImages::trainGP(annotationsHandle::POSE what, bool fromFolder){
+void classifyImages::loadData(cv::Mat tmpData1,cv::Mat tmpTargets1){
 	if(!this->trainData.empty()){
 		this->trainData.release();
 	}
 	if(!this->trainTargets.empty()){
 		this->trainTargets.release();
 	}
+
+	// LOAD THE DATA AND TARGET MATRIX FROM THE FILE IF IT'S THERE
+	cv::Mat tmpData2, tmpTargets2;
+	if(file_exists((this->modelName+"Data.bin").c_str())){
+		binFile2mat(tmpData2, const_cast<char*>((this->modelName+"Data.bin").c_str()));
+	}else{
+		tmpData2 = cv::Mat();
+	}
+	if(file_exists((this->modelName+"Labels.bin").c_str())){
+		binFile2mat(tmpTargets2, const_cast<char*>((this->modelName+"Labels.bin").c_str()));
+	}else{
+		tmpTargets2 = cv::Mat();
+	}
+
+	// NOW COPY THEM TOGETHER INTO A FINAL MATRIX AND STORE IT.
+	if(!tmpData1.empty() && !tmpData2.empty()){
+		if(tmpData1.cols!=tmpData2.cols){
+			std::cerr<<"The sizes of the stored data matrix and the newly generated "\
+				<<"data matrix do not agree: "<<tmpData1.size()<<" VS. "<<\
+				tmpData2.size()<<std::endl;
+			exit(1);
+		}
+	}
+	// IF ONE OF THE MATRIXES IS EMPTY USE THE OTHER ONE TO GET THE COLS
+	cv::Mat dumData1, dumData2, dumTargets1, dumTargets2;
+	unsigned colsData    = std::max(tmpData2.cols,tmpData1.cols);
+	unsigned colsTargets = std::max(tmpTargets2.cols,tmpTargets1.cols);
+	this->trainData = cv::Mat::zeros(cv::Size(colsData,tmpData1.rows+tmpData2.rows),\
+		CV_32FC1);
+	this->trainTargets = cv::Mat::zeros(cv::Size(colsTargets,tmpTargets1.rows+\
+		tmpTargets2.rows), CV_32FC1);
+
+	// COPY DATA1 AND TARGETS1 TO THE DATA MATRIX
+	if(!tmpData1.empty() && !tmpTargets1.empty()){
+		dumData1 = this->trainData.rowRange(0,tmpData1.rows);
+		tmpData1.copyTo(dumData1);
+		dumTargets1 = this->trainTargets.rowRange(0,tmpTargets1.rows);
+		tmpTargets1.copyTo(dumTargets1);
+	}
+
+	// COPY DATA2 AND TARGETS2 TO THE DATA MATRIX
+	if(!tmpData2.empty() && !tmpTargets2.empty()){
+		dumData2 = this->trainData.rowRange(tmpData1.rows,tmpData1.rows+tmpData2.rows);
+		tmpData2.copyTo(dumData2);
+		dumTargets2 = this->trainTargets.rowRange(tmpTargets1.rows,tmpTargets1.rows+\
+			tmpTargets2.rows);
+		tmpTargets2.copyTo(dumTargets2);
+	}
+	this->trainData.convertTo(this->trainData,CV_32FC1);
+	this->trainTargets.convertTo(this->trainTargets,CV_32FC1);
+	std::cout<<"SIZE: "<<this->trainData.size()<<"=("<<tmpData1.size()<<"+"<<\
+		tmpData2.size()<<")"<<std::endl;
+	std::cout<<"SIZE: "<<this->trainTargets.size()<<"=("<<tmpTargets1.size()<<"+"<<\
+		tmpTargets2.size()<<")"<<std::endl;
+
+	// RELEASE THE BILLION OF ALLOCATED MATRIXES
+	dumData1.release();
+	dumData2.release();
+	dumTargets1.release();
+	dumTargets2.release();
+	tmpData2.release();
+	tmpTargets2.release();
+}
+//==============================================================================
+/** Creates the training data (according to the options), the labels and
+ * trains the a \c GaussianProcess on the data.
+ */
+void classifyImages::trainGP(annotationsHandle::POSE what, bool fromFolder){
 	this->gpSin.init(this->kFunction);
 	this->gpCos.init(this->kFunction);
 
 	// IF WE CANNOT LOAD DATA, THEN WE BUILD IT
 	std::string modelNameData   = this->modelName+"Data.bin";
 	std::string modelNameLabels = this->modelName+"Labels.bin";
-	if(this->loadData || !file_exists(modelNameData.c_str()) || \
-	!file_exists(modelNameLabels.c_str())){
-		this->features->init(this->trainFolder,this->annotationsTrain,\
-			this->feature,fromFolder);
-		this->features->start(fromFolder,this->useGroundTruth);
-		this->features->data.copyTo(this->trainData);
-		this->features->targets.copyTo(this->trainTargets);
 
-		std::cout<<"SIZE: "<<this->trainData.cols<<" "<<this->trainData.rows<<std::endl;
-		std::cout<<"SIZE: "<<this->trainTargets.cols<<" "<<this->trainTargets.rows<<std::endl;
-
-		this->trainData.convertTo(this->trainData, CV_32FC1);
-		this->trainTargets.convertTo(this->trainTargets, CV_32FC1);
-	}else if(!this->modelName.empty()){
-		// WE JUST LOAD THE DATA AND TRAIN AND PREDICT
-		binFile2mat(this->trainData,const_cast<char*>((this->modelName+\
-			"Data.bin").c_str()));
-		binFile2mat(this->trainTargets,const_cast<char*>((this->modelName+\
-			"Labels.bin").c_str()));
-	}
+	cv::Mat tmpData, tmpTargets;
+	this->features->init(this->trainFolder,this->annotationsTrain,this->feature,\
+		fromFolder);
+	this->features->start(fromFolder,this->useGroundTruth);
+	this->features->data.copyTo(tmpData);
+	this->features->targets.copyTo(tmpTargets);
+	tmpData.convertTo(tmpData,CV_32FC1);
+	tmpTargets.convertTo(tmpTargets,CV_32FC1);
+	this->loadData(tmpData,tmpTargets);
 
 	// TRAIN THE SIN AND COS SEPARETELY FOR LONGITUDE || LATITUDe
 	if(what == annotationsHandle::LONGITUDE){
@@ -225,6 +280,8 @@ void classifyImages::trainGP(annotationsHandle::POSE what, bool fromFolder){
 		this->gpCos.train(this->trainData,this->trainTargets.col(3),\
 			this->kFunction, this->noise, this->length);
 	}
+	tmpData.release();
+	tmpTargets.release();
 }
 //==============================================================================
 /** Just build data matrix and store it; it can be called over multiple datasets
@@ -645,7 +702,7 @@ void classifyImages::resetFeatures(std::string dir,std::string imStr,int colorSp
 	args[0] = const_cast<char*>("peopleDetector");
 	args[1] = const_cast<char*>(dir.c_str());
 	args[2] = const_cast<char*>(imStr.c_str());
-	this->features = new peopleDetector(3,args,false,true);
+	this->features = new peopleDetector(3,args,false,false);
 	this->features->colorspaceCode = colorSp;
 	delete [] args;
 }
@@ -699,8 +756,10 @@ float &normError){
 /** Combine the output of multiple classifiers (only on testing, no multiple
  * predictions).
  */
-void multipleClassifier(int colorSp,bool load,annotationsHandle::POSE what,\
-classifyImages &classi){
+void multipleClassifier(int colorSp,annotationsHandle::POSE what,\
+classifyImages &classi,double noise,double length,gaussianProcess::kernelFunction \
+kernel,bool useGT){
+	classi.init(noise,length,featureExtractor::PIXELS,kernel,useGT);
 	std::deque<std::deque<float> > predictions;
 	std::deque<float> tmpPrediction;
 	float dummy = 0;
@@ -742,20 +801,34 @@ classifyImages &classi){
 			tmpPrediction.clear();
 	}
 	// HOW TO COMBINE THEM?BIN VOTES EVERY 20DEGREES AND AVERAGE THE WINNING BIN
-	std::deque<float> finalPreds(predictions[0].size(),0.0);
+	std::deque<float> finalPreds;
 	for(std::size_t j=0; j<predictions[0].size();j++){
-		std::deque<unsigned> votes(9,0);
-		std::deque<float> bins(9,0.0);
-		unsigned winningLabel      = 0;
-		unsigned winningNoVotes    = 0;
+		std::deque<unsigned> votes(18,0);
+		std::deque<float> bins(18,0.0);
+		unsigned winningLabel   = 0;
+		unsigned winningNoVotes = 0;
+		// COMPUTE THE RANGE IN WHICH THE ANGLE SHOULD BE
+		float angleMin,angleMax;
+		if(classi.features->dataMotionVectors[j] == -1.0){
+			angleMax = 2*M_PI;
+			angleMin = 0.0;
+		}else{
+			angleMin = classi.features->dataMotionVectors[j]-M_PI/2.0;
+			angle0to360(angleMin);
+			angleMax = classi.features->dataMotionVectors[j]+M_PI/2.0;
+			angle0to360(angleMax);
+			if(angleMin>angleMax){
+				float aux = angleMin;
+				angleMin  = angleMax;
+				angleMax  = aux;
+			}
+		}
+
 		// FOR EACH IMAGE LOOP OVER ALL PREDICTIONS
 		for(std::size_t i=0; i<predictions.size();i++){
-			float angleMin = classi.features->dataMotionVectors[j]-M_PI/2.0;
-			angle0to360(angleMin);
-			float angleMax = classi.features->dataMotionVectors[j]+M_PI/2.0;
-			angle0to360(angleMax);
-			if(predictions[i][j]>=angleMin || predictions[i][j]<=angleMax){
-				unsigned label = static_cast<unsigned>(predictions[i][j])/20;
+			if(predictions[i][j]>=angleMin || predictions[i][j]<angleMax){
+				unsigned degrees = static_cast<unsigned>(predictions[i][j]*180.0/M_PI);
+				unsigned label   = degrees/20;
 				votes[label]++;
 				bins[label] += predictions[i][j];
 				if(votes[label]>winningNoVotes){
@@ -764,11 +837,23 @@ classifyImages &classi){
 				}
 			}
 		}
+
+		// IF NOT PREDICTION WAS WITHIN THE LIMITS:
+		float guess;
+		if(winningNoVotes==0){
+			guess = classi.features->dataMotionVectors[j];
+		}else{
+			guess = bins[winningLabel]/static_cast<float>(votes[winningLabel]);
+		}
 		// STORE THE FINAL PREDICTIONS
-		finalPreds.push_back(bins[winningLabel]/static_cast<float>(votes[winningLabel]));
+		finalPreds.push_back(guess);
+		votes.clear();
+		bins.clear();
 	}
 
 	// FINALLY EVALUATE THE FINAL PREDICTIONS
+	std::cout<<"FINAL EVALUATION________________________________________________"<<\
+		"________________________"<<std::endl;
 	float error = 0.0, normError=0.0, meanDiff=0.0;
 	classi.evaluate(finalPreds,error,normError,meanDiff);
 }
@@ -777,17 +862,18 @@ classifyImages &classi){
  */
 void parameterSetting(std::string errorsOnTrain,std::string errorsOnTest,\
 classifyImages &classi,int argc,char** argv,featureExtractor::FEATURE feat,\
-int colorSp,bool useGt,annotationsHandle::POSE what){
+int colorSp,bool useGt,annotationsHandle::POSE what,\
+gaussianProcess::kernelFunction kernel){
   	std::ofstream train, test;
 	train.open(errorsOnTrain.c_str(),std::ios::out);
 	test.open(errorsOnTest.c_str(),std::ios::out);
 	for(float v=0.1; v<5; v+=0.1){
 		for(float l=1; l<125; l+=1){
-			classi.init(v,l,feat,&gaussianProcess::sqexp,useGt);
+			classi.init(v,l,feat,kernel,useGt);
 			float errorTrain;
 			classi.runTest(colorSp,what,errorTrain);
 			train<<v<<" "<<l<<" "<<errorTrain<<std::endl;
-			classi.init(v,l,feat,&gaussianProcess::sqexp,useGt);
+			classi.init(v,l,feat,kernel,useGt);
 			float errorTest;
 			classi.runTest(colorSp,what,errorTest);
 			test<<v<<" "<<l<<" "<<errorTest<<std::endl;
@@ -828,13 +914,14 @@ int main(int argc, char **argv){
 /*
 	classifyImages classi(argc,argv,classifyImages::TEST);
 	parameterSetting("train.txt","text.txt",classi,argc,argv,featureExtractor::HOG,\
-		CV_BGR2Luv,true,annotationsHandle::LONGITUDE);
+		CV_BGR2Luv,true,annotationsHandle::LONGITUDE,&gaussianProcess::sqexp);
 */
 	//--------------------------------------------------------------------------
 
 	// test
 	classifyImages classi(argc,argv,classifyImages::TEST);
-	multipleClassifier(CV_BGR2Luv,true,annotationsHandle::LONGITUDE,classi);
+	multipleClassifier(CV_BGR2Luv,annotationsHandle::LONGITUDE,classi,0.85,\
+		85,&gaussianProcess::sqexp,true);
 
 }
 
