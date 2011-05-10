@@ -32,7 +32,6 @@ bool buildBg):Tracker(argc, argv, 20, buildBg, true){
 		this->plot           = false;
 		this->print          = true;
 		this->useGroundTruth = true;
-		this->lastIndex      = 0;
 		this->producer       = NULL;
 		this->borderedIpl    = NULL;
 		this->colorspaceCode = CV_BGR2Lab;
@@ -47,6 +46,12 @@ bool buildBg):Tracker(argc, argv, 20, buildBg, true){
 			" imageString"<<std::endl;
 		exit(1);
 	}
+
+	// INITIALIZE THE DATA MATRIX AND TARGETS MATRIX
+	for(unsigned i=0;i<3;i++){
+		this->data.push_back(cv::Mat());
+		this->targets.push_back(cv::Mat());
+	}
 }
 //==============================================================================
 peopleDetector::~peopleDetector(){
@@ -55,11 +60,13 @@ peopleDetector::~peopleDetector(){
 		delete this->producer;
 		this->producer = NULL;
 	}
-	if(!this->targets.empty()){
-		this->targets.release();
-	}
-	if(!this->data.empty()){
-		this->data.release();
+	for(std::size_t i=0;i<this->data.size();i++){
+		if(!this->data[i].empty()){
+			this->data[i].release();
+		}
+		if(!this->targets[i].empty()){
+			this->targets[i].release();
+		}
 	}
 	if(!this->targetAnno.empty()){
 		this->targetAnno.clear();
@@ -112,11 +119,13 @@ featureExtractor::FEATURE feat, bool readFromFolder){
 	if(!this->entireNext.empty()){
 		this->entireNext.release();
 	}
-	if(!this->targets.empty()){
-		this->targets.release();
-	}
-	if(!this->data.empty()){
-		this->data.release();
+	for(std::size_t i=0; i<this->data.size(); i++){
+		if(!this->targets[i].empty()){
+			this->targets[i].release();
+		}
+		if(!this->data[i].empty()){
+			this->data[i].release();
+		}
 	}
 	if(!this->targetAnno.empty()){
 		this->targetAnno.clear();
@@ -126,7 +135,6 @@ featureExtractor::FEATURE feat, bool readFromFolder){
 		annotationsHandle::loadAnnotations(const_cast<char*>\
 			(theAnnotationsFile.c_str()), this->targetAnno);
 	}
-	this->lastIndex = 0;
 	this->extractor->init(feat,this->datasetPath+"features/");
 	if(feat==featureExtractor::SIFT_DICT || (feat==featureExtractor::SIFT &&\
 	!this->onlyExtract)){
@@ -444,7 +452,6 @@ unsigned border){
 	}
 
 	// PROCESS THE REST OF THE IMAGES
-	this->lastIndex = this->data.rows;
 	cv::Mat image(this->borderedIpl);
 	cv::cvtColor(image, image, this->colorspaceCode);
 	if(this->tracking && this->current->index+1<this->producer->filelist.size()){
@@ -533,10 +540,12 @@ unsigned border){
 		}
 		dataRow.convertTo(dataRow, CV_32FC1);
 		normalizeMat(dataRow);
-		if(this->data.empty()){
-			dataRow.copyTo(this->data);
+
+		unsigned groupNo=this->findImageClass();
+		if(this->data[groupNo].empty()){
+			dataRow.copyTo(this->data[groupNo]);
 		}else{
-			this->data.push_back(dataRow);
+			this->data[groupNo].push_back(dataRow);
 		}
 		if(!thresholded.empty()){thresholded.release();}
 		dataRow.release();
@@ -740,10 +749,11 @@ std::deque<unsigned> peopleDetector::fixLabels(std::deque<unsigned> existing){
 			tmp.at<float>(0,3) = std::cos(angle);
 
 			// STORE THE LABELS IN THE TARGETS ON THE RIGHT POSITION
-			if(this->targets.empty()){
-				tmp.copyTo(this->targets);
+			unsigned groupNo=this->findImageClass();
+			if(this->targets[groupNo].empty()){
+				tmp.copyTo(this->targets[groupNo]);
 			}else{
-				this->targets.push_back(tmp);
+				this->targets[groupNo].push_back(tmp);
 			}
 			tmp.release();
 		}
@@ -1099,10 +1109,11 @@ std::deque<unsigned> peopleDetector::readLocations(){
 		tmp.at<float>(0,3) = std::cos(angle);
 
 		// STORE THE LABELS IN THE TARGETS ON THE RIGHT POSITION
-		if(this->targets.empty()){
-			tmp.copyTo(this->targets);
+		unsigned groupNo=this->findImageClass();
+		if(this->targets[groupNo].empty()){
+			tmp.copyTo(this->targets[groupNo]);
 		}else{
-			this->targets.push_back(tmp);
+			this->targets[groupNo].push_back(tmp);
 		}
 		tmp.release();
 	}
@@ -1135,6 +1146,14 @@ float peopleDetector::rotationAngle(cv::Point2f headLocation,cv::Point2f feetLoc
 	return rotAngle;
 }
 //==============================================================================
+/** Find the class in which we can store the current image (the data is split in
+ * 3 classes depending on the position of the person wrt camera).
+ */
+unsigned classifyImages::findImageClass(){
+	// TODO: compare the difference between head and feet with the max diff
+}
+//==============================================================================
+
 /*
 int main(int argc, char **argv){
 	peopleDetector feature(argc,argv,true,false);

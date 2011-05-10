@@ -820,7 +820,44 @@ int annotationsHandle::runEvaluation(int argc, char **argv){
 	annoDifferences(allAnnoTrain, allAnnoTest, avgDist, Ndiff, ssdLongDiff, \
 		ssdLatDiff, poseDiff);
 }
+//==============================================================================
+/** Check calibration: shows how the projection grows depending on the location
+ * of the point.
+ */
+void annotationsHandle::checkCalibration(int argc, char **argv){
+	init();
+	if(argc != 3){
+		std::cerr<<"run <image_file> <calibration_file>\n"<<std::endl;
+		std::abort();
+	}
 
+	std::cout<<"Loading the image...."<<argv[1]<<std::endl;
+	image = cvLoadImage("test3/annotated_train/0000004japanese.jpg");
+
+	std::cout<<"Loading the calibration...."<<argv[2]<<std::endl;
+	loadCalibration(argv[2]);
+
+	// FIND OUT WHERE THE CAMERA LOCATION GETS PROJECTS
+	cv::Point2f cam = project(cv::Point3f(camPosX,camPosY,0));
+	std::cout<<"Camera position: "<<cam<<std::endl;
+
+	for(float in=0;in<=1.0;in+=1.0/8.0){
+		float ptX = (cam.x>width)?(cam.x-in*width):(cam.x-in*width);
+		float ptY = (cam.y>height)?(cam.y-in*height):(cam.y-in*height);
+		cv::Point2f pt(ptX,ptY);
+		std::vector<cv::Point2f> points;
+		genTemplate2(pt,persHeight,camHeight,points);
+		for(int i =0;i<points.size();i++){
+			points[i].x += float(width/2.0-pt.x);
+			points[i].y += float(height/2.0-pt.y);
+		}
+		plotTemplate2(image,pt,persHeight,camHeight,cv::Scalar(255,0,0),points);
+		cvShowImage((std::string("img_")+int2string(in*width)).c_str(),image);
+		cvWaitKey(0);
+	}
+	cvReleaseImage(&image);
+}
+//==============================================================================
 char annotationsHandle::choice = ' ';
 std::deque<std::string> annotationsHandle::poseNames;
 bool annotationsHandle::withPoses = false;
@@ -833,5 +870,6 @@ std::deque<annotationsHandle::ANNOTATION> annotationsHandle::annotations;
 int main(int argc, char **argv){
 	annotationsHandle::runAnn(argc,argv,1,"_test",-1);
 	//annotationsHandle::runEvaluation(argc,argv);
+	//annotationsHandle::checkCalibration(argc,argv);
 }
 */

@@ -111,6 +111,10 @@ class peopleDetector:public Tracker{
 		 */
 		void fixLocationsTracksBorderes(std::deque<unsigned> &existing,\
 			unsigned border);
+		/** Find the class in which we can store the current image (the data is
+		 * split in 3 classes depending on the position of the person wrt camera).
+		 */
+		unsigned findImageClass();
 		//======================================================================
 	public:
 		/** @var print
@@ -122,21 +126,18 @@ class peopleDetector:public Tracker{
 		 */
 		bool plot;
 		/** @var data
-		 * The training data obtained from the feature descriptors.
+		 * The training data obtained from the feature descriptors (for 3
+		 * positions wrt the camera).
 		 */
-		cv::Mat data;
-		/** @var data
-		 * The targets/labels of the data.
+		std::vector<cv::Mat> data;
+		/** @var targets
+		 * The targets/labels of the data (for 3 positions wrt the camera).
 		 */
-		cv::Mat targets;
+		std::vector<cv::Mat> targets;
 		/** @var annotations
 		 * Loaded annotations for the read images.
 		 */
 		std::deque<annotationsHandle::FULL_ANNOTATIONS> targetAnno;
-		/** @var lastIndex
-		 * The previous size of the data matrix before adding new detections.
-		 */
-		unsigned lastIndex;
 		/** @var colorspaceCode
 		 * The colorspace code to be used before extracting the features.
 		 */

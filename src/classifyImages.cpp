@@ -250,6 +250,8 @@ void classifyImages::loadData(cv::Mat tmpData1,cv::Mat tmpTargets1){
  * trains the a \c GaussianProcess on the data.
  */
 void classifyImages::trainGP(annotationsHandle::POSE what, bool fromFolder){
+	// TODO: train a different classifier for each class
+
 	this->gpSin.init(this->kFunction);
 	this->gpCos.init(this->kFunction);
 
@@ -371,6 +373,8 @@ void classifyImages::buildDataMatrix(int colorSp){
 std::deque<float> classifyImages::predictGP(std::deque<gaussianProcess::prediction>\
 &predictionsSin,std::deque<gaussianProcess::prediction> &predictionsCos,\
 annotationsHandle::POSE what,bool fromFolder){
+	// TODO: predict on a different classifier for each class
+
 	if(!this->testData.empty()){
 		this->testData.release();
 	}
@@ -917,12 +921,12 @@ int main(int argc, char **argv){
 		CV_BGR2Luv,true,annotationsHandle::LONGITUDE,&gaussianProcess::sqexp);
 */
 	//--------------------------------------------------------------------------
-
+/*
 	// test
 	classifyImages classi(argc,argv,classifyImages::TEST);
 	multipleClassifier(CV_BGR2Luv,annotationsHandle::LONGITUDE,classi,0.85,\
 		85,&gaussianProcess::sqexp,true);
-
+*/
 }
 
 

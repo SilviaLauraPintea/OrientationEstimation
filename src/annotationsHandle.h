@@ -210,6 +210,10 @@ class annotationsHandle {
 		/** Initializes all the values of the class variables.
 		 */
 		static void init();
+		/** Check calibration: shows how the projection grows depending on the location
+		 * of the point.
+		 */
+		static void checkCalibration(int argc, char **argv);
 		//======================================================================
 	protected:
 		/** @var image
