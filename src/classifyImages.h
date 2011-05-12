@@ -1,7 +1,7 @@
 /* classifyImages.h
  * Author: Silvia-Laura Pintea
  * Copyright (c) 2010-2011 Silvia-Laura Pintea. All rights reserved.
- * Feel free to use this code, but please retain the above copyright notice.
+ * Feel free to use this code,but please retain the above copyright notice.
  */
 #ifndef CLASSIFYIMAGES_H_
 #define CLASSIFYIMAGES_H_
@@ -16,18 +16,18 @@ class classifyImages {
 		//======================================================================
 		/** All available uses of this class.
 		 */
-		enum USES {EVALUATE, BUILD_DICTIONARY, TEST, BUILD_DATA};
+		enum USES {EVALUATE,BUILD_DICTIONARY,TEST,BUILD_DATA};
 		/** Constructor & destructor of the class.
 		 */
-		classifyImages(int argc, char **argv, classifyImages::USES use = \
+		classifyImages(int argc,char **argv,classifyImages::USES use = \
 			classifyImages::EVALUATE);
 		virtual ~classifyImages();
 
 		/** Build dictionary for vector quantization.
 		 */
-		void buildDictionary(int colorSp = CV_BGR2Lab, bool toUseGT = true);
+		void buildDictionary(int colorSp = CV_BGR2Lab,bool toUseGT = true);
 
-		/** Creates the training data (according to the options), the labels and
+		/** Creates the training data (according to the options),the labels and
 		 * trains the a \c GaussianProcess on the data.
 		 */
 		void trainGP(annotationsHandle::POSE what,bool fromFolder);
@@ -35,25 +35,25 @@ class classifyImages {
 		/** Creates the test data and applies \c GaussianProcess prediction on the test
 		 * data.
 		 */
-		std::deque<float> predictGP(std::deque<gaussianProcess::prediction>\
+		std::deque<std::deque<float> > predictGP(std::deque<gaussianProcess::prediction>\
 			&predictionsSin,std::deque<gaussianProcess::prediction> &predictionsCos,\
 			annotationsHandle::POSE what,bool fromFolder);
 
 		/** Initialize the options for the Gaussian Process regression.
 		 */
-		void init(float theNoise, float theLength, featureExtractor::FEATURE \
-			theFeature, gaussianProcess::kernelFunction theKFunction = \
-			&gaussianProcess::sqexp, bool toUseGT = false);
+		void init(float theNoise,float theLength,featureExtractor::FEATURE \
+			theFeature,gaussianProcess::kernelFunction theKFunction = \
+			&gaussianProcess::sqexp,bool toUseGT = false);
 
 		/** Evaluate one prediction versus its target.
 		 */
-		void evaluate(std::deque<float> prediAngles,float &error,float &normError,\
-			float &meanDiff);
+		void evaluate(std::deque<std::deque<float> > prediAngles,float &error,\
+			float &normError,float &meanDiff);
 
 		/** Do k-fold cross-validation by splitting the training folder into
 		 * training-set and validation-set.
 		 */
-		void crossValidation(unsigned k, unsigned fold, bool onTrain = false);
+		void crossValidation(unsigned k,unsigned fold,bool onTrain = false);
 
 		/** Does the cross-validation and computes the average error over all folds.
 		 */
@@ -61,37 +61,41 @@ class classifyImages {
 			int colorSp = CV_BGR2Lab,bool onTrain = false);
 		/** Runs the final evaluation (test).
 		 */
-		std::deque<float> runTest(int colorSp,annotationsHandle::POSE what,\
-			float &normError);
+		std::deque<std::deque<float> > runTest(int colorSp,\
+			annotationsHandle::POSE what,float &normError);
 		/** Try to optimize the prediction of the angle considering the variance
 		 * of sin and cos.
 		 */
 		float optimizePrediction(gaussianProcess::prediction predictionsSin,\
 			gaussianProcess::prediction predictionsCos);
 		/** Reset the features object when the training and testing might have different
-		 * calibration, background models...
+		 * calibration,background models...
 		 */
-		void resetFeatures(std::string dir, std::string imStr, int colorSp);
-		/** Just build data matrix and store it; it can be called over multiple
+		void resetFeatures(std::string dir,std::string imStr,int colorSp);
+		/** Just build data matrix and store it;it can be called over multiple
 		 * datasets by adding the the new data rows at the end to the stored
 		 * matrix.
 		 */
 		void buildDataMatrix(int colorSp);
 		/** Concatenate the loaded data from the files to the currently computed data.
 		 */
-		void loadData(cv::Mat tmpData1,cv::Mat tmpTargets1);
+		void loadData(cv::Mat tmpData1,cv::Mat tmpTargets1,unsigned i);
 		/** Run over multiple settings of the parameters to find the best ones.
 		 */
 		friend void parameterSetting(std::string errorsOnTrain,std::string errorsOnTest,\
 			classifyImages &classi,int argc,char** argv,featureExtractor::FEATURE feat,\
 			int colorSp,bool useGt,annotationsHandle::POSE what,\
 			gaussianProcess::kernelFunction kernel);
-		/** Combine the output of multiple classifiers (only on testing, no multiple
+		/** Combine the output of multiple classifiers (only on testing,no multiple
 		 * predictions).
 		 */
 		friend void multipleClassifier(int colorSp,annotationsHandle::POSE what,\
 			classifyImages &classi,double noise,double length,\
 			gaussianProcess::kernelFunction kernel,bool useGT);
+		/** Get the minimum and maximum angle given the motion vector.
+		 */
+		void getAngleLimits(unsigned classNo,unsigned predNo,float &angleMin,\
+			float &angleMax);
 		//======================================================================
 	protected:
 		/** @var features
@@ -102,12 +106,12 @@ class classifyImages {
 		/** @var trainData
 		 * The training data matrix.
 		 */
-		cv::Mat trainData;
+		std::vector<cv::Mat> trainData;
 
 		/** @var testData
 		 * The test data matrix.
 		 */
-		cv::Mat testData;
+		std::vector<cv::Mat> testData;
 
 		/** @var trainFolder
 		 * The folder containing the training images.
@@ -132,22 +136,22 @@ class classifyImages {
 		/** @var trainTargets
 		 * The column matrix containing the train annotation data (targets).
 		 */
-		cv::Mat trainTargets;
+		std::vector<cv::Mat> trainTargets;
 
 		/** @var testTargets
 		 * The column matrix containing the test annotation data (targets).
 		 */
-		cv::Mat testTargets;
+		std::vector<cv::Mat> testTargets;
 
 		/** @var gaussianProcess
 		 * An instance of the class gaussianProcess.
 		 */
-		gaussianProcess gpCos;
+		std::deque<gaussianProcess> gpCos;
 
 		/** @var gaussianProcess
 		 * An instance of the class gaussianProcess.
 		 */
-		gaussianProcess gpSin;
+		std::deque<gaussianProcess> gpSin;
 
 		/** @var noise
 		 * The noise level of the data.
@@ -222,7 +226,5 @@ class classifyImages {
 		//======================================================================
 	private:
 		DISALLOW_COPY_AND_ASSIGN(classifyImages);
-
 };
-
 #endif /* CLASSIFYIMAGES_H_ */

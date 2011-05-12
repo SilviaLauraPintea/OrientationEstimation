@@ -1,7 +1,7 @@
 /* annotationsHandle.h
  * Author: Silvia-Laura Pintea
  * Copyright (c) 2010-2011 Silvia-Laura Pintea. All rights reserved.
- * Feel free to use this code, but please retain the above copyright notice.
+ * Feel free to use this code,but please retain the above copyright notice.
  */
 #ifndef ANNOTATIONSHANDLE_H_
 #define ANNOTATIONSHANDLE_H_
@@ -17,7 +17,7 @@ class annotationsHandle {
 	public:
 		/** All considered poses.
 		 */
-		enum POSE {SITTING, STANDING, BENDING, LONGITUDE, LATITUDE};
+		enum POSE {SITTING,STANDING,BENDING,LONGITUDE,LATITUDE};
 		/** A structure that stores a single annotation for a specific person.
  		 */
 		struct ANNOTATION {
@@ -118,8 +118,8 @@ class annotationsHandle {
 
 		/** Mouse handler for annotating people's positions and poses.
 		 */
-		static void mouseHandlerAnn(int event, int x, int y, int \
-			flags, void *param);
+		static void mouseHandlerAnn(int event,int x,int y,int \
+			flags,void *param);
 
 		/** Draws the "menu" of possible poses for the current position.
 		 */
@@ -127,7 +127,7 @@ class annotationsHandle {
 
 		/** Plots the hull indicated by the parameter \c hull on the given image.
 		 */
-		static void plotHull(IplImage *img, std::vector<cv::Point2f> &hull);
+		static void plotHull(IplImage *img,std::vector<cv::Point2f> &hull);
 
 		/** Starts the annotation of the images. The parameters that need to be indicated
 		 * are:
@@ -138,8 +138,8 @@ class annotationsHandle {
 		 * \li argv[2]    -- the file contains the calibration data of the camera
 		 * \li argv[3]    -- the file in which the annotation data needs to be stored
 		 */
-		static int runAnn(int argc, char **argv, unsigned step,  std::string \
-			usedImages, int imgIndex=-1);
+		static int runAnn(int argc,char **argv,unsigned step, std::string \
+			usedImages,int imgIndex=-1);
 
 		/** The "on change" handler for the track-bars.
 		 */
@@ -155,12 +155,12 @@ class annotationsHandle {
 			std::deque<annotationsHandle::FULL_ANNOTATIONS> &loadedAnno);
 
 		/** Computes the average distance from the predicted location and the
-		 * annotated one, the number of unpredicted people in each image and
+		 * annotated one,the number of unpredicted people in each image and
 		 * the differences in the pose estimation.
 		 */
 		static void annoDifferences(std::deque<annotationsHandle::FULL_ANNOTATIONS>\
-			&train, std::deque<annotationsHandle::FULL_ANNOTATIONS> &test,\
-			float &avgDist, float &Ndiff, float ssdLongDiff, float ssdLatDiff,\
+			&train,std::deque<annotationsHandle::FULL_ANNOTATIONS> &test,\
+			float &avgDist,float &Ndiff,float ssdLongDiff,float ssdLatDiff,\
 			float poseDiff);
 
 		/** Correlate annotations' from locations in \c annoOld to locations in
@@ -173,8 +173,8 @@ class annotationsHandle {
 		/** Checks to see if a location can be assigned to a specific ID given the
 		 * new distance.
 		 */
-		static bool canBeAssigned(std::deque<annotationsHandle::ASSIGNED> &idAssignedTo, short int id, \
-			float newDist, short int to);
+		static bool canBeAssigned(std::deque<annotationsHandle::ASSIGNED> &idAssignedTo,short int id,\
+			float newDist,short int to);
 
 		/** Displays the complete annotations for all images.
 		 */
@@ -187,25 +187,25 @@ class annotationsHandle {
 		 * \li argv[1] -- train file with the correct annotations;
 		 * \li argv[2] -- test file with predicted annotations;
 		 */
-		static int runEvaluation(int argc, char **argv);
+		static int runEvaluation(int argc,char **argv);
 
 		/** Shows how the selected orientation looks on the image.
 		 */
-		static void drawOrientation(cv::Point2f center, unsigned int orient,\
+		static void drawOrientation(cv::Point2f center,unsigned int orient,\
 			annotationsHandle::POSE pose);
 
 		/** Shows how the selected orientation looks on the image.
 		 */
-		static void drawLatitude(cv::Point2f head, cv::Point2f feet,\
-			unsigned int orient, annotationsHandle::POSE pose);
+		static void drawLatitude(cv::Point2f head,cv::Point2f feet,\
+			unsigned int orient,annotationsHandle::POSE pose);
 
 		static cv::Mat rotateWrtCamera(cv::Point2f headLocation,\
-			cv::Point2f feetLocation, cv::Mat toRotate, cv::Point2f &borders);
+			cv::Point2f feetLocation,cv::Mat toRotate,cv::Point2f &borders);
 
 		/** Writes a given FULL_ANNOTATIONS structure into a given file.
 		 */
 		static void writeAnnoToFile(std::deque<annotationsHandle::FULL_ANNOTATIONS>\
-			fullAnno, std::string fileName);
+			fullAnno,std::string fileName);
 
 		/** Initializes all the values of the class variables.
 		 */
@@ -213,7 +213,7 @@ class annotationsHandle {
 		/** Check calibration: shows how the projection grows depending on the location
 		 * of the point.
 		 */
-		static void checkCalibration(int argc, char **argv);
+		static void checkCalibration(int argc,char **argv);
 		//======================================================================
 	protected:
 		/** @var image

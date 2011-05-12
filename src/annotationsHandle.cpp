@@ -1,7 +1,7 @@
 /* annotationsHandle.cpp
  * Author: Silvia-Laura Pintea
  * Copyright (c) 2010-2011 Silvia-Laura Pintea. All rights reserved.
- * Feel free to use this code, but please retain the above copyright notice.
+ * Feel free to use this code,but please retain the above copyright notice.
  */
 #include <err.h>
 #include <iostream>
@@ -40,15 +40,13 @@ void annotationsHandle::init(){
 //==============================================================================
 /** Define a post-fix increment operator for the enum \c POSE.
  */
-annotationsHandle::POSE operator++(annotationsHandle::POSE &refPose, int){
-	annotationsHandle::POSE oldPose = refPose;
-	refPose                         = (annotationsHandle::POSE)(refPose + 1);
-	return oldPose;
+void operator++(annotationsHandle::POSE &refPose){
+	refPose = (annotationsHandle::POSE)(refPose+1);
 }
 //==============================================================================
 /** Mouse handler for annotating people's positions and poses.
  */
-void annotationsHandle::mouseHandlerAnn(int event, int x, int y, int flags, void *param){
+void annotationsHandle::mouseHandlerAnn(int event,int x,int y,int flags,void *param){
 	static bool down = false;
 	switch (event){
 		case CV_EVENT_LBUTTONDOWN:
@@ -72,12 +70,12 @@ void annotationsHandle::mouseHandlerAnn(int event, int x, int y, int flags, void
 				temp.location = cv::Point2f(x,y);
 				std::cout<<"Saved location: "<<temp.location<<std::endl;
 				temp.id       = annotations.size();
-				temp.poses.assign(poseSize, 0);
+				temp.poses.assign(poseSize,0);
 				temp.poses[(int)LATITUDE] = 90;
 				annotations.push_back(temp);
 				showMenu(cv::Point2f(x,y));
-				for(unsigned i=0;i!=annotations.size(); ++i){
-					Annotate::plotArea(image, (float)annotations[i].location.x, \
+				for(unsigned i=0;i!=annotations.size();++i){
+					Annotate::plotArea(image,(float)annotations[i].location.x,\
 						(float)annotations[i].location.y);
 				}
 			}
@@ -88,7 +86,7 @@ void annotationsHandle::mouseHandlerAnn(int event, int x, int y, int flags, void
 /** Rotate matrix wrt to the camera location.
  */
 cv::Mat annotationsHandle::rotateWrtCamera(cv::Point2f headLocation,\
-cv::Point2f feetLocation, cv::Mat toRotate, cv::Point2f &borders){
+cv::Point2f feetLocation,cv::Mat toRotate,cv::Point2f &borders){
 	// GET THE ANGLE TO ROTATE WITH
 	float cameraAngle = std::atan2((headLocation.y-feetLocation.y),\
 						(headLocation.x-feetLocation.x));
@@ -110,11 +108,11 @@ cv::Point2f feetLocation, cv::Mat toRotate, cv::Point2f &borders){
 
 	// GET THE ROTATION MATRIX
 	cv::Mat rotationMat = cv::getRotationMatrix2D(cv::Point2f(\
-		srcRotate.cols/2.0,srcRotate.rows/2.0),cameraAngle, 1.0);
+		srcRotate.cols/2.0,srcRotate.rows/2.0),cameraAngle,1.0);
 
 	// ROTATE THE IMAGE WITH THE ROTATION MATRIX
 	cv::Mat rotated = cv::Mat::zeros(srcRotate.size(),toRotate.type());
-	cv::warpAffine(srcRotate, rotated, rotationMat, srcRotate.size());
+	cv::warpAffine(srcRotate,rotated,rotationMat,srcRotate.size());
 
 	rotationMat.release();
 	srcRotate.release();
@@ -123,16 +121,16 @@ cv::Point2f feetLocation, cv::Mat toRotate, cv::Point2f &borders){
 //==============================================================================
 /** Shows how the selected orientation looks on the image.
  */
-void annotationsHandle::drawLatitude(cv::Point2f head, cv::Point2f feet,\
-unsigned int orient, annotationsHandle::POSE pose){
+void annotationsHandle::drawLatitude(cv::Point2f head,cv::Point2f feet,\
+unsigned int orient,annotationsHandle::POSE pose){
 	unsigned int length = 80;
 	float angle = (M_PI * orient)/180;
 
 	// GET THE TEMPLATE AND DETERMINE ITS SIZE
 	std::vector<cv::Point2f> points;
-	genTemplate2(feet, persHeight, camHeight, points);
+	genTemplate2(feet,persHeight,camHeight,points);
 	int maxX=0,maxY=0,minX=image->width,minY=image->height;
-	for(unsigned i=0;i<points.size();i++){
+	for(unsigned i=0;i<points.size();++i){
 		if(maxX<points[i].x){maxX = points[i].x;}
 		if(maxY<points[i].y){maxY = points[i].y;}
 		if(minX>points[i].x){minX = points[i].x;}
@@ -147,13 +145,13 @@ unsigned int orient, annotationsHandle::POSE pose){
 	cv::Mat tmpImage((image),cv::Rect(cv::Point2f(minX,minY),\
 		cv::Size(maxX-minX,maxY-minY)));
 	cv::Point2f stupid;
-	cv::Mat tmpImg = rotateWrtCamera(head, feet, tmpImage, stupid);
+	cv::Mat tmpImg = rotateWrtCamera(head,feet,tmpImage,stupid);
 	cv::Mat large;
-	cv::resize(tmpImg,large,cv::Size(0,0),1.5,1.5, cv::INTER_CUBIC);
+	cv::resize(tmpImg,large,cv::Size(0,0),1.5,1.5,cv::INTER_CUBIC);
 
 	// DRAW THE LINE ON WHICH THE ARROW SITS
 	cv::Point2f center(large.cols*1/4,large.rows/2);
-	cv::Point point1, point2;
+	cv::Point point1,point2;
 	point1.x = center.x - 0.3*length * cos(angle + M_PI/2.0);
 	point1.y = center.y + 0.3*length * sin(angle + M_PI/2.0);
 	point2.x = center.x - length * cos(angle + M_PI/2.0);
@@ -162,7 +160,7 @@ unsigned int orient, annotationsHandle::POSE pose){
 	cv::line(large,point1,point2,cv::Scalar(100,50,255),2,8,0);
 
 	// DRAW THE TOP OF THE ARROW
-	cv::Point2f point3, point4, point5;
+	cv::Point2f point3,point4,point5;
 	point3.x = center.x - length * 4/5 * cos(angle + M_PI/2.0);
 	point3.y = center.y + length * 4/5 * sin(angle + M_PI/2.0);
 	point4.x = point3.x - 7 * cos(M_PI + angle);
@@ -180,7 +178,7 @@ unsigned int orient, annotationsHandle::POSE pose){
 
 	// PUT A CIRCLE ON THE CENTER POINT
 	cv::circle(large,center,1,cv::Scalar(255,50,0),1,8,0);
-	cv::imshow("Latitude", large);
+	cv::imshow("Latitude",large);
 	tmpImg.release();
 	large.release();
 	tmpImage.release();
@@ -188,11 +186,11 @@ unsigned int orient, annotationsHandle::POSE pose){
 //==============================================================================
 /** Shows how the selected orientation looks on the image.
  */
-void annotationsHandle::drawOrientation(cv::Point2f center, unsigned int orient,\
+void annotationsHandle::drawOrientation(cv::Point2f center,unsigned int orient,\
 annotationsHandle::POSE pose){
 	unsigned int length = 60;
 	float angle = (M_PI * orient)/180;
-	cv::Point point1, point2;
+	cv::Point point1,point2;
 	point1.x = center.x - length * cos(angle);
 	point1.y = center.y + length * sin(angle);
 	point2.x = center.x - length * cos(angle + M_PI);
@@ -205,7 +203,7 @@ annotationsHandle::POSE pose){
 	cv::Mat tmpImage(tmpImage1.clone());
 	cv::line(tmpImage,point1,point2,cv::Scalar(100,255,0),2,8,0);
 
-	cv::Point2f point3, point4, point5;
+	cv::Point2f point3,point4,point5;
 	point3.x = center.x - length * 4/5 * cos(angle + M_PI);
 	point3.y = center.y + length * 4/5 * sin(angle + M_PI);
 	point4.x = point3.x - 7 * cos(M_PI/2.0 + angle);
@@ -221,7 +219,7 @@ annotationsHandle::POSE pose){
 
 	delete [] pts;
 	cv::circle(tmpImage,center,1,cv::Scalar(255,50,0),1,8,0);
-	cv::imshow("image", tmpImage);
+	cv::imshow("image",tmpImage);
 	tmpImage.release();
 	tmpImage1.release();
 }
@@ -238,42 +236,42 @@ void annotationsHandle::showMenu(cv::Point2f center){
 	cvNamedWindow("Poses",CV_WINDOW_AUTOSIZE);
 
 	IplImage *tmpImg = cvCreateImage(cv::Size(400,1),8,1);
-	POSE sit = SITTING, stand = STANDING, bend = BENDING, longi = LONGITUDE,
+	POSE sit = SITTING,stand = STANDING,bend = BENDING,longi = LONGITUDE,
 		lat = LATITUDE;
-	for(POSE p=SITTING; p<=LATITUDE;p++){
+	for(POSE p=SITTING;p<=LATITUDE;++p){
 		switch(p){
 			case SITTING:
 				if(withPoses){
-					cv::createTrackbar("Sitting","Poses", &pose0, 1, \
-						trackbar_callback, &sit);
+					cv::createTrackbar("Sitting","Poses",&pose0,1,\
+						trackbar_callback,&sit);
 				}
 				break;
 			case STANDING:
 				if(withPoses){
-					cv::createTrackbar("Standing","Poses", &pose1, 1, \
-						trackbar_callback, &stand);
+					cv::createTrackbar("Standing","Poses",&pose1,1,\
+						trackbar_callback,&stand);
 				}
 				break;
 			case BENDING:
 				if(withPoses){
-					cv::createTrackbar("Bending","Poses", &pose2, 1, \
-						trackbar_callback, &bend);
+					cv::createTrackbar("Bending","Poses",&pose2,1,\
+						trackbar_callback,&bend);
 				}
 				break;
 			case LONGITUDE:
-				cv::createTrackbar("Longitude", "Poses", &pose3, 360, \
-					trackbar_callback, &longi);
+				cv::createTrackbar("Longitude","Poses",&pose3,360,\
+					trackbar_callback,&longi);
 				break;
 			case LATITUDE:
-				cv::createTrackbar("Latitude", "Poses", &pose4, 180, \
-					trackbar_callback, &lat);
+				cv::createTrackbar("Latitude","Poses",&pose4,180,\
+					trackbar_callback,&lat);
 				break;
 			default:
 				//do nothing
 				break;
 		}
 	}
-	cvShowImage("Poses", tmpImg);
+	cvShowImage("Poses",tmpImg);
 
 	cout<<"Press 'c' once the annotation for poses is done."<<endl;
 	while(choice != 'c' && choice != 'C'){
@@ -297,13 +295,13 @@ void annotationsHandle::trackBarHandleFct(int position,void *param){
 
 	// DRAW THE ORIENTATION TO SEE IT
 	std::vector<cv::Point2f> points;
-	genTemplate2(lastAnno.location, persHeight, camHeight, points);
+	genTemplate2(lastAnno.location,persHeight,camHeight,points);
 	cv::Point2f headCenter((points[12].x+points[14].x)/2,\
 		(points[12].y+points[14].y)/2);
 	if((POSE)(*ii)==LONGITUDE){
-		drawOrientation(headCenter, position, (POSE)(*ii));
+		drawOrientation(headCenter,position,(POSE)(*ii));
 	}else if((POSE)(*ii)==LATITUDE){
-		drawLatitude(headCenter, lastAnno.location, position, (POSE)(*ii));
+		drawLatitude(headCenter,lastAnno.location,position,(POSE)(*ii));
 	}
 
 	// FOR ALL CASES STORE THE POSITION
@@ -320,20 +318,20 @@ void annotationsHandle::trackBarHandleFct(int position,void *param){
 		if(position % 10 != 0){
 			position = (int)(position / 10) * 10;
 			if((POSE)(*ii) == LATITUDE){
-				cv::setTrackbarPos("Latitude", "Poses", position);
+				cv::setTrackbarPos("Latitude","Poses",position);
 			}else{
-				cv::setTrackbarPos("Longitude", "Poses", position);
+				cv::setTrackbarPos("Longitude","Poses",position);
 			}
 		}
 	}else if((POSE)(*ii) == SITTING){
 		int oppPos = cv::getTrackbarPos("Standing","Poses");
 		if(oppPos == position){
-			cv::setTrackbarPos("Standing", "Poses", (1-oppPos));
+			cv::setTrackbarPos("Standing","Poses",(1-oppPos));
 		}
 	}else if((POSE)(*ii) == STANDING){
 		int oppPos = cv::getTrackbarPos("Sitting","Poses");
 		if(oppPos == position){
-			cv::setTrackbarPos("Sitting", "Poses", (1-oppPos));
+			cv::setTrackbarPos("Sitting","Poses",(1-oppPos));
 		}
 	}
 }
@@ -341,15 +339,15 @@ void annotationsHandle::trackBarHandleFct(int position,void *param){
 /** The "on change" handler for the track-bars.
  */
 void annotationsHandle::trackbar_callback(int position,void *param){
-	trackBarHandleFct(position, param);
+	trackBarHandleFct(position,param);
 }
 //==============================================================================
 /** Plots the hull indicated by the parameter \c hull on the given image.
  */
-void annotationsHandle::plotHull(IplImage *img, std::vector<cv::Point2f> &hull){
+void annotationsHandle::plotHull(IplImage *img,std::vector<cv::Point2f> &hull){
 	hull.push_back(hull.front());
-	for(unsigned i=1; i<hull.size(); ++i){
-		cvLine(img, hull[i-1],hull[i],CV_RGB(255,0,0),2);
+	for(unsigned i=1;i<hull.size();++i){
+		cvLine(img,hull[i-1],hull[i],CV_RGB(255,0,0),2);
 	}
 }
 //==============================================================================
@@ -362,8 +360,8 @@ void annotationsHandle::plotHull(IplImage *img, std::vector<cv::Point2f> &hull){
  * \li argv[2]    -- the file contains the calibration data of the camera
  * \li argv[3]    -- the file in which the annotation data needs to be stored
  */
-int annotationsHandle::runAnn(int argc, char **argv, unsigned step, std::string \
-usedImages, int imgIndex){
+int annotationsHandle::runAnn(int argc,char **argv,unsigned step,std::string \
+usedImages,int imgIndex){
 	init();
 	if(imgIndex!= -1){
 		imgIndex += step;
@@ -389,27 +387,27 @@ usedImages, int imgIndex){
 	loadCalibration(argv[2]);
 	std::vector<cv::Point2f> priorHull;
 	cerr<<"Loading the location prior...."<< argv[3] << endl;
-	loadPriorHull(argv[3], priorHull);
+	loadPriorHull(argv[3],priorHull);
 
 	std::cerr<<"LATITUDE: Only looking upwards or downwards matters!"<<std::endl;
 
 	// set the handler of the mouse events to the method: <<mouseHandler>>
 	image = cvLoadImage(imgs[index].c_str());
-	plotHull(image, priorHull);
+	plotHull(image,priorHull);
 
 	cvNamedWindow("image");
-	cvSetMouseCallback("image", mouseHandlerAnn, NULL);
-	cvShowImage("image", image);
+	cvSetMouseCallback("image",mouseHandlerAnn,NULL);
+	cvShowImage("image",image);
 
 	// used to write the output stream to a file given in <<argv[3]>>
 	std::ofstream annoOut;
-	annoOut.open(argv[4], std::ios::out | std::ios::app);
+	annoOut.open(argv[4],std::ios::out | std::ios::app);
 	if(!annoOut){
-		errx(1,"Cannot open file %s", argv[4]);
+		errx(1,"Cannot open file %s",argv[4]);
 	}
-	annoOut.seekp(0, std::ios::end);
+	annoOut.seekp(0,std::ios::end);
 
-	/* while 'q' was not pressed, annotate images and store the info in
+	/* while 'q' was not pressed,annotate images and store the info in
 	 * the annotation file */
 	int key = 0;
 	while((char)key != 'q' && (char)key != 'Q' && index<imgs.size()) {
@@ -418,10 +416,10 @@ usedImages, int imgIndex){
 		 * for the current image */
 		if((char)key == 's'){
 			annoOut<<imgs[index].substr(imgs[index].rfind("/")+1);
-			for(unsigned i=0; i!=annotations.size();++i){
+			for(unsigned i=0;i!=annotations.size();++i){
 				annoOut <<" ("<<annotations[i].location.x<<","\
 					<<annotations[i].location.y<<")|";
-				for(unsigned j=0;j<annotations[i].poses.size();j++){
+				for(unsigned j=0;j<annotations[i].poses.size();++j){
 					annoOut<<"("<<poseNames[j]<<":"<<annotations[i].poses[j]<<")";
 					if(j<annotations[i].poses.size()-1){
 						annoOut<<"|";
@@ -433,7 +431,7 @@ usedImages, int imgIndex){
 				imgs[index].substr(imgs[index].rfind("/")+1)\
 				<<" were successfully saved!"<<endl;
 			//clean the annotations and release the image
-			for(unsigned ind=0; ind<annotations.size(); ind++){
+			for(unsigned ind=0;ind<annotations.size();++ind){
 				annotations[ind].poses.clear();
 			}
 			annotations.clear();
@@ -449,7 +447,7 @@ usedImages, int imgIndex){
 			newLocation += imgs[index].substr(imgs[index].rfind("/")+1);
 			cerr<<"NEW LOCATION >> "<<newLocation<<endl;
 			cerr<<"CURR LOCATION >> "<<currLocation<<endl;
-			if(rename(imgs[index].c_str(), newLocation.c_str())){
+			if(rename(imgs[index].c_str(),newLocation.c_str())){
 				perror(NULL);
 			}
 
@@ -464,15 +462,15 @@ usedImages, int imgIndex){
 			}
 
 			image = cvLoadImage(imgs[index].c_str());
-			plotHull(image, priorHull);
-			cvShowImage("image", image);
+			plotHull(image,priorHull);
+			cvShowImage("image",image);
 		}else if((char)key == 'n'){
 			cout<<"Annotations for image: "<<\
 				imgs[index].substr(imgs[index].rfind("/")+1)\
 				<<" NOT saved!"<<endl;
 
 			//clean the annotations and release the image
-			for(unsigned ind=0; ind<annotations.size(); ind++){
+			for(unsigned ind=0;ind<annotations.size();++ind){
 				annotations[ind].poses.clear();
 			}
 			annotations.clear();
@@ -487,8 +485,8 @@ usedImages, int imgIndex){
 				break;
 			}
 			image = cvLoadImage(imgs[index].c_str());
-			plotHull(image, priorHull);
-			cvShowImage("image", image);
+			plotHull(image,priorHull);
+			cvShowImage("image",image);
 		}else if(isalpha(key)){
 			cout<<"key pressed >>> "<<(char)key<<"["<<key<<"]"<<endl;
 		}
@@ -502,7 +500,7 @@ usedImages, int imgIndex){
 //==============================================================================
 /** Load annotations from file.
  */
-void annotationsHandle::loadAnnotations(char* filename, \
+void annotationsHandle::loadAnnotations(char* filename,\
 std::deque<annotationsHandle::FULL_ANNOTATIONS> &loadedAnno){
 	init();
 	std::ifstream annoFile(filename);
@@ -512,18 +510,18 @@ std::deque<annotationsHandle::FULL_ANNOTATIONS> &loadedAnno){
 		annotationsHandle::FULL_ANNOTATIONS tmpFullAnno;
 		while(annoFile.good()){
 			std::string line;
-			std::getline(annoFile, line);
+			std::getline(annoFile,line);
 			std::deque<std::string> lineVect = splitLine(\
 				const_cast<char*>(line.c_str()),' ');
 
 			// IF IT IS NOT AN EMPTY FILE
 			if(lineVect.size()>0){
 				tmpFullAnno.imgFile = std::string(lineVect[0]);
-				for(unsigned i=1; i<lineVect.size();i++){
+				for(unsigned i=1;i<lineVect.size();++i){
 					annotationsHandle::ANNOTATION tmpAnno;
 					std::deque<std::string> subVect = \
 						splitLine(const_cast<char*>(lineVect[i].c_str()),'|');
-					for(unsigned j=0; j<subVect.size();j++){
+					for(unsigned j=0;j<subVect.size();++j){
 						std::string temp(subVect[j]);
 						if(temp.find("(")!=std::string::npos){
 							temp.erase(temp.find("("),1);
@@ -537,7 +535,7 @@ std::deque<annotationsHandle::FULL_ANNOTATIONS> &loadedAnno){
 							std::deque<std::string> locVect = \
 								splitLine(const_cast<char*>(subVect[j].c_str()),',');
 							if(locVect.size()==2){
-								char *pEndX, *pEndY;
+								char *pEndX,*pEndY;
 								tmpAnno.location.x = strtol(locVect[0].c_str(),&pEndX,10);
 								tmpAnno.location.y = strtol(locVect[1].c_str(),&pEndY,10);
 							}
@@ -570,26 +568,26 @@ std::deque<annotationsHandle::FULL_ANNOTATIONS> &loadedAnno){
 /** Writes a given FULL_ANNOTATIONS structure into a given file.
  */
 void annotationsHandle::writeAnnoToFile(\
-std::deque<annotationsHandle::FULL_ANNOTATIONS> fullAnno, std::string fileName){
+std::deque<annotationsHandle::FULL_ANNOTATIONS> fullAnno,std::string fileName){
 	// OPEN THE FILE TO WRITE ANNOTATIONS
 	std::ofstream annoOut;
-	annoOut.open(fileName.c_str(), std::ios::out | std::ios::app);
+	annoOut.open(fileName.c_str(),std::ios::out | std::ios::app);
 	if(!annoOut){
-		errx(1,"Cannot open file %s", fileName.c_str());
+		errx(1,"Cannot open file %s",fileName.c_str());
 	}
-	annoOut.seekp(0, std::ios::end);
+	annoOut.seekp(0,std::ios::end);
 
-	for(std::size_t k=0; k<fullAnno.size();++k){
+	for(std::size_t k=0;k<fullAnno.size();++k){
 		// WRITE THE IMAGE NAME
 		annoOut<<fullAnno[k].imgFile<<" ";
 
 		// FOR EACH ANNOTATION IN THE ANNOTATIONS ARRAY
-		for(std::size_t i=0; i<fullAnno[k].annos.size();++i){
+		for(std::size_t i=0;i<fullAnno[k].annos.size();++i){
 
 			// WRITE THE LOCATION OF THE DETECTED PERSON
 			annoOut<<"("<<fullAnno[k].annos[i].location.x<<","<<\
 				fullAnno[k].annos[i].location.y<<")|";
-			for(std::size_t j=0;j<fullAnno[k].annos[i].poses.size();j++){
+			for(std::size_t j=0;j<fullAnno[k].annos[i].poses.size();++j){
 				annoOut<<"("<<(POSE)(j)<<":"<<fullAnno[k].annos[i].poses[j]<<")|";
 			}
 		}
@@ -604,9 +602,9 @@ std::deque<annotationsHandle::FULL_ANNOTATIONS> fullAnno, std::string fileName){
  * new distance.
  */
 bool annotationsHandle::canBeAssigned(std::deque<annotationsHandle::ASSIGNED>\
-&idAssignedTo, short int id, float newDist, short int to){
+&idAssignedTo,short int id,float newDist,short int to){
 	bool isHere = false;
-	for(unsigned int i=0; i<idAssignedTo.size(); i++){
+	for(unsigned int i=0;i<idAssignedTo.size();++i){
 		if(idAssignedTo[i].id == id){
 			isHere = true;
 			if(idAssignedTo[i].dist>newDist){
@@ -618,7 +616,7 @@ bool annotationsHandle::canBeAssigned(std::deque<annotationsHandle::ASSIGNED>\
 	}
 	if(!isHere){
 		bool alreadyTo = false;
-		for(unsigned i=0;i<idAssignedTo.size();i++){
+		for(unsigned i=0;i<idAssignedTo.size();++i){
 			if(idAssignedTo[i].to == to){
 				alreadyTo = true;
 				if(idAssignedTo[i].dist>newDist){
@@ -649,16 +647,16 @@ bool annotationsHandle::canBeAssigned(std::deque<annotationsHandle::ASSIGNED>\
  * annoNew through IDs.
  */
 void annotationsHandle::correltateLocs(std::deque<annotationsHandle::ANNOTATION>\
-&annoOld, std::deque<annotationsHandle::ANNOTATION> &annoNew,\
+&annoOld,std::deque<annotationsHandle::ANNOTATION> &annoNew,\
 std::deque<annotationsHandle::ASSIGNED> &idAssignedTo){
 	std::deque< std::deque<float> > distMatrix;
 
 	//1. compute the distances between all annotations
-	for(unsigned k=0;k<annoNew.size();k++){
+	for(unsigned k=0;k<annoNew.size();++k){
 		distMatrix.push_back(std::deque<float>());
-		for(unsigned l=0;l<annoOld.size();l++){
+		for(unsigned l=0;l<annoOld.size();++l){
 			distMatrix[k].push_back(0.0);
-			distMatrix[k][l] = dist(annoNew[k].location, annoOld[l].location);
+			distMatrix[k][l] = dist(annoNew[k].location,annoOld[l].location);
 		}
 	}
 
@@ -666,11 +664,11 @@ std::deque<annotationsHandle::ASSIGNED> &idAssignedTo){
 	bool canAssign = true;
 	while(canAssign){
 		canAssign = false;
-		for(unsigned k=0;k<distMatrix.size();k++){ //for each row in new
+		for(unsigned k=0;k<distMatrix.size();++k){ //for each row in new
 			float minDist = (float)INFINITY;
-			for(unsigned l=0;l<distMatrix[k].size();l++){ // loop over all old
-				if(distMatrix[k][l]<minDist && canBeAssigned(idAssignedTo, \
-					annoOld[l].id, distMatrix[k][l], annoNew[k].id)){
+			for(unsigned l=0;l<distMatrix[k].size();++l){ // loop over all old
+				if(distMatrix[k][l]<minDist && canBeAssigned(idAssignedTo,\
+					annoOld[l].id,distMatrix[k][l],annoNew[k].id)){
 					minDist       =	distMatrix[k][l];
 					canAssign     = true;
 				}
@@ -679,11 +677,11 @@ std::deque<annotationsHandle::ASSIGNED> &idAssignedTo){
 	}
 
 	//3. update the ids to the new one to correspond to the ids of the old one!!
-	for(unsigned i=0;i<annoNew.size();i++){
-		for(unsigned n=0;n<idAssignedTo.size();n++){
+	for(unsigned i=0;i<annoNew.size();++i){
+		for(unsigned n=0;n<idAssignedTo.size();++n){
 			if(annoNew[i].id == idAssignedTo[n].to){
 				if(idAssignedTo[n].to != idAssignedTo[n].id){
-					for(unsigned j=0;j<annoNew.size();j++){
+					for(unsigned j=0;j<annoNew.size();++j){
 						if(annoNew[j].id == idAssignedTo[n].id){
 							annoNew[j].id = -1;
 						}
@@ -698,17 +696,17 @@ std::deque<annotationsHandle::ASSIGNED> &idAssignedTo){
 }
 //==============================================================================
 /** Computes the average distance from the predicted location and the annotated
- * one, the number of unpredicted people in each image and the differences in the
+ * one,the number of unpredicted people in each image and the differences in the
  * pose estimation.
  */
 void annotationsHandle::annoDifferences(std::deque<annotationsHandle::FULL_ANNOTATIONS>\
-&train, std::deque<annotationsHandle::FULL_ANNOTATIONS> &test, float &avgDist,\
-float &Ndiff, float ssdLongDiff, float ssdLatDiff, float poseDiff){
+&train,std::deque<annotationsHandle::FULL_ANNOTATIONS> &test,float &avgDist,\
+float &Ndiff,float ssdLongDiff,float ssdLatDiff,float poseDiff){
 	if(train.size() != test.size()) {
 		std::cerr<<"Training annotations and test annotations have different sizes";
 		exit(1);
 	}
-	for(unsigned i=0;i<train.size();i++){
+	for(unsigned i=0;i<train.size();++i){
 		if(train[i].imgFile != test[i].imgFile) {
 			errx(1,"Images on positions %i do not correspond",i);
 		}
@@ -718,10 +716,10 @@ float &Ndiff, float ssdLongDiff, float ssdLatDiff, float poseDiff){
 		std::deque<annotationsHandle::ASSIGNED> idAssignedTo;
 		//0. if one of them is 0 then no correlation can be done
 		if(train[i].annos.size()!=0 && test[i].annos.size()!=0){
-			correltateLocs(train[i].annos, test[i].annos,idAssignedTo);
+			correltateLocs(train[i].annos,test[i].annos,idAssignedTo);
 		}
 		//1. update average difference for the current image
-		for(unsigned l=0; l<idAssignedTo.size(); l++){
+		for(unsigned l=0;l<idAssignedTo.size();++l){
 			cout<<idAssignedTo[l].id<<" assigned to "<<idAssignedTo[l].to<<endl;
 			avgDist += idAssignedTo[l].dist;
 		}
@@ -737,19 +735,19 @@ float &Ndiff, float ssdLongDiff, float ssdLatDiff, float poseDiff){
 
 		//3. update the poses estimation differences
 		unsigned int noCorresp = 0;
-		for(unsigned int l=0;l<train[i].annos.size();l++){
-			for(unsigned int k=0;k<test[i].annos.size();k++){
+		for(unsigned int l=0;l<train[i].annos.size();++l){
+			for(unsigned int k=0;k<test[i].annos.size();++k){
 				if(train[i].annos[l].id == test[i].annos[k].id){
 					// FOR POSES COMPUTE THE DIFFERENCES
 					if(withPoses){
-						for(unsigned int m=0;m<train[i].annos[l].poses.size()-1;m++){
+						for(unsigned int m=0;m<train[i].annos[l].poses.size()-1;++m){
 							poseDiff += abs((float)train[i].annos[l].poses[m] - \
 								(float)test[i].annos[k].poses[m])/2.0;
 						}
 					}
 
 					// SSD between the predicted values and the correct ones
-					int longPos = (int)LONGITUDE, latPos = (int)LATITUDE;
+					int longPos = (int)LONGITUDE,latPos = (int)LATITUDE;
 					float angleTrain = ((float)train[i].annos[l].poses[longPos]*M_PI/180.0);
 					float angleTest  = ((float)test[i].annos[k].poses[longPos]*M_PI/180.0);
 					ssdLongDiff += pow(cos(angleTrain)-cos(angleTest),2) +\
@@ -778,14 +776,14 @@ float &Ndiff, float ssdLongDiff, float ssdLatDiff, float poseDiff){
  */
 void annotationsHandle::displayFullAnns(std::deque<annotationsHandle::FULL_ANNOTATIONS>\
 &fullAnns){
-	for(unsigned int i=0; i<fullAnns.size();i++){
+	for(unsigned int i=0;i<fullAnns.size();++i){
 		cout<<"Image name: "<<fullAnns[i].imgFile<<endl;
-		for(unsigned int j=0; j<fullAnns[i].annos.size();j++){
+		for(unsigned int j=0;j<fullAnns[i].annos.size();++j){
 			cout<<"Annotation Id:"<<fullAnns[i].annos[j].id<<\
 				"_____________________________________________"<<endl;
 			cout<<"Location: ["<<fullAnns[i].annos[j].location.x<<","\
 				<<fullAnns[i].annos[j].location.y<<"]"<<endl;
-			for(unsigned l=0; l<poseSize; l++){
+			for(unsigned l=0;l<poseSize;++l){
 				cout<<"("<<poseNames[l]<<": "<<fullAnns[i].annos[j].poses[l]<<")";
 			}
 			std::cout<<std::endl;
@@ -800,7 +798,7 @@ void annotationsHandle::displayFullAnns(std::deque<annotationsHandle::FULL_ANNOT
  * \li argv[1] -- train file with the correct annotations;
  * \li argv[2] -- test file with predicted annotations;
  */
-int annotationsHandle::runEvaluation(int argc, char **argv){
+int annotationsHandle::runEvaluation(int argc,char **argv){
 	init();
 	if(argc != 3){
 		cerr<<"usage: cmmd <train_annotations.txt> <train_annotations.txt>\n"<< \
@@ -816,15 +814,15 @@ int annotationsHandle::runEvaluation(int argc, char **argv){
 
 	displayFullAnns(allAnnoTrain);
 
-	float avgDist = 0, Ndiff = 0, ssdLatDiff = 0, ssdLongDiff = 0, poseDiff = 0;
-	annoDifferences(allAnnoTrain, allAnnoTest, avgDist, Ndiff, ssdLongDiff, \
-		ssdLatDiff, poseDiff);
+	float avgDist = 0,Ndiff = 0,ssdLatDiff = 0,ssdLongDiff = 0,poseDiff = 0;
+	annoDifferences(allAnnoTrain,allAnnoTest,avgDist,Ndiff,ssdLongDiff,\
+		ssdLatDiff,poseDiff);
 }
 //==============================================================================
 /** Check calibration: shows how the projection grows depending on the location
  * of the point.
  */
-void annotationsHandle::checkCalibration(int argc, char **argv){
+void annotationsHandle::checkCalibration(int argc,char **argv){
 	init();
 	if(argc != 3){
 		std::cerr<<"run <image_file> <calibration_file>\n"<<std::endl;
@@ -847,7 +845,7 @@ void annotationsHandle::checkCalibration(int argc, char **argv){
 		cv::Point2f pt(ptX,ptY);
 		std::vector<cv::Point2f> points;
 		genTemplate2(pt,persHeight,camHeight,points);
-		for(int i =0;i<points.size();i++){
+		for(int i =0;i<points.size();++i){
 			points[i].x += float(width/2.0-pt.x);
 			points[i].y += float(height/2.0-pt.y);
 		}
@@ -867,7 +865,7 @@ IplImage *annotationsHandle::image;
 std::deque<annotationsHandle::ANNOTATION> annotationsHandle::annotations;
 //==============================================================================
 /*
-int main(int argc, char **argv){
+int main(int argc,char **argv){
 	annotationsHandle::runAnn(argc,argv,1,"_test",-1);
 	//annotationsHandle::runEvaluation(argc,argv);
 	//annotationsHandle::checkCalibration(argc,argv);

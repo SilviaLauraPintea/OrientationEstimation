@@ -1,7 +1,7 @@
 /* Auxiliary.cpp
  * Author: Silvia-Laura Pintea
  * Copyright (c) 2010-2011 Silvia-Laura Pintea. All rights reserved.
- * Feel free to use this code, but please retain the above copyright notice.
+ * Feel free to use this code,but please retain the above copyright notice.
  */
 #include <vector>
 #include <string>
@@ -33,10 +33,10 @@ IplImage* mat2ipl(cv::Mat image){
 /** Convert the values from a cv::Mat of doubles to be between 0 and 1.
  */
 void normalizeMat(cv::Mat &matrix){
-	matrix.convertTo(matrix, CV_32FC1);
-	float mini = matrix.at<float>(0,0), maxi = matrix.at<float>(0,0);
-	for(int x=0; x<matrix.cols; x++){
-		for(int y=0; y<matrix.rows; y++){
+	matrix.convertTo(matrix,CV_32FC1);
+	float mini = matrix.at<float>(0,0),maxi = matrix.at<float>(0,0);
+	for(int x=0;x<matrix.cols;++x){
+		for(int y=0;y<matrix.rows;++y){
 			if(mini>matrix.at<float>(y,x)){
 				mini = matrix.at<float>(y,x);
 			}
@@ -61,24 +61,24 @@ void range1Mat(cv::Mat &matrix){
 //==============================================================================
 /** Write a 2D-matrix to a text file (first row is the dimension of the matrix).
  */
-void mat2TxtFile(cv::Mat matrix, char* fileName, bool append){
+void mat2TxtFile(cv::Mat matrix,char* fileName,bool append){
 	std::ofstream dictOut;
 	try{
 		if(append){
-			dictOut.open(fileName, std::ios::out | std::ios::app);
-			dictOut.seekp(0, std::ios::end);
+			dictOut.open(fileName,std::ios::out | std::ios::app);
+			dictOut.seekp(0,std::ios::end);
 		}else{
-			dictOut.open(fileName, std::ios::out);
+			dictOut.open(fileName,std::ios::out);
 		}
 	}catch(std::exception &e){
 		cerr<<"Cannot open file: %s"<<e.what()<<endl;
 		exit(1);
 	}
 
-	matrix.convertTo(matrix, CV_32FC1);
+	matrix.convertTo(matrix,CV_32FC1);
 	dictOut<<matrix.cols<<" "<<matrix.rows<<std::endl;
-	for(int y=0; y<matrix.rows; y++){
-		for(int x=0; x<matrix.cols; x++){
+	for(int y=0;y<matrix.rows;++y){
+		for(int x=0;x<matrix.cols;++x){
 			dictOut<<matrix.at<float>(y,x)<<" ";
 		}
 		dictOut<<std::endl;
@@ -88,20 +88,20 @@ void mat2TxtFile(cv::Mat matrix, char* fileName, bool append){
 //==============================================================================
 /** Reads a 2D-matrix from a text file (first row is the dimension of the matrix).
  */
-void txtFile2Mat(cv::Mat &matrix, char* fileName){
+void txtFile2Mat(cv::Mat &matrix,char* fileName){
 	std::ifstream dictFile(fileName);
 	int y=0;
 	if(dictFile.is_open()){
 		// FIRST LINE IS THE SIZE OF THE MATRIX
 		std::string fline;
-		std::getline(dictFile, fline);
+		std::getline(dictFile,fline);
 		std::deque<std::string> flineVect = splitLine(const_cast<char*>\
 											(fline.c_str()),' ');
 		if(flineVect.size() == 2){
-			char *pRows, *pCols;
-			int cols = strtol(flineVect[0].c_str(), &pCols, 10);
-			int rows = strtol(flineVect[1].c_str(), &pRows, 10);
-			matrix   = cv::Mat::zeros(cv::Size(cols,rows), CV_32FC1);
+			char *pRows,*pCols;
+			int cols = strtol(flineVect[0].c_str(),&pCols,10);
+			int rows = strtol(flineVect[1].c_str(),&pRows,10);
+			matrix   = cv::Mat::zeros(cv::Size(cols,rows),CV_32FC1);
 		}else return;
 		fline.clear();
 		flineVect.clear();
@@ -109,50 +109,50 @@ void txtFile2Mat(cv::Mat &matrix, char* fileName){
 		// THE REST OF THE LINES ARE READ ONE BY ONE
 		while(dictFile.good()){
 			std::string line;
-			std::getline(dictFile, line);
+			std::getline(dictFile,line);
 			std::deque<std::string> lineVect = splitLine(const_cast<char*>\
 												(line.c_str()),' ');
 			if(lineVect.size()>=1){
-				for(std::size_t x=0; x<lineVect.size(); x++){
+				for(std::size_t x=0;x<lineVect.size();++x){
 					char *pValue;
 					matrix.at<float>(y,static_cast<int>(x)) = \
-						strtod(lineVect[x].c_str(), &pValue);
+						strtod(lineVect[x].c_str(),&pValue);
 				}
-				y++;
+				++y;
 			}
 			line.clear();
 			lineVect.clear();
 		}
 		dictFile.close();
 	}
-	matrix.convertTo(matrix, CV_32FC1);
+	matrix.convertTo(matrix,CV_32FC1);
 }
 //==============================================================================
 /** Write a 2D-matrix to a binary file (first the dimension of the matrix).
  */
-void mat2BinFile(cv::Mat matrix, char* fileName, bool append){
+void mat2BinFile(cv::Mat matrix,char* fileName,bool append){
 	std::ofstream mxFile;
 	try{
 		if(append){
-			mxFile.open(fileName, std::ios::out|std::ios::app|std::ios::binary);
-			mxFile.seekp(0, std::ios::end);
+			mxFile.open(fileName,std::ios::out|std::ios::app|std::ios::binary);
+			mxFile.seekp(0,std::ios::end);
 		}else{
-			mxFile.open(fileName, std::ios::out|std::ios::binary);
+			mxFile.open(fileName,std::ios::out|std::ios::binary);
 		}
 	}catch(std::exception &e){
 		cerr<<"Cannot open file: %s"<<e.what()<<endl;
 		exit(1);
 	}
 
-	matrix.convertTo(matrix, CV_32FC1);
+	matrix.convertTo(matrix,CV_32FC1);
 
 	// FIRST WRITE THE DIMENSIONS OF THE MATRIX
-	mxFile.write(reinterpret_cast<char*>(&matrix.cols), sizeof(int));
-	mxFile.write(reinterpret_cast<char*>(&matrix.rows), sizeof(int));
+	mxFile.write(reinterpret_cast<char*>(&matrix.cols),sizeof(int));
+	mxFile.write(reinterpret_cast<char*>(&matrix.rows),sizeof(int));
 
 	// WRITE THE MATRIX TO THE FILE
-	for(int x=0; x<matrix.cols; x++){
-		for(int y=0; y<matrix.rows; y++){
+	for(int x=0;x<matrix.cols;++x){
+		for(int y=0;y<matrix.rows;++y){
 			mxFile.write(reinterpret_cast<char*>(&matrix.at<float>(y,x)),\
 				sizeof(float));
 		}
@@ -162,30 +162,30 @@ void mat2BinFile(cv::Mat matrix, char* fileName, bool append){
 //==============================================================================
 /** Reads a 2D-matrix from a binary file (first the dimension of the matrix).
  */
-void binFile2mat(cv::Mat &matrix, char* fileName){
+void binFile2mat(cv::Mat &matrix,char* fileName){
 	if(!file_exists(fileName)){
 		std::cerr<<"Error opening the file: "<<fileName<<std::endl;
 		exit(1);
 	}
-	std::ifstream mxFile(fileName, std::ios::in | std::ios::binary);
+	std::ifstream mxFile(fileName,std::ios::in | std::ios::binary);
 
 	if(mxFile.is_open()){
 		// FIRST READ THE MATRIX SIZE AND ALLOCATE IT
-		int cols, rows;
-		mxFile.read(reinterpret_cast<char*>(&cols), sizeof(int));
-		mxFile.read(reinterpret_cast<char*>(&rows), sizeof(int));
+		int cols,rows;
+		mxFile.read(reinterpret_cast<char*>(&cols),sizeof(int));
+		mxFile.read(reinterpret_cast<char*>(&rows),sizeof(int));
 		matrix = cv::Mat::zeros(cv::Size(cols,rows),CV_32FC1);
 
 		// READ THE CONTENT OF THE MATRIX
-		for(int x=0; x<matrix.cols; x++){
-			for(int y=0; y<matrix.rows; y++){
+		for(int x=0;x<matrix.cols;++x){
+			for(int y=0;y<matrix.rows;++y){
 				mxFile.read(reinterpret_cast<char*>(&matrix.at<float>(y,x)),\
 					sizeof(float));
 			}
 		}
 		mxFile.close();
 	}
-	matrix.convertTo(matrix, CV_32FC1);
+	matrix.convertTo(matrix,CV_32FC1);
 }
 //==============================================================================
 /** Convert int to string.
@@ -221,7 +221,7 @@ void angle180to180(float &angle){
 //==============================================================================
 /** Checks to see if a point is on the same side of a line like another given point.
  */
-bool sameSubplane(cv::Point2f test, cv::Point2f point, float m, float b){
+bool sameSubplane(cv::Point2f test,cv::Point2f point,float m,float b){
 	if(isnan(m)){
 		return (point.x*test.x)>=0.0;
 	}else if(m == 0){
@@ -231,9 +231,9 @@ bool sameSubplane(cv::Point2f test, cv::Point2f point, float m, float b){
 	}
 }
 //==============================================================================
-/** Get perpendicular to a line given by 2 points A, B in point C.
+/** Get perpendicular to a line given by 2 points A,B in point C.
  */
-void perpendicularLine(cv::Point2f A, cv::Point2f B, cv::Point2f C, float &m,\
+void perpendicularLine(cv::Point2f A,cv::Point2f B,cv::Point2f C,float &m,\
 float &b){
 	float slope = (float)(B.y - A.y)/(float)(B.x - A.x);
 	m            = -1.0/slope;
@@ -242,10 +242,10 @@ float &b){
 //==============================================================================
 /** Just displaying an image a bit larger to visualize it better.
  */
-void showZoomedImage(cv::Mat image, const std::string title){
+void showZoomedImage(cv::Mat image,const std::string title){
 	cv::Mat large;
-	cv::resize(image, large, cv::Size(0,0), 5, 5, cv::INTER_CUBIC);
-	cv::imshow(title, large);
+	cv::resize(image,large,cv::Size(0,0),5,5,cv::INTER_CUBIC);
+	cv::imshow(title,large);
 	cv::waitKey(0);
 	cvDestroyWindow(title.c_str());
 	large.release();
