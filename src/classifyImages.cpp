@@ -968,18 +968,18 @@ int main(int argc,char **argv){
 	classi.buildDataMatrix(CV_BGR2Luv);
 */
 	//--------------------------------------------------------------------------
-
+/*
 	// evaluate
- 	classifyImages classi(argc,argv,classifyImages::TEST);
+ 	classifyImages classi(argc,argv,classifyImages::EVALUATE);
 	classi.init(0.85,85.0,featureExtractor::PIXELS,&gaussianProcess::sqexp,true);
 	classi.runCrossValidation(7,annotationsHandle::LONGITUDE,CV_BGR2XYZ,false);
-
+*/
 	//--------------------------------------------------------------------------
-/*
+
 	// BUILD THE SIFT DICTIONARY
   	classifyImages classi(argc,argv,classifyImages::BUILD_DICTIONARY);
 	classi.buildDictionary(CV_BGR2Luv,true);
-*/
+
 	//--------------------------------------------------------------------------
 /*
 	classifyImages classi(argc,argv,classifyImages::TEST);

@@ -35,7 +35,7 @@ bool buildBg):Tracker(argc,argv,20,buildBg,true){
 		if(dataPath[dataPath.size()-1]!='/'){
 			dataPath += "/";
 		}
-		this->plot           = false;
+		this->plot           = true;
 		this->print          = true;
 		this->useGroundTruth = true;
 		this->producer       = NULL;
@@ -87,6 +87,7 @@ peopleDetector::~peopleDetector(){
 		this->borderedIpl = NULL;
 	}
 	this->dataMotionVectors.clear();
+	this->classesRange.clear();
 }
 //==============================================================================
 /** Checks the image name (used to find the corresponding labels for each image).
@@ -477,7 +478,8 @@ unsigned border){
 	std::deque<std::string> names;
 	names.push_back("CLOSE");names.push_back("MEDIUM");	names.push_back("FAR");
 	for(std::size_t i=0;i<existing.size();++i){
-		peopleDetector::CLASSES groupNo=this->findImageClass(this->templates[i].center);
+		peopleDetector::CLASSES groupNo=this->findImageClass(this->templates[i].center,\
+			this->templates[i].head);
 
 		// INITIALIZE THE FEATURE EXTRACTOR SO WE CAN USE IT
 		this->extractor->setImageClass(groupNo,this->datasetPath);
@@ -547,7 +549,7 @@ unsigned border){
 			dataRow.at<float>(0,dataRow.cols-2) = 0.0;
 		}
 		dataRow.convertTo(dataRow,CV_32FC1);
-		normalizeMat(dataRow);
+		mean0Variance1(dataRow);
 
 		// STORE THE EXTRACTED ROW INTO THE DATA MATRIX
 		if(this->data[groupNo].empty()){
@@ -757,7 +759,7 @@ std::deque<unsigned> peopleDetector::fixLabels(std::deque<unsigned> existing){
 			tmp.at<float>(0,3) = std::cos(angle);
 
 			// STORE THE LABELS IN THE TARGETS ON THE RIGHT POSITION
-			peopleDetector::CLASSES groupNo=this->findImageClass(feet);
+			peopleDetector::CLASSES groupNo=this->findImageClass(feet,head);
 			if(this->targets[groupNo].empty()){
 				tmp.copyTo(this->targets[groupNo]);
 			}else{
@@ -1117,7 +1119,7 @@ std::deque<unsigned> peopleDetector::readLocations(){
 		tmp.at<float>(0,3) = std::cos(angle);
 
 		// STORE THE LABELS IN THE TARGETS ON THE RIGHT POSITION
-		peopleDetector::CLASSES groupNo=this->findImageClass(feet);
+		peopleDetector::CLASSES groupNo=this->findImageClass(feet,head);
 		if(this->targets[groupNo].empty()){
 			tmp.copyTo(this->targets[groupNo]);
 		}else{
@@ -1157,19 +1159,36 @@ float peopleDetector::rotationAngle(cv::Point2f headLocation,cv::Point2f feetLoc
 /** Find the class in which we can store the current image (the data is split in
  * 3 classes depending on the position of the person wrt camera).
  */
-peopleDetector::CLASSES peopleDetector::findImageClass(cv::Point2f feet){
-	// GET THE MAXIMUM BETWEEN THE IMAGE WIDTH AND IMAGE HEIGHT
-	float dimension = std::max(this->current->img->width,this->current->img->height);
+peopleDetector::CLASSES peopleDetector::findImageClass(cv::Point2f feet,\
+cv::Point2f head){
+	if(this->classesRange.empty()){
+		// GET THE CAMERA POSITION IN THE IMAGE PLANE
+		cv::Point2f cam = proj(cv::Point3f(camPosX,camPosY,0));
+		float dimension = std::sqrt(this->current->img->width*this->current->img->width+\
+			this->current->img->height*this->current->img->height)/2.0;
 
-	// GET THE CAMERA POSITION IN THE IMAGE PLANE
-	cv::Point2f cam = proj(cv::Point3f(camPosX,camPosY,0));
-	float distance  = dist(feet,cam);
+		float previous = 0.0;
+		for(float in=0.16;in<0.5;in+=0.16){
+			cv::Point2f pt(std::abs(in*dimension-cam.x),std::abs(in*dimension-cam.y));
+			std::vector<cv::Point2f> points;
+			genTemplate2(pt,persHeight,camHeight,points);
+			cv::Point2f pHead = cv::Point2f((points[12].x+points[14].x)/2,\
+				(points[12].y+points[14].y)/2);
+			float current = dist(pHead,pt);
+			this->classesRange.push_back(cv::Point2f(previous,current));
+			previous = current;
+		}
+	}
 
-	if(distance<dimension/4.0){
+	float distance = dist(feet,head);
+	if(distance>this->classesRange[peopleDetector::CLOSE].x &&\
+ distance<=this->classesRange[peopleDetector::CLOSE].y){
 		return peopleDetector::CLOSE;
-	}else if(distance>dimension/4.0 && distance<dimension/2.0){
+	}else if(distance>this->classesRange[peopleDetector::MEDIUM].x &&\
+ distance<=this->classesRange[peopleDetector::MEDIUM].y){
 		return peopleDetector::MEDIUM;
-	}else if(distance>dimension/2.0){
+	}else if(distance>this->classesRange[peopleDetector::FAR].x &&\
+ distance<=this->classesRange[peopleDetector::FAR].y){
 		return peopleDetector::FAR;
 	}
 }

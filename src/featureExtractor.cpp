@@ -35,7 +35,7 @@ featureExtractor::featureExtractor(){
 	this->meanSize     = 128;
 	this->featureFile  = "none";
 	this->print        = true;
-	this->plot         = false;
+	this->plot         = true;
 }
 //==============================================================================
 featureExtractor::~featureExtractor(){
@@ -200,9 +200,6 @@ aTempl,cv::Rect roi){
 	cv::Mat tmp(image,up),large,gray;
 	cv::resize(tmp,large,cv::Size(50,50),0,0,cv::INTER_CUBIC);
 	cv::cvtColor(large,gray,CV_BGR2GRAY);
-	normalizeMat(gray);
-	gray *= 255.0;
-	gray.convertTo(gray,CV_8UC1);
 	cv::medianBlur(gray,gray,3);
 	if(this->plot){
 		cv::imshow("part",large);
@@ -221,8 +218,6 @@ aTempl,cv::Rect roi){
 			exit(1);
 		}
 		cv::resize(tmple,small,cv::Size(radius,radius),0,0,cv::INTER_CUBIC);
-		normalizeMat(small);
-		small *= 255.0;
 		small.convertTo(small,CV_8UC1);
 		cv::matchTemplate(gray,small,result,CV_TM_CCOEFF_NORMED);
 		cv::resize(result,resized,cv::Size(30,30),0,0,cv::INTER_CUBIC);
@@ -738,9 +733,6 @@ cv::Mat featureExtractor::extractPointsGrid(cv::Mat image){
 cv::Mat featureExtractor::extractEdges(cv::Mat image){
 	cv::Mat gray,edges;
 	cv::cvtColor(image,gray,CV_BGR2GRAY);
-	normalizeMat(gray);
-	gray *= 255.0;
-	gray.convertTo(gray,CV_8UC1);
 	cv::medianBlur(gray,gray,3);
 	cv::Canny(gray,edges,100,0,3,true);
 	edges.convertTo(edges,CV_32FC1);
@@ -765,9 +757,6 @@ cv::Mat featureExtractor::extractSURF(cv::Mat image){
 	// EXTRACT INTEREST POINTS FROM THE IMAGE
 	cv::Mat gray;
 	cv::cvtColor(image,gray,CV_BGR2GRAY);
-	normalizeMat(gray);
-	gray *= 255.0;
-	gray.convertTo(gray,CV_8UC1);
 	cv::medianBlur(gray,gray,3);
 	aSURF(gray,cv::Mat(),keypoints,descriptors,false);
 	gray.release();
@@ -840,9 +829,6 @@ cv::Mat featureExtractor::extractGabor(cv::Mat image){
 	// CONVERT THE IMAGE TO GRAYSCALE TO APPLY THE FILTER
 	cv::Mat gray;
 	cv::cvtColor(image,gray,CV_BGR2GRAY);
-	normalizeMat(gray);
-	gray *= 255.0;
-	gray.convertTo(gray,CV_8UC1);
 	cv::medianBlur(gray,gray,3);
 
 	// CREATE EACH GABOR AND CONVOLVE THE IMAGE WITH IT
@@ -889,9 +875,6 @@ cv::Rect roi){
 	// EXTRACT SIFT FEATURES IN THE IMAGE
 	cv::Mat gray,sift;
 	cv::cvtColor(image,gray,CV_BGR2GRAY);
-	normalizeMat(gray);
-	gray *= 255.0;
-	gray.convertTo(gray,CV_8UC1);
 	cv::medianBlur(gray,gray,3);
 	aSIFT(gray,cv::Mat(),keypoints);
 
@@ -1081,7 +1064,7 @@ unsigned featureExtractor::setImageClass(unsigned aClass,std::string path){
 	this->imageClass     = names[aClass];
 
 	// WE NEED A SIFT DICTIONARY FOR EACH CLASS
-	std::string dictName = path+names[aClass]+"SIFT_"+this->imageClass+".bin";
+	std::string dictName = path+this->imageClass+"_SIFT"+".bin";
 	this->initSIFT(path,dictName);
 }
 //==============================================================================

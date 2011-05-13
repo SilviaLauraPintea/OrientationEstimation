@@ -57,4 +57,8 @@ bool sameSubplane(cv::Point2f test,cv::Point2f point,float m,float b);
 /** Just displaying an image a bit larger to visualize it better.
  */
 void showZoomedImage(cv::Mat image,std::string title="zoomed");
+/** A function that transforms the data such that it has zero mean and unit
+ * variance: img = (img-mean(img(:)))/std(img(:)).
+ */
+void mean0Variance1(cv::Mat &mat);
 #endif /* AUXILIARY_H_ */

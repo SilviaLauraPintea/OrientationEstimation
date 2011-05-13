@@ -830,8 +830,6 @@ void annotationsHandle::checkCalibration(int argc,char **argv){
 	}
 
 	std::cout<<"Loading the image...."<<argv[1]<<std::endl;
-	image = cvLoadImage("test3/annotated_train/0000004japanese.jpg");
-
 	std::cout<<"Loading the calibration...."<<argv[2]<<std::endl;
 	loadCalibration(argv[2]);
 
@@ -839,10 +837,10 @@ void annotationsHandle::checkCalibration(int argc,char **argv){
 	cv::Point2f cam = project(cv::Point3f(camPosX,camPosY,0));
 	std::cout<<"Camera position: "<<cam<<std::endl;
 
-	for(float in=0;in<=1.0;in+=1.0/8.0){
-		float ptX = (cam.x>width)?(cam.x-in*width):(cam.x-in*width);
-		float ptY = (cam.y>height)?(cam.y-in*height):(cam.y-in*height);
-		cv::Point2f pt(ptX,ptY);
+	float dimension = std::sqrt(width*width+height*height)/2.0;
+	for(float in=0;in<0.5;in+=0.16){
+		image = cvLoadImage(argv[1]);
+		cv::Point2f pt(std::abs(in*dimension-cam.x),std::abs(in*dimension-cam.y));
 		std::vector<cv::Point2f> points;
 		genTemplate2(pt,persHeight,camHeight,points);
 		for(int i =0;i<points.size();++i){
@@ -852,8 +850,8 @@ void annotationsHandle::checkCalibration(int argc,char **argv){
 		plotTemplate2(image,pt,persHeight,camHeight,cv::Scalar(255,0,0),points);
 		cvShowImage((std::string("img_")+int2string(in*width)).c_str(),image);
 		cvWaitKey(0);
+		cvReleaseImage(&image);
 	}
-	cvReleaseImage(&image);
 }
 //==============================================================================
 char annotationsHandle::choice = ' ';
@@ -866,8 +864,8 @@ std::deque<annotationsHandle::ANNOTATION> annotationsHandle::annotations;
 //==============================================================================
 /*
 int main(int argc,char **argv){
-	annotationsHandle::runAnn(argc,argv,1,"_test",-1);
+	//annotationsHandle::runAnn(argc,argv,1,"_test",-1);
 	//annotationsHandle::runEvaluation(argc,argv);
-	//annotationsHandle::checkCalibration(argc,argv);
+	annotationsHandle::checkCalibration(argc,argv);
 }
 */

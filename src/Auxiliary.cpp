@@ -251,8 +251,24 @@ void showZoomedImage(cv::Mat image,const std::string title){
 	large.release();
 }
 //==============================================================================
-
-
+/** A function that transforms the data such that it has zero mean and unit
+ * variance: img = (img-mean(img(:)))/std(img(:)).
+ */
+void mean0Variance1(cv::Mat &mat){
+	mat.convertTo(mat,CV_32FC1);
+	unsigned rows = mat.rows;
+	if(rows != 1){
+		mat = mat.reshape(0,1);
+	}
+	cv::Scalar mean,stddev;
+	cv::meanStdDev(mat,mean,stddev);
+	mat = (mat-mean.val[0])/stddev.val[0];
+	mat.convertTo(mat,CV_32FC1);
+	if(rows != 1){
+		mat = mat.reshape(0,rows);
+	}
+}
+//==============================================================================
 
 
 

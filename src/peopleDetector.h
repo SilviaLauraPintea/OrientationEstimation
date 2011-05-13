@@ -117,7 +117,7 @@ class peopleDetector:public Tracker{
 		/** Find the class in which we can store the current image (the data is
 		 * split in 3 classes depending on the position of the person wrt camera).
 		 */
-		peopleDetector::CLASSES findImageClass(cv::Point2f feet);
+		peopleDetector::CLASSES findImageClass(cv::Point2f feet,cv::Point2f head);
 		//======================================================================
 	public:
 		/** @var print
@@ -185,6 +185,9 @@ class peopleDetector:public Tracker{
 		 * The motion vectors for all the images in the data matrix
 		 */
 		std::deque<std::deque<float> > dataMotionVectors;
+		/** The minimum/maximum template size for each class as a vector of points
+		 */
+		std::vector<cv::Point2f> classesRange;
 		//======================================================================
 	private:
 		DISALLOW_COPY_AND_ASSIGN(peopleDetector);
