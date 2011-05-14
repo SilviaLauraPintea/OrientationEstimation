@@ -17,7 +17,7 @@
 class peopleDetector:public Tracker{
 	public:
 		peopleDetector(int argc,char** argv,bool extract=false,bool buildBg=\
-			false);
+			false,int colorSp=CV_BGR2Lab);
 		virtual ~peopleDetector();
 		/** Classes/groups (wrt the camera) in which to store the image data.
 		 */
@@ -28,37 +28,40 @@ class peopleDetector:public Tracker{
 		/** Overwrites the \c doFindPeople function from the \c Tracker class
 		 * to make it work with the feature extraction.
 		 */
-		bool doFindPerson(unsigned imgNum,IplImage *src,\
+		bool doFindPerson(const unsigned imgNum,const IplImage *src,\
 			const vnl_vector<FLOAT> &imgVec,vnl_vector<FLOAT> &bgVec,\
 			const FLOAT logBGProb,const vnl_vector<FLOAT> &logSumPixelBGProb,\
-			unsigned border = 150);
+			const unsigned border = 150);
 		/** Simple "menu" for skipping to the next image or quitting the processing.
 		 */
 		bool imageProcessingMenu();
 		/** Get the foreground pixels corresponding to each person.
 		 */
 		void allForegroundPixels(std::deque<featureExtractor::people> &allPeople,\
-			std::deque<unsigned> existing,IplImage *bg,float threshold);
+			const std::deque<unsigned> existing,const IplImage *bg,\
+			const float threshold);
 		/** Gets the distance to the given template from a given pixel location.
 		 */
-		float getDistToTemplate(int pixelX,int pixelY,std::vector<cv::Point2f> templ);
+		float getDistToTemplate(const int pixelX,const int pixelY,\
+			const std::vector<cv::Point2f> templ);
 		/** Creates on data row in the final data matrix by getting the feature
 		 * descriptors.
 		 */
-		void extractDataRow(std::deque<unsigned> &existing,IplImage *oldBg,\
-			unsigned border=150);
+		void extractDataRow(std::deque<unsigned> &existing,const IplImage *oldBg,\
+			const unsigned border=150);
 		/** For each row added in the data matrix (each person detected for which we
 		 * have extracted some features) find the corresponding label.
 		 */
-		std::deque<unsigned> fixLabels(std::deque<unsigned> existing);
+		void fixLabels(std::deque<unsigned> &existing);
 		/** Returns the size of a window around a template centered in a given point.
 		 */
-		void templateWindow(cv::Size imgSize,int &minX,int &maxX,\
-		int &minY,int &maxY,featureExtractor::templ aTempl,int tplBorder=150);
+		void templateWindow(const cv::Size imgSize,int &minX,int &maxX,\
+		int &minY,int &maxY,const featureExtractor::templ aTempl,\
+		const int tplBorder=100);
 		/** Initializes the parameters of the tracker.
 		 */
-		void init(std::string dataFolder,std::string theAnnotationsFile,\
-			featureExtractor::FEATURE feat,bool readFromFolder = true);
+		void init(const std::string dataFolder,const std::string theAnnotationsFile,\
+			const featureExtractor::FEATURE feat,const bool readFromFolder = true);
 		/** Checks to see if an annotation can be assigned to a detection.
 		 */
 		bool canBeAssigned(unsigned l,std::deque<float> &minDistances,\
@@ -98,14 +101,11 @@ class peopleDetector:public Tracker{
 		void start(bool readFromFolder,bool useGT,unsigned border=150);
 		/** Adds a templates to the vector of templates at detected positions.
 		 */
-		void add2Templates(std::deque<unsigned> existing);
+		void add2Templates(std::deque<unsigned> existing,unsigned border=150);
 		/** Assigns pixels to templates based on proximity.
 		 */
 		void pixels2Templates(int maxX,int minX,int maxY,int minY,int k,\
 			cv::Mat thresh,cv::Mat &colorRoi,float tmplHeight);
-		/** Gets the location of the head given the feet location.
-		 */
-		cv::Point2f headLocation(cv::Point2f center);
 		/** Return rotation angle given the head and feet position.
 		 */
 		float rotationAngle(cv::Point2f headLocation,cv::Point2f feetLocation);
@@ -118,6 +118,9 @@ class peopleDetector:public Tracker{
 		 * split in 3 classes depending on the position of the person wrt camera).
 		 */
 		peopleDetector::CLASSES findImageClass(cv::Point2f feet,cv::Point2f head);
+		/** Initialize the inverse value of the color space used in feature extraction.
+		 */
+		void initInvColoprSp();
 		//======================================================================
 	public:
 		/** @var print
@@ -145,6 +148,10 @@ class peopleDetector:public Tracker{
 		 * The colorspace code to be used before extracting the features.
 		 */
 		int colorspaceCode;
+		/** @var invColorspaceCode
+		 * The code to be used to convert an image to gray.
+		 */
+		int invColorspaceCode;
 		/** @var featurePart
 		 * Indicates if the part from the image to be used (feet,head,or both).
 		 */

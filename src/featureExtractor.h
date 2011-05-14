@@ -116,7 +116,8 @@ class featureExtractor {
 		enum ROTATE {MATRIX,TEMPLATE,KEYS};
 		/** Initializes the class elements.
 		 */
-		void init(featureExtractor::FEATURE fType,std::string featFile);
+		void init(featureExtractor::FEATURE fType,std::string featFile,\
+			int colorSp,int invColorSp);
 		/** Resets the variables to the default values.
 		 */
 		void reset();
@@ -126,7 +127,7 @@ class featureExtractor {
 			unsigned means=500,unsigned size=128);
 		/** Creates a data matrix for each image and stores it locally.
 		 */
-		void extractFeatures(cv::Mat image,std::string sourceName,int colorspaceCode);
+		void extractFeatures(cv::Mat image,std::string sourceName);
 		/** Extract the interest points in a gird and returns them.
 		 */
 		cv::Mat extractPointsGrid(cv::Mat image);
@@ -250,6 +251,14 @@ class featureExtractor {
 		 * The class of the image corresponding to its position wrt the camera.
 		 */
 		std::string imageClass;
+		/** @var invColorspaceCode
+		 * The code to be used to convert an image to gray.
+		 */
+		int invColorspaceCode;
+		/** @var colorspaceCode
+		 * The code to be used to convert an image to gray.
+		 */
+		int colorspaceCode;
 		//======================================================================
 	private:
 		DISALLOW_COPY_AND_ASSIGN(featureExtractor);

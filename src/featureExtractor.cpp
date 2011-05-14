@@ -35,7 +35,7 @@ featureExtractor::featureExtractor(){
 	this->meanSize     = 128;
 	this->featureFile  = "none";
 	this->print        = true;
-	this->plot         = true;
+	this->plot         = false;
 }
 //==============================================================================
 featureExtractor::~featureExtractor(){
@@ -49,11 +49,14 @@ featureExtractor::~featureExtractor(){
 //==============================================================================
 /** Initializes the class elements.
  */
-void featureExtractor::init(featureExtractor::FEATURE fType,std::string featFile){
+void featureExtractor::init(featureExtractor::FEATURE fType,std::string featFile,\
+int colorSp,int invColorSp){
 	if(this->isInit){this->reset();}
-	this->featureType = fType;
-	this->featureFile = featFile;
-	this->isInit      = true;
+	this->featureType       = fType;
+	this->featureFile       = featFile;
+	this->isInit            = true;
+	this->colorspaceCode    = colorSp;
+	this->invColorspaceCode = invColorSp;
 }
 //==============================================================================
 /** Initializes the settings for the SIFT dictionary.
@@ -68,9 +71,9 @@ unsigned means,unsigned size){
 	this->meanSize     = size;
 
 	// ASSUME THAT THERE IS ALREADY A SIFT DICTIONARY AVAILABLE
-	std::cout<<"Build dictionary .."<<this->featureType<<" "<<\
-		(this->featureType==featureExtractor::SIFT_DICT)<<std::endl;
-
+	if(this->featureType == featureExtractor::SIFT_DICT){
+		std::cout<<"Build dictionary .."<<std::endl;
+	}
 	if(this->dictionarySIFT.empty() && this->featureType!=featureExtractor::SIFT_DICT){
 		binFile2mat(this->dictionarySIFT,const_cast<char*>(this->dictFilename.c_str()));
 	}
@@ -199,6 +202,9 @@ aTempl,cv::Rect roi){
 		aTempl.extremes[0],aTempl.extremes[3]-aTempl.extremes[2]);
 	cv::Mat tmp(image,up),large,gray;
 	cv::resize(tmp,large,cv::Size(50,50),0,0,cv::INTER_CUBIC);
+	if(this->colorspaceCode!=-1){
+		cv::cvtColor(large,large,this->invColorspaceCode);
+	}
 	cv::cvtColor(large,gray,CV_BGR2GRAY);
 	cv::medianBlur(gray,gray,3);
 	if(this->plot){
@@ -617,9 +623,10 @@ std::vector<cv::Point2f> &indices,cv::Rect roi,cv::Mat test){
 //==============================================================================
 /** Creates a data matrix for each image and stores it locally.
  */
-void featureExtractor::extractFeatures(cv::Mat image,std::string sourceName,\
-int colorspaceCode){
-	cv::cvtColor(image,image,colorspaceCode);
+void featureExtractor::extractFeatures(cv::Mat image,std::string sourceName){
+	if(this->colorspaceCode != -1){
+		cv::cvtColor(image,image,this->colorspaceCode);
+	}
 	if(this->featureFile[this->featureFile.size()-1]!='/'){
 		this->featureFile = this->featureFile + '/';
 	}
@@ -732,10 +739,17 @@ cv::Mat featureExtractor::extractPointsGrid(cv::Mat image){
  */
 cv::Mat featureExtractor::extractEdges(cv::Mat image){
 	cv::Mat gray,edges;
+	if(this->colorspaceCode!=-1){
+		cv::cvtColor(image,image,this->invColorspaceCode);
+	}
 	cv::cvtColor(image,gray,CV_BGR2GRAY);
+
+	cv::imshow("gredges",gray);
+	cv::waitKey(0);
+
+
 	cv::medianBlur(gray,gray,3);
 	cv::Canny(gray,edges,100,0,3,true);
-	edges.convertTo(edges,CV_32FC1);
 
 	if(this->plot){
 		cv::imshow("edges",edges);
@@ -756,6 +770,9 @@ cv::Mat featureExtractor::extractSURF(cv::Mat image){
 
 	// EXTRACT INTEREST POINTS FROM THE IMAGE
 	cv::Mat gray;
+	if(this->colorspaceCode!=-1){
+		cv::cvtColor(image,image,this->invColorspaceCode);
+	}
 	cv::cvtColor(image,gray,CV_BGR2GRAY);
 	cv::medianBlur(gray,gray,3);
 	aSURF(gray,cv::Mat(),keypoints,descriptors,false);
@@ -828,6 +845,9 @@ cv::Mat featureExtractor::extractGabor(cv::Mat image){
 
 	// CONVERT THE IMAGE TO GRAYSCALE TO APPLY THE FILTER
 	cv::Mat gray;
+	if(this->colorspaceCode!=-1){
+		cv::cvtColor(image,image,this->invColorspaceCode);
+	}
 	cv::cvtColor(image,gray,CV_BGR2GRAY);
 	cv::medianBlur(gray,gray,3);
 
@@ -874,6 +894,9 @@ cv::Rect roi){
 
 	// EXTRACT SIFT FEATURES IN THE IMAGE
 	cv::Mat gray,sift;
+	if(this->colorspaceCode!=-1){
+		cv::cvtColor(image,image,this->invColorspaceCode);
+	}
 	cv::cvtColor(image,gray,CV_BGR2GRAY);
 	cv::medianBlur(gray,gray,3);
 	aSIFT(gray,cv::Mat(),keypoints);
@@ -945,6 +968,7 @@ cv::Point2f rotBorders,float rotAngle){
 	cv::Mat dataRow,feature;
 	std::string toRead;
 	cv::Mat dictImage;
+	std::cout<<"Image class (CLOSE/MEDIUM/FAR): "<<this->imageClass<<std::endl;
 	switch(this->featureType){
 		case (featureExtractor::IPOINTS):
 			toRead = (this->featureFile+"IPOINTS/"+imgName+".bin");
@@ -1064,7 +1088,7 @@ unsigned featureExtractor::setImageClass(unsigned aClass,std::string path){
 	this->imageClass     = names[aClass];
 
 	// WE NEED A SIFT DICTIONARY FOR EACH CLASS
-	std::string dictName = path+this->imageClass+"_SIFT"+".bin";
+	std::string dictName = this->imageClass+"_SIFT"+".bin";
 	this->initSIFT(path,dictName);
 }
 //==============================================================================

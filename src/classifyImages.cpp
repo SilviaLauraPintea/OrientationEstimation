@@ -300,6 +300,9 @@ void classifyImages::trainGP(annotationsHandle::POSE what,bool fromFolder){
 		tmpTargets.convertTo(tmpTargets,CV_32FC1);
 		this->loadData(tmpData,tmpTargets,i);
 
+		// CHECK TO SEE IF THERE IS ANY DATA IN THE CURRENT CLASS
+		if(this->features->data[i].empty()) continue;
+
 		// TRAIN THE SIN AND COS SEPARETELY FOR LONGITUDE || LATITUDe
 		if(what == annotationsHandle::LONGITUDE){
 			this->gpSin[i].train(this->trainData[i],this->trainTargets[i].col(0),\
@@ -410,12 +413,12 @@ std::deque<std::deque<float> > classifyImages::predictGP\
 (std::deque<gaussianProcess::prediction> &predictionsSin,\
 std::deque<gaussianProcess::prediction> &predictionsCos,\
 annotationsHandle::POSE what,bool fromFolder){
-	for(std::size_t i=0;i<this->trainData.size();++i){
-		if(!this->trainData[i].empty()){
-			this->trainData[i].release();
+	for(std::size_t i=0;i<this->testData.size();++i){
+		if(!this->testData[i].empty()){
+			this->testData[i].release();
 		}
-		if(!this->trainTargets[i].empty()){
-			this->trainTargets[i].release();
+		if(!this->testTargets[i].empty()){
+			this->testTargets[i].release();
 		}
 	}
 	this->features->init(this->testFolder,this->annotationsTest,\
@@ -427,9 +430,13 @@ annotationsHandle::POSE what,bool fromFolder){
 	names.push_back("CLOSE");names.push_back("MEDIUM");	names.push_back("FAR");
 	std::deque<std::deque<float> > predictions;
 	for(peopleDetector::CLASSES i=peopleDetector::CLOSE;i<=peopleDetector::FAR;++i){
+		// CHECK TO SEE IF THERE IS ANY DATA IN THE CURRENT CLASS
 		std::deque<float> oneClassPredictions;
-		std::string modelNameData   = this->modelName+names[i]+"/Data.bin";
-		std::string modelNameLabels = this->modelName+names[i]+"/Labels.bin";
+		if(this->features->data[i].empty() || !this->gpSin[i].N ||\
+		!this->gpCos[i].N){
+			predictions.push_back(oneClassPredictions);
+			continue;
+		}
 		this->features->data[i].copyTo(this->testData[i]);
 
 		// GET ONLY THE ANGLES YOU NEED
@@ -470,7 +477,15 @@ void classifyImages::evaluate(std::deque<std::deque<float> > prediAngles,\
 float &error,float &normError,float &meanDiff){
 	error = 0.0;normError = 0.0;meanDiff = 0.0;
 	unsigned noPeople = 0;
+	std::deque<std::string> names;
+	names.push_back("CLOSE");names.push_back("MEDIUM");	names.push_back("FAR");
 	for(peopleDetector::CLASSES i=peopleDetector::CLOSE;i<=peopleDetector::FAR;++i){
+		std::cout<<"Class "<<names[i]<<": "<<this->testTargets[i].size()<<\
+			" people"<<std::endl;
+
+std::cout<<">>>>>>>>>>>>>>>>>>"<<this->testTargets[i].rows<<" == "<<\
+	prediAngles[i].size()<<std::endl;
+		assert(this->testTargets[i].rows == prediAngles[i].size());
 		for(int y=0;y<this->testTargets[i].rows;++y){
 			float targetAngle = std::atan2(this->testTargets[i].at<float>(y,0),\
 									this->testTargets[i].at<float>(y,1));
@@ -577,6 +592,7 @@ void classifyImages::buildDictionary(int colorSp,bool toUseGT){
 	std::deque<std::string> names;
 	names.push_back("CLOSE");names.push_back("MEDIUM");	names.push_back("FAR");
 	for(peopleDetector::CLASSES i=peopleDetector::CLOSE;i<=peopleDetector::FAR;++i){
+		if(this->features->data[i].empty()) continue;
 		cv::Mat dictData;
 		this->features->data[i].copyTo(dictData);
 		this->features->extractor->setImageClass(i,this->features->datasetPath);
@@ -596,7 +612,10 @@ void classifyImages::buildDictionary(int colorSp,bool toUseGT){
 
 		// WRITE TO FILE THE MEANS
 		cv::Mat matrix(*centers);
-		std::string dictName = names[i]+"/"+this->features->extractor->readDictName();
+		std::string dictName = this->features->extractor->readDictName();
+		std::cout<<"Size("<<names[i]<<"): "<<this->features->data[i].size()<<\
+			" stored in: "<<dictName<<std::endl;
+
 		mat2BinFile(matrix,const_cast<char*>(dictName.c_str()));
 		centers->release();
 		matrix.release();
@@ -760,8 +779,7 @@ void classifyImages::resetFeatures(std::string dir,std::string imStr,int colorSp
 	args[0] = const_cast<char*>("peopleDetector");
 	args[1] = const_cast<char*>(dir.c_str());
 	args[2] = const_cast<char*>(imStr.c_str());
-	this->features = new peopleDetector(3,args,false,false);
-	this->features->colorspaceCode = colorSp;
+	this->features = new peopleDetector(3,args,false,false,colorSp);
 	delete [] args;
 }
 //==============================================================================
@@ -835,7 +853,7 @@ float &angleMin,float &angleMax){
  * predictions).
  */
 void multipleClassifier(int colorSp,annotationsHandle::POSE what,\
-classifyImages &classi,double noise,double length,gaussianProcess::kernelFunction \
+classifyImages &classi,float noise,float length,gaussianProcess::kernelFunction \
 kernel,bool useGT){
 	classi.init(noise,length,featureExtractor::PIXELS,kernel,useGT);
 
@@ -968,18 +986,18 @@ int main(int argc,char **argv){
 	classi.buildDataMatrix(CV_BGR2Luv);
 */
 	//--------------------------------------------------------------------------
-/*
+
 	// evaluate
  	classifyImages classi(argc,argv,classifyImages::EVALUATE);
-	classi.init(0.85,85.0,featureExtractor::PIXELS,&gaussianProcess::sqexp,true);
+	classi.init(0.85,85.0,featureExtractor::HOG,&gaussianProcess::sqexp,true);
 	classi.runCrossValidation(7,annotationsHandle::LONGITUDE,CV_BGR2XYZ,false);
-*/
-	//--------------------------------------------------------------------------
 
+	//--------------------------------------------------------------------------
+/*
 	// BUILD THE SIFT DICTIONARY
   	classifyImages classi(argc,argv,classifyImages::BUILD_DICTIONARY);
 	classi.buildDictionary(CV_BGR2Luv,true);
-
+*/
 	//--------------------------------------------------------------------------
 /*
 	classifyImages classi(argc,argv,classifyImages::TEST);

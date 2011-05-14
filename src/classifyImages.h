@@ -90,7 +90,7 @@ class classifyImages {
 		 * predictions).
 		 */
 		friend void multipleClassifier(int colorSp,annotationsHandle::POSE what,\
-			classifyImages &classi,double noise,double length,\
+			classifyImages &classi,float noise,float length,\
 			gaussianProcess::kernelFunction kernel,bool useGT);
 		/** Get the minimum and maximum angle given the motion vector.
 		 */
