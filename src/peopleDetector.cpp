@@ -171,6 +171,9 @@ const bool readFromFolder){
 			(theAnnotationsFile.c_str()),this->targetAnno);
 	}
 
+	if(this->onlyExtract){
+		assert(feat!=featureExtractor::HOG && feat!=featureExtractor::PIXELS);
+	}
 	this->extractor->init(feat,this->datasetPath+"features/",this->colorspaceCode,\
 		this->invColorspaceCode);
 	if(feat==featureExtractor::SIFT_DICT){
@@ -833,10 +836,10 @@ void peopleDetector::fixLabels(std::deque<unsigned> &existing){
 /** Overwrites the \c doFindPeople function from the \c Tracker class to make it
  * work with the feature extraction.
  */
-bool peopleDetector::doFindPerson(const unsigned imgNum,const IplImage *src,\
+bool peopleDetector::doFindPerson(unsigned imgNum,IplImage *src,\
 const vnl_vector<FLOAT> &imgVec,vnl_vector<FLOAT> &bgVec,\
 const FLOAT logBGProb,const vnl_vector<FLOAT> &logSumPixelBGProb,\
-const unsigned border){
+unsigned border){
 	std::cout<<this->current->index<<") Image... "<<this->current->sourceName<<std::endl;
 
 	//1) START THE TIMER & INITIALIZE THE PROBABLITIES,THE VECTOR OF POSITIONS
@@ -1248,8 +1251,8 @@ cv::Point2f head){
 /*
 int main(int argc,char **argv){
 	peopleDetector feature(argc,argv,true,false,CV_BGR2Lab);
-	feature.init(std::string(argv[1])+"annotated_train",\
-		std::string(argv[1])+"annotated_train.txt",featureExtractor::SURF,true);
+	feature.init(std::string(argv[1])+"annotated_test",\
+		std::string(argv[1])+"annotated_test.txt",featureExtractor::SIFT,true);
 	feature.start(true,true,150);
 }
 */

@@ -28,10 +28,10 @@ class peopleDetector:public Tracker{
 		/** Overwrites the \c doFindPeople function from the \c Tracker class
 		 * to make it work with the feature extraction.
 		 */
-		bool doFindPerson(const unsigned imgNum,const IplImage *src,\
+		bool doFindPerson(unsigned imgNum,IplImage *src,\
 			const vnl_vector<FLOAT> &imgVec,vnl_vector<FLOAT> &bgVec,\
 			const FLOAT logBGProb,const vnl_vector<FLOAT> &logSumPixelBGProb,\
-			const unsigned border = 150);
+			unsigned border=150);;
 		/** Simple "menu" for skipping to the next image or quitting the processing.
 		 */
 		bool imageProcessingMenu();

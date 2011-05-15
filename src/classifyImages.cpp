@@ -482,9 +482,6 @@ float &error,float &normError,float &meanDiff){
 	for(peopleDetector::CLASSES i=peopleDetector::CLOSE;i<=peopleDetector::FAR;++i){
 		std::cout<<"Class "<<names[i]<<": "<<this->testTargets[i].size()<<\
 			" people"<<std::endl;
-
-std::cout<<">>>>>>>>>>>>>>>>>>"<<this->testTargets[i].rows<<" == "<<\
-	prediAngles[i].size()<<std::endl;
 		assert(this->testTargets[i].rows == prediAngles[i].size());
 		for(int y=0;y<this->testTargets[i].rows;++y){
 			float targetAngle = std::atan2(this->testTargets[i].at<float>(y,0),\
@@ -855,19 +852,19 @@ float &angleMin,float &angleMax){
 void multipleClassifier(int colorSp,annotationsHandle::POSE what,\
 classifyImages &classi,float noise,float length,gaussianProcess::kernelFunction \
 kernel,bool useGT){
-	classi.init(noise,length,featureExtractor::PIXELS,kernel,useGT);
+	classi.init(noise,length,featureExtractor::EDGES,kernel,useGT);
 
 	std::deque<std::deque<std::deque<float> > > predictions;
 	std::deque<std::deque<float> > tmpPrediction;
 	float dummy = 0;
 	switch(classi.feature){
-		case(featureExtractor::IPOINTS):
-			classi.feature = featureExtractor::IPOINTS;
+		case(featureExtractor::EDGES):
+			classi.feature = featureExtractor::EDGES;
 			tmpPrediction  = classi.runTest(colorSp,what,dummy);
 			predictions.push_back(tmpPrediction);
 			tmpPrediction.clear();
-		case(featureExtractor::EDGES):
-			classi.feature = featureExtractor::EDGES;
+		case(featureExtractor::IPOINTS):
+			classi.feature = featureExtractor::IPOINTS;
 			tmpPrediction  = classi.runTest(colorSp,what,dummy);
 			predictions.push_back(tmpPrediction);
 			tmpPrediction.clear();
@@ -974,9 +971,10 @@ gaussianProcess::kernelFunction kernel){
 int main(int argc,char **argv){
 /*
 	// test
+	float normError = 0.0f;
 	classifyImages classi(argc,argv,classifyImages::TEST);
-	classi.init(1e-3,70.0,featureExtractor::EDGES,&gaussianProcess::sqexp,false);
- 	classi.runTest(CV_BGR2Luv,annotationsHandle::LONGITUDE);
+	classi.init(0.85,85.0,featureExtractor::HOG,&gaussianProcess::sqexp,true);
+ 	classi.runTest(CV_BGR2Luv,annotationsHandle::LONGITUDE,normError);
 */
 	//--------------------------------------------------------------------------
 /*
@@ -986,12 +984,12 @@ int main(int argc,char **argv){
 	classi.buildDataMatrix(CV_BGR2Luv);
 */
 	//--------------------------------------------------------------------------
-
+/*
 	// evaluate
  	classifyImages classi(argc,argv,classifyImages::EVALUATE);
 	classi.init(0.85,85.0,featureExtractor::HOG,&gaussianProcess::sqexp,true);
 	classi.runCrossValidation(7,annotationsHandle::LONGITUDE,CV_BGR2XYZ,false);
-
+*/
 	//--------------------------------------------------------------------------
 /*
 	// BUILD THE SIFT DICTIONARY
@@ -1000,17 +998,18 @@ int main(int argc,char **argv){
 */
 	//--------------------------------------------------------------------------
 /*
+	// find parmeteres
 	classifyImages classi(argc,argv,classifyImages::TEST);
 	parameterSetting("train.txt","text.txt",classi,argc,argv,featureExtractor::HOG,\
 		CV_BGR2Luv,true,annotationsHandle::LONGITUDE,&gaussianProcess::sqexp);
 */
 	//--------------------------------------------------------------------------
-/*
-	// test
+
+	// multiple classifiers
 	classifyImages classi(argc,argv,classifyImages::TEST);
 	multipleClassifier(CV_BGR2Luv,annotationsHandle::LONGITUDE,classi,0.85,\
-		85,&gaussianProcess::sqexp,true);
-*/
+		85,&gaussianProcess::sqexp,false);
+
 }
 
 

@@ -394,7 +394,8 @@ usedImages,int imgIndex){
 	// set the handler of the mouse events to the method: <<mouseHandler>>
 	image = cvLoadImage(imgs[index].c_str());
 	plotHull(image,priorHull);
-
+	std::cerr<<"Annotations for image: "<<imgs[index].substr\
+		(imgs[index].rfind("/")+1)<<std::endl;
 	cvNamedWindow("image");
 	cvSetMouseCallback("image",mouseHandlerAnn,NULL);
 	cvShowImage("image",image);
@@ -411,6 +412,8 @@ usedImages,int imgIndex){
 	 * the annotation file */
 	int key = 0;
 	while((char)key != 'q' && (char)key != 'Q' && index<imgs.size()) {
+		std::cerr<<"Annotations for image: "<<imgs[index].substr\
+			(imgs[index].rfind("/")+1)<<std::endl;
 		key = cv::waitKey(0);
 		/* if the pressed key is 's' stores the annotated positions
 		 * for the current image */
@@ -440,11 +443,166 @@ usedImages,int imgIndex){
 			//move image to a different directory to keep track of annotated images
 			std::string currLocation = imgs[index].substr(0,imgs[index].rfind("/"));
 			std::string newLocation  = currLocation.substr(0,currLocation.rfind("/")) + \
-				"/annotated"+usedImages+"/";
+							"/annotated"+usedImages+"/";
 			if(!boost::filesystem::is_directory(newLocation)){
 				boost::filesystem::create_directory(newLocation);
 			}
 			newLocation += imgs[index].substr(imgs[index].rfind("/")+1);
+			cerr<<"NEW LOCATION >> "<<newLocation<<endl;
+			cerr<<"CURR LOCATION >> "<<currLocation<<endl;
+			if(rename(imgs[index].c_str(),newLocation.c_str())){
+				perror(NULL);
+			}
+
+			// load the next image or break if it is the last one
+			// skip to the next step^th image
+			while(index+step>imgs.size() && step>0){
+				step = step/10;
+			}
+			index += step;
+			if(index>=imgs.size()){
+				break;
+			}
+
+			image = cvLoadImage(imgs[index].c_str());
+			plotHull(image,priorHull);
+			cvShowImage("image",image);
+		}else if((char)key == 'n'){
+			cout<<"Annotations for image: "<<\
+				imgs[index].substr(imgs[index].rfind("/")+1)\
+				<<" NOT saved!"<<endl;
+
+			//clean the annotations and release the image
+			for(unsigned ind=0;ind<annotations.size();++ind){
+				annotations[ind].poses.clear();
+			}
+			annotations.clear();
+			cvReleaseImage(&image);
+
+			// skip to the next step^th image
+			while(index+step>imgs.size() && step>0){
+				step = step/10;
+			}
+			index += step;
+			if(index>=imgs.size()){
+				break;
+			}
+			image = cvLoadImage(imgs[index].c_str());
+			plotHull(image,priorHull);
+			cvShowImage("image",image);
+		}else if(isalpha(key)){
+			cout<<"key pressed >>> "<<(char)key<<"["<<key<<"]"<<endl;
+		}
+	}
+	annoOut.close();
+	cout<<"Thank you for your time ;)!"<<endl;
+	cvReleaseImage(&image);
+	cvDestroyAllWindows();
+	return 0;
+}
+//==============================================================================
+/** Starts the annotation of the images on the artificial data (labels in the
+ * image name).
+ */
+int annotationsHandle::runAnnArtificial(int argc,char **argv,unsigned step,\
+std::string usedImages,int imgIndex,int imoffset,unsigned set){
+	init();
+	if(imgIndex!= -1){
+		imgIndex += step;
+	}
+	choice = 'c';
+	if(argc != 5){
+		cerr<<"usage: ./annotatepos <img_list.txt> <calib.xml> <annotation.txt>\n"<< \
+		"<img_directory>   => name of directory containing the images\n"<< \
+		"<calib.xml>       => the file contains the calibration data of the camera\n"<< \
+		"<prior.txt>       => the file containing the location prior\n"<< \
+		"<annotations.txt> => the file in which the annotation data needs to be stored\n"<<endl;
+		exit(1);
+	} else {
+		cout<<"Help info:\n"<< \
+		"> press 'q' to quite before all the images are annotated;\n"<< \
+		"> press 'n' to skip to the next image without saving the current one;\n"<< \
+		"> press 's' to save the annotations for the current image and go to the next one;\n"<<endl;
+	}
+	unsigned index                = 0;
+	cerr<<"Loading the images...."<< argv[1] << endl;
+	std::deque<std::string> imgs = readImages(argv[1],imgIndex);
+	cerr<<"Loading the calibration...."<< argv[2] << endl;
+	loadCalibration(argv[2]);
+	std::vector<cv::Point2f> priorHull;
+	cerr<<"Loading the location prior...."<< argv[3] << endl;
+	loadPriorHull(argv[3],priorHull);
+
+	std::cerr<<"LATITUDE: Only looking upwards or downwards matters!"<<std::endl;
+
+	// set the handler of the mouse events to the method: <<mouseHandler>>
+	image = cvLoadImage(imgs[index].c_str());
+	plotHull(image,priorHull);
+	std::cerr<<"Annotations for image: "<<imgs[index].substr\
+		(imgs[index].rfind("/")+1)<<std::endl;
+	cvNamedWindow("image");
+	cvSetMouseCallback("image",mouseHandlerAnn,NULL);
+	cvShowImage("image",image);
+
+	// used to write the output stream to a file given in <<argv[3]>>
+	std::ofstream annoOut;
+	annoOut.open(argv[4],std::ios::out | std::ios::app);
+	if(!annoOut){
+		errx(1,"Cannot open file %s",argv[4]);
+	}
+	annoOut.seekp(0,std::ios::end);
+
+	/* while 'q' was not pressed,annotate images and store the info in
+	 * the annotation file */
+	int key = 0;
+	while((char)key != 'q' && (char)key != 'Q' && index<imgs.size()) {
+		std::string imageName = imgs[index].substr(imgs[index].rfind("/")+1);
+		unsigned pos;int picIndx;
+		int setoffset;
+		if(set == 1){
+			setoffset = 0;
+		}else if(set == 2){
+			setoffset = 72;
+		}else if(set == 3){
+			setoffset = 146;
+		}
+		imageNumber(imageName,pos,picIndx);
+		picIndx = ((picIndx-setoffset)*5)+270;
+		while(picIndx>=360){
+			picIndx-=360;
+		}
+		std::cerr<<"Annotations for image: "<<picIndx<<std::endl;
+
+		key = cv::waitKey(0);
+		/* if the pressed key is 's' stores the annotated positions
+		 * for the current image */
+		if((char)key == 's'){
+			annoOut<<int2string(index+imoffset)+"artificial.jpg";
+			for(unsigned i=0;i!=annotations.size();++i){
+				annoOut <<" ("<<annotations[i].location.x<<","\
+					<<annotations[i].location.y<<")|";
+				annoOut<<"(SITTING:0)|(STANDING:0)|(BENDING:0)|(LONGITUDE:"<<\
+					picIndx<<")|(LATITUDE:60)";
+			}
+			annoOut<<endl;
+			cout<<"Annotations for image: "<<\
+				imgs[index].substr(imgs[index].rfind("/")+1)\
+				<<" were successfully saved!"<<endl;
+			//clean the annotations and release the image
+			for(unsigned ind=0;ind<annotations.size();++ind){
+				annotations[ind].poses.clear();
+			}
+			annotations.clear();
+			cvReleaseImage(&image);
+
+			//move image to a different directory to keep track of annotated images
+			std::string currLocation = imgs[index].substr(0,imgs[index].rfind("/"));
+			std::string newLocation  = currLocation.substr(0,currLocation.rfind("/")) + \
+							"/annotated"+usedImages+"/";
+			if(!boost::filesystem::is_directory(newLocation)){
+				boost::filesystem::create_directory(newLocation);
+			}
+			newLocation += int2string(index+imoffset)+"artificial.jpg";
 			cerr<<"NEW LOCATION >> "<<newLocation<<endl;
 			cerr<<"CURR LOCATION >> "<<currLocation<<endl;
 			if(rename(imgs[index].c_str(),newLocation.c_str())){
@@ -864,8 +1022,9 @@ std::deque<annotationsHandle::ANNOTATION> annotationsHandle::annotations;
 //==============================================================================
 /*
 int main(int argc,char **argv){
-	//annotationsHandle::runAnn(argc,argv,1,"_test",-1);
+	//annotationsHandle::runAnn(argc,argv,1,"_train",-1);
+	annotationsHandle::runAnnArtificial(argc,argv,1,"_train",-1,146,3);
 	//annotationsHandle::runEvaluation(argc,argv);
-	annotationsHandle::checkCalibration(argc,argv);
+	//annotationsHandle::checkCalibration(argc,argv);
 }
 */

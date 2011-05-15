@@ -743,14 +743,8 @@ cv::Mat featureExtractor::extractEdges(cv::Mat image){
 		cv::cvtColor(image,image,this->invColorspaceCode);
 	}
 	cv::cvtColor(image,gray,CV_BGR2GRAY);
-
-	cv::imshow("gredges",gray);
-	cv::waitKey(0);
-
-
 	cv::medianBlur(gray,gray,3);
 	cv::Canny(gray,edges,100,0,3,true);
-
 	if(this->plot){
 		cv::imshow("edges",edges);
 		cv::waitKey(0);

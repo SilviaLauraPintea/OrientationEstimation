@@ -214,6 +214,11 @@ class annotationsHandle {
 		 * of the point.
 		 */
 		static void checkCalibration(int argc,char **argv);
+		/** Starts the annotation of the images on the artificial data (labels in the
+		 * image name).
+		 */
+		static int runAnnArtificial(int argc,char **argv,unsigned step,\
+			std::string usedImages,int imgIndex,int imoffset,unsigned set);
 		//======================================================================
 	protected:
 		/** @var image
