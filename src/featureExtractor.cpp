@@ -61,12 +61,11 @@ int colorSp,int invColorSp){
 //==============================================================================
 /** Initializes the settings for the SIFT dictionary.
  */
-void featureExtractor::initSIFT(std::string pathName,std::string dictName,\
-unsigned means,unsigned size){
+void featureExtractor::initSIFT(std::string dictName,unsigned means,unsigned size){
 	if(!this->dictionarySIFT.empty()){
 		this->dictionarySIFT.release();
 	}
-	this->dictFilename = pathName+dictName;
+	this->dictFilename = "data/"+dictName;
 	this->noMeans      = means;
 	this->meanSize     = size;
 
@@ -113,9 +112,10 @@ std::vector<cv::Point2f> templ){
 		return false;
 	}
 
-	if(std::abs(static_cast<int>(iter->line)==static_cast<int>(pixelY)) &&\
-	static_cast<int>(iter->start) <= static_cast<int>(pixelX) &&\
-	static_cast<int>(iter->end) >= static_cast<int>(pixelX)){
+	unsigned var = 5;
+	if(std::abs(static_cast<int>(iter->line)-static_cast<int>(pixelY))<=var &&\
+	static_cast<int>(iter->start)-var <= static_cast<int>(pixelX) &&\
+	static_cast<int>(iter->end)+var >= static_cast<int>(pixelX)){
 		return true;
 	}else{
 		return false;
@@ -126,7 +126,7 @@ std::vector<cv::Point2f> templ){
  */
 cv::Mat featureExtractor::rotate2Zero(float rotAngle,cv::Mat toRotate,\
 cv::Point2f &rotBorders,cv::Point2f rotCenter,featureExtractor::ROTATE what,\
-std::vector<cv::Point2f> &pts){
+std::vector<cv::Point2f> &pts,cv::Rect roi){
 	float diag;
 	cv::Mat srcRotate,rotated,rotationMat,result;
 	switch(what){
@@ -168,18 +168,37 @@ std::vector<cv::Point2f> &pts){
 		case(featureExtractor::KEYS):
 			rotationMat = cv::getRotationMatrix2D(rotCenter,rotAngle,1.0);
 			rotationMat.convertTo(rotationMat,CV_32FC1);
-			srcRotate = cv::Mat::ones(cv::Size(3,toRotate.rows),CV_32FC1);
 			for(int y=0;y<toRotate.rows;++y){
-				srcRotate.at<float>(y,0) = toRotate.at<float>(y,toRotate.cols-2)+\
-											rotBorders.x;
-				srcRotate.at<float>(y,1) = toRotate.at<float>(y,toRotate.cols-1)+\
-											rotBorders.y;
+				float ptX = toRotate.at<float>(y,toRotate.cols-2)+\
+					rotBorders.x;
+				float ptY = toRotate.at<float>(y,toRotate.cols-1)+\
+					rotBorders.y;
+				if(ptX<roi.x || ptY<roi.y || ptX>(roi.x+roi.width) || \
+				ptY>(roi.y+roi.height)){
+					continue;
+				}
+				cv::Mat tmp = cv::Mat::zeros(cv::Size(3,1),CV_32FC1);
+				tmp.at<float>(0,0) = ptX;
+				tmp.at<float>(0,1) = ptY;
+				tmp.at<float>(0,2) = 0.0f;
+				if(srcRotate.empty()){
+					tmp.copyTo(srcRotate);
+				}else{
+					srcRotate.push_back(tmp);
+				}
+				cv::Mat dummy = toRotate.row(y);
+				if(result.empty()){
+					dummy.copyTo(result);
+				}else{
+					result.push_back(dummy);
+				}
+				tmp.release();
+				dummy.release();
 			}
 			srcRotate.convertTo(srcRotate,CV_32FC1);
 			rotated = srcRotate*rotationMat.t();
 			rotated.convertTo(rotated,CV_32FC1);
-			toRotate.copyTo(result);
-			for(int y=0;y<toRotate.rows;++y){
+			for(int y=0;y<rotated.rows;++y){
 				result.at<float>(y,toRotate.cols-2) = rotated.at<float>(y,0);
 				result.at<float>(y,toRotate.cols-1) = rotated.at<float>(y,1);
 			}
@@ -743,9 +762,13 @@ cv::Mat featureExtractor::extractEdges(cv::Mat image){
 		cv::cvtColor(image,image,this->invColorspaceCode);
 	}
 	cv::cvtColor(image,gray,CV_BGR2GRAY);
+	mean0Variance1(gray);
+	gray *= 255;
+	gray.convertTo(gray,CV_8UC1);
 	cv::medianBlur(gray,gray,3);
-	cv::Canny(gray,edges,100,0,3,true);
+	cv::Canny(gray,edges,250,150,3,true);
 	if(this->plot){
+		cv::imshow("gray",gray);
 		cv::imshow("edges",edges);
 		cv::waitKey(0);
 	}
@@ -969,7 +992,7 @@ cv::Point2f rotBorders,float rotAngle){
 			binFile2mat(feature,const_cast<char*>(toRead.c_str()));
 			feature.convertTo(feature,CV_32FC1);
 			feature = this->rotate2Zero(rotAngle,feature,rotBorders,\
-						absRotCenter,featureExtractor::KEYS,keys);
+						absRotCenter,featureExtractor::KEYS,keys,roi);
 			dataRow = this->getPointsGrid(feature,roi,aTempl,person.pixels);
 			break;
 		case featureExtractor::EDGES:
@@ -982,7 +1005,7 @@ cv::Point2f rotBorders,float rotAngle){
 			binFile2mat(feature,const_cast<char*>(toRead.c_str()));
 			feature.convertTo(feature,CV_32FC1);
 			feature = this->rotate2Zero(rotAngle,feature,rotBorders,\
-						absRotCenter,featureExtractor::KEYS,keys);
+						absRotCenter,featureExtractor::KEYS,keys,roi);
 			dataRow = this->getSURF(feature,aTempl.points,keys,roi,person.pixels);
 			break;
 		case featureExtractor::GABOR:
@@ -1002,7 +1025,7 @@ cv::Point2f rotBorders,float rotAngle){
 			binFile2mat(feature,const_cast<char*>(toRead.c_str()));
 			feature.convertTo(feature,CV_32FC1);
 			feature = this->rotate2Zero(rotAngle,feature,rotBorders,\
-						absRotCenter,featureExtractor::KEYS,keys);
+						absRotCenter,featureExtractor::KEYS,keys,roi);
 			dataRow = this->getSIFT(feature,aTempl.points,keys,roi,person.pixels);
 			break;
 		case featureExtractor::PIXELS:
@@ -1076,14 +1099,14 @@ std::string featureExtractor::readDictName(){
 //==============================================================================
 /** Sets the image class and resets the dictionary name.
  */
-unsigned featureExtractor::setImageClass(unsigned aClass,std::string path){
+unsigned featureExtractor::setImageClass(unsigned aClass){
 	std::deque<std::string> names;
 	names.push_back("CLOSE");names.push_back("MEDIUM");	names.push_back("FAR");
-	this->imageClass     = names[aClass];
+	this->imageClass = names[aClass];
 
 	// WE NEED A SIFT DICTIONARY FOR EACH CLASS
 	std::string dictName = this->imageClass+"_SIFT"+".bin";
-	this->initSIFT(path,dictName);
+	this->initSIFT(dictName);
 }
 //==============================================================================
 

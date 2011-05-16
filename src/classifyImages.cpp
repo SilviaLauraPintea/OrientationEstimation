@@ -852,19 +852,20 @@ float &angleMin,float &angleMax){
 void multipleClassifier(int colorSp,annotationsHandle::POSE what,\
 classifyImages &classi,float noise,float length,gaussianProcess::kernelFunction \
 kernel,bool useGT){
-	classi.init(noise,length,featureExtractor::EDGES,kernel,useGT);
+	classi.init(noise,length,featureExtractor::IPOINTS,kernel,useGT);
 
 	std::deque<std::deque<std::deque<float> > > predictions;
 	std::deque<std::deque<float> > tmpPrediction;
 	float dummy = 0;
 	switch(classi.feature){
-		case(featureExtractor::EDGES):
-			classi.feature = featureExtractor::EDGES;
+		case(featureExtractor::IPOINTS):
+			classi.feature = featureExtractor::IPOINTS;
 			tmpPrediction  = classi.runTest(colorSp,what,dummy);
 			predictions.push_back(tmpPrediction);
 			tmpPrediction.clear();
-		case(featureExtractor::IPOINTS):
-			classi.feature = featureExtractor::IPOINTS;
+/*
+		case(featureExtractor::EDGES):
+			classi.feature = featureExtractor::EDGES;
 			tmpPrediction  = classi.runTest(colorSp,what,dummy);
 			predictions.push_back(tmpPrediction);
 			tmpPrediction.clear();
@@ -893,6 +894,7 @@ kernel,bool useGT){
 			tmpPrediction  = classi.runTest(colorSp,what,dummy);
 			predictions.push_back(tmpPrediction);
 			tmpPrediction.clear();
+*/
 	}
 
 	// HOW TO COMBINE THEM?BIN VOTES EVERY 20DEGREES AND AVERAGE THE WINNING BIN
@@ -977,12 +979,12 @@ int main(int argc,char **argv){
  	classi.runTest(CV_BGR2Luv,annotationsHandle::LONGITUDE,normError);
 */
 	//--------------------------------------------------------------------------
-/*
+
 	// build data matrix
  	classifyImages classi(argc,argv,classifyImages::EVALUATE);
 	classi.init(0.85,85.0,featureExtractor::PIXELS,&gaussianProcess::sqexp,true);
-	classi.buildDataMatrix(CV_BGR2Luv);
-*/
+	classi.buildDataMatrix();
+
 	//--------------------------------------------------------------------------
 /*
 	// evaluate
@@ -994,7 +996,7 @@ int main(int argc,char **argv){
 /*
 	// BUILD THE SIFT DICTIONARY
   	classifyImages classi(argc,argv,classifyImages::BUILD_DICTIONARY);
-	classi.buildDictionary(CV_BGR2Luv,true);
+	classi.buildDictionary(-1,true);
 */
 	//--------------------------------------------------------------------------
 /*
@@ -1004,12 +1006,12 @@ int main(int argc,char **argv){
 		CV_BGR2Luv,true,annotationsHandle::LONGITUDE,&gaussianProcess::sqexp);
 */
 	//--------------------------------------------------------------------------
-
+/*
 	// multiple classifiers
 	classifyImages classi(argc,argv,classifyImages::TEST);
 	multipleClassifier(CV_BGR2Luv,annotationsHandle::LONGITUDE,classi,0.85,\
 		85,&gaussianProcess::sqexp,false);
-
+*/
 }
 
 

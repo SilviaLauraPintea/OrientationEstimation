@@ -123,8 +123,7 @@ class featureExtractor {
 		void reset();
 		/** Initializes the settings for the SIFT dictionary.
 		 */
-		void initSIFT(std::string pathName,std::string dictName,\
-			unsigned means=500,unsigned size=128);
+		void initSIFT(std::string dictName,unsigned means=500,unsigned size=128);
 		/** Creates a data matrix for each image and stores it locally.
 		 */
 		void extractFeatures(cv::Mat image,std::string sourceName);
@@ -195,7 +194,7 @@ class featureExtractor {
 		 */
 		cv::Mat rotate2Zero(float rotAngle,cv::Mat toRotate,cv::Point2f \
 			&rotBorders,cv::Point2f rotCenter,featureExtractor::ROTATE what,\
-			std::vector<cv::Point2f> &pts);
+			std::vector<cv::Point2f> &pts,cv::Rect roi = cv::Rect());
 		/**Return number of means.
 		 */
 		unsigned readNoMeans();
@@ -204,7 +203,7 @@ class featureExtractor {
 		std::string readDictName();
 		/** Sets the image class and resets the dictionary name.
 		 */
-		unsigned setImageClass(unsigned aClass,std::string path);
+		unsigned setImageClass(unsigned aClass);
 	//==========================================================================
 	private:
 		/** @var isInit

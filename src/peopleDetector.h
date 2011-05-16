@@ -30,8 +30,7 @@ class peopleDetector:public Tracker{
 		 */
 		bool doFindPerson(unsigned imgNum,IplImage *src,\
 			const vnl_vector<FLOAT> &imgVec,vnl_vector<FLOAT> &bgVec,\
-			const FLOAT logBGProb,const vnl_vector<FLOAT> &logSumPixelBGProb,\
-			unsigned border=150);;
+			const FLOAT logBGProb,const vnl_vector<FLOAT> &logSumPixelBGProb);
 		/** Simple "menu" for skipping to the next image or quitting the processing.
 		 */
 		bool imageProcessingMenu();
@@ -47,8 +46,7 @@ class peopleDetector:public Tracker{
 		/** Creates on data row in the final data matrix by getting the feature
 		 * descriptors.
 		 */
-		void extractDataRow(std::deque<unsigned> &existing,const IplImage *oldBg,\
-			const unsigned border=150);
+		void extractDataRow(std::deque<unsigned> &existing,const IplImage *oldBg);
 		/** For each row added in the data matrix (each person detected for which we
 		 * have extracted some features) find the corresponding label.
 		 */
@@ -56,8 +54,7 @@ class peopleDetector:public Tracker{
 		/** Returns the size of a window around a template centered in a given point.
 		 */
 		void templateWindow(const cv::Size imgSize,int &minX,int &maxX,\
-		int &minY,int &maxY,const featureExtractor::templ aTempl,\
-		const int tplBorder=100);
+		int &minY,int &maxY,const featureExtractor::templ aTempl);
 		/** Initializes the parameters of the tracker.
 		 */
 		void init(const std::string dataFolder,const std::string theAnnotationsFile,\
@@ -98,10 +95,10 @@ class peopleDetector:public Tracker{
 		std::deque<unsigned> readLocations();
 		/** Starts running something (either the tracker or just mimics it).
 		 */
-		void start(bool readFromFolder,bool useGT,unsigned border=150);
+		void start(bool readFromFolder,bool useGT);
 		/** Adds a templates to the vector of templates at detected positions.
 		 */
-		void add2Templates(std::deque<unsigned> existing,unsigned border=150);
+		void add2Templates(std::deque<unsigned> existing);
 		/** Assigns pixels to templates based on proximity.
 		 */
 		void pixels2Templates(int maxX,int minX,int maxY,int minY,int k,\
@@ -112,8 +109,7 @@ class peopleDetector:public Tracker{
 		/** Fixes the existing/detected locations of people and updates the tracks and
 		 * creates the bordered image.
 		 */
-		void fixLocationsTracksBorderes(std::deque<unsigned> &existing,\
-			unsigned border);
+		void fixLocationsTracksBorderes(std::deque<unsigned> &existing);
 		/** Find the class in which we can store the current image (the data is
 		 * split in 3 classes depending on the position of the person wrt camera).
 		 */

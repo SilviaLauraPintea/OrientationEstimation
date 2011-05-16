@@ -1022,8 +1022,8 @@ std::deque<annotationsHandle::ANNOTATION> annotationsHandle::annotations;
 //==============================================================================
 /*
 int main(int argc,char **argv){
-	//annotationsHandle::runAnn(argc,argv,1,"_train",-1);
-	annotationsHandle::runAnnArtificial(argc,argv,1,"_train",-1,146,3);
+	annotationsHandle::runAnn(argc,argv,1,"_train",-1);
+	//annotationsHandle::runAnnArtificial(argc,argv,1,"_train",-1,146,3);
 	//annotationsHandle::runEvaluation(argc,argv);
 	//annotationsHandle::checkCalibration(argc,argv);
 }

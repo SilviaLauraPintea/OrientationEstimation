@@ -25,7 +25,7 @@ class classifyImages {
 
 		/** Build dictionary for vector quantization.
 		 */
-		void buildDictionary(int colorSp = CV_BGR2Lab,bool toUseGT = true);
+		void buildDictionary(int colorSp = -1,bool toUseGT = true);
 
 		/** Creates the training data (according to the options),the labels and
 		 * trains the a \c GaussianProcess on the data.
@@ -58,7 +58,7 @@ class classifyImages {
 		/** Does the cross-validation and computes the average error over all folds.
 		 */
 		float runCrossValidation(unsigned k,annotationsHandle::POSE what,\
-			int colorSp = CV_BGR2Lab,bool onTrain = false);
+			int colorSp = -1,bool onTrain = false);
 		/** Runs the final evaluation (test).
 		 */
 		std::deque<std::deque<float> > runTest(int colorSp,\
