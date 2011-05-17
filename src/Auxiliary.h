@@ -9,11 +9,11 @@
 
 /** Converts a pointer to an IplImage to an OpenCV Mat.
  */
-cv::Mat ipl2mat(IplImage* ipl_image);
+void ipl2mat(IplImage* ipl_image,cv::Mat &mat_image);
 
 /** Converts an OpenCV Mat to a pointer to an IplImage.
  */
-IplImage* mat2ipl(cv::Mat image);
+void mat2ipl(const cv::Mat &image,IplImage* ipl_image);
 
 /** Convert the values from a cv::Mat of doubles to be between 0 and 1.
  */
@@ -25,7 +25,7 @@ void range1Mat(cv::Mat &matrix);
 
 /** Write a 2D-matrix to a text file (first row is the dimension of the matrix).
  */
-void mat2TxtFile(cv::Mat matrix,char* fileName,bool append = false);
+void mat2TxtFile(cv::Mat &matrix,char* fileName,bool append = false);
 
 /** Reads a 2D-matrix from a text file (first row is the dimension of the matrix).
  */
@@ -33,7 +33,7 @@ void txtFile2Mat(cv::Mat &matrix,char* fileName);
 
 /** Write a 2D-matrix to a binary file (first the dimension of the matrix).
  */
-void mat2BinFile(cv::Mat matrix,char* fileName,bool append = false);
+void mat2BinFile(cv::Mat &matrix,char* fileName,bool append = false);
 
 /** Reads a 2D-matrix from a binary file (first the dimension of the matrix).
  */
@@ -49,14 +49,14 @@ void angle0to360(float &angle);
 void angle180to180(float &angle);
 /** Get perpendicular to a line given by 2 points A,B in point C.
  */
-void perpendicularLine(cv::Point2f A,cv::Point2f B,cv::Point2f C,\
-	float &m,float &b);
+void perpendicularLine(const cv::Point2f &A,const cv::Point2f &B,\
+const cv::Point2f &C,float &m,float &b);
 /** Checks to see if a point is on the same side of a line like another given point.
  */
-bool sameSubplane(cv::Point2f test,cv::Point2f point,float m,float b);
+bool sameSubplane(const cv::Point2f &test,const cv::Point2f &point,float m,float b);
 /** Just displaying an image a bit larger to visualize it better.
  */
-void showZoomedImage(cv::Mat image,std::string title="zoomed");
+void showZoomedImage(const cv::Mat &image,std::string &title);
 /** A function that transforms the data such that it has zero mean and unit
  * variance: img = (img-mean(img(:)))/std(img(:)).
  */

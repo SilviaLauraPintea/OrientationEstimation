@@ -18,16 +18,14 @@
 //==============================================================================
 /** Converts a pointer to an IplImage to an OpenCV Mat.
  */
-cv::Mat ipl2mat(IplImage* ipl_image){
-	cv::Mat mat_image(ipl_image);
-	return mat_image;
+void ipl2mat(IplImage* ipl_image,cv::Mat &mat_image){
+	mat_image = cv::Mat(ipl_image);
 }
 //==============================================================================
 /** Converts an OpenCV Mat to a pointer to an IplImage.
  */
-IplImage* mat2ipl(cv::Mat image){
-	IplImage* ipl_image = new IplImage(image);
-	return ipl_image;
+void mat2ipl(const cv::Mat &image,IplImage* ipl_image){
+	ipl_image = new IplImage(image);
 }
 //==============================================================================
 /** Convert the values from a cv::Mat of doubles to be between 0 and 1.
@@ -61,7 +59,7 @@ void range1Mat(cv::Mat &matrix){
 //==============================================================================
 /** Write a 2D-matrix to a text file (first row is the dimension of the matrix).
  */
-void mat2TxtFile(cv::Mat matrix,char* fileName,bool append){
+void mat2TxtFile(cv::Mat &matrix,char* fileName,bool append){
 	std::ofstream dictOut;
 	try{
 		if(append){
@@ -130,7 +128,7 @@ void txtFile2Mat(cv::Mat &matrix,char* fileName){
 //==============================================================================
 /** Write a 2D-matrix to a binary file (first the dimension of the matrix).
  */
-void mat2BinFile(cv::Mat matrix,char* fileName,bool append){
+void mat2BinFile(cv::Mat &matrix,char* fileName,bool append){
 	std::ofstream mxFile;
 	try{
 		if(append){
@@ -221,7 +219,7 @@ void angle180to180(float &angle){
 //==============================================================================
 /** Checks to see if a point is on the same side of a line like another given point.
  */
-bool sameSubplane(cv::Point2f test,cv::Point2f point,float m,float b){
+bool sameSubplane(const cv::Point2f &test,const cv::Point2f &point,float m,float b){
 	if(isnan(m)){
 		return (point.x*test.x)>=0.0;
 	}else if(m == 0){
@@ -233,8 +231,8 @@ bool sameSubplane(cv::Point2f test,cv::Point2f point,float m,float b){
 //==============================================================================
 /** Get perpendicular to a line given by 2 points A,B in point C.
  */
-void perpendicularLine(cv::Point2f A,cv::Point2f B,cv::Point2f C,float &m,\
-float &b){
+void perpendicularLine(const cv::Point2f &A,const cv::Point2f &B,\
+const cv::Point2f &C,float &m,float &b){
 	float slope = (float)(B.y - A.y)/(float)(B.x - A.x);
 	m            = -1.0/slope;
 	b            = C.y - m * C.x;
@@ -242,7 +240,7 @@ float &b){
 //==============================================================================
 /** Just displaying an image a bit larger to visualize it better.
  */
-void showZoomedImage(cv::Mat image,const std::string title){
+void showZoomedImage(const cv::Mat &image,const std::string &title){
 	cv::Mat large;
 	cv::resize(image,large,cv::Size(0,0),5,5,cv::INTER_CUBIC);
 	cv::imshow(title,large);

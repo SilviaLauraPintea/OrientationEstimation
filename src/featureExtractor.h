@@ -116,85 +116,90 @@ class featureExtractor {
 		enum ROTATE {MATRIX,TEMPLATE,KEYS};
 		/** Initializes the class elements.
 		 */
-		void init(featureExtractor::FEATURE fType,std::string featFile,\
+		void init(featureExtractor::FEATURE fType,const std::string &featFile,\
 			int colorSp,int invColorSp);
 		/** Resets the variables to the default values.
 		 */
 		void reset();
 		/** Initializes the settings for the SIFT dictionary.
 		 */
-		void initSIFT(std::string dictName,unsigned means=500,unsigned size=128);
+		void initSIFT(const std::string &dictName,unsigned means=500,unsigned size=128);
 		/** Creates a data matrix for each image and stores it locally.
 		 */
-		void extractFeatures(cv::Mat image,std::string sourceName);
+		void extractFeatures(cv::Mat &image,const std::string &sourceName);
 		/** Extract the interest points in a gird and returns them.
 		 */
-		cv::Mat extractPointsGrid(cv::Mat image);
+		cv::Mat extractPointsGrid(cv::Mat &image);
 		/** Extract edges from the whole image.
 		 */
-		cv::Mat extractEdges(cv::Mat image);
+		cv::Mat extractEdges(cv::Mat &image);
 		/** Convolves the whole image with some Gabors wavelets and then stores the
 		 * results.
 		 */
-		cv::Mat extractGabor(cv::Mat image);
+		cv::Mat extractGabor(cv::Mat &image);
 		/** Extracts SIFT features from the image and stores them in a matrix.
 		 */
-		cv::Mat extractSIFT(cv::Mat image,std::vector<cv::Point2f> templ =\
-			std::vector<cv::Point2f>(),cv::Rect roi = cv::Rect());
+		cv::Mat extractSIFT(cv::Mat &image,const std::vector<cv::Point2f> &templ,\
+			const cv::Rect &roi);
 		/** Extracts all the surf descriptors from the whole image and writes them in a
 		 * matrix.
 		 */
-		cv::Mat extractSURF(cv::Mat image);
+		cv::Mat extractSURF(cv::Mat &image);
 		/** Gets the plain pixels corresponding to the upper part of the body.
 		 */
-		cv::Mat getPixels(cv::Mat image,featureExtractor::templ aTempl,\
-			cv::Rect roi);
+		cv::Mat getPixels(const cv::Mat &image,const featureExtractor::templ &aTempl,\
+			const cv::Rect &roi);
 		/** Gets the HOG descriptors over an image.
 		 */
-		cv::Mat getHOG(cv::Mat pixels,featureExtractor::templ aTempl,cv::Rect roi);
+		cv::Mat getHOG(const cv::Mat &pixels,const featureExtractor::templ &aTempl,\
+			const cv::Rect &roi);
 		/** Gets the edges in an image.
 		 */
-		cv::Mat getEdges(cv::Mat feature,cv::Mat thresholded,cv::Rect roi,\
-			featureExtractor::templ aTempl,float rotAngle);
+		cv::Mat getEdges(cv::Mat &feature,const cv::Mat &thresholded,\
+			const cv::Rect &roi,const featureExtractor::templ &aTempl,\
+			float rotAngle);
 		/** SURF descriptors (Speeded Up Robust Features).
 		 */
-		cv::Mat getSURF(cv::Mat feature,std::vector<cv::Point2f> templ,\
-			std::vector<cv::Point2f> &indices,cv::Rect roi,cv::Mat test=cv::Mat());
+		cv::Mat getSURF(cv::Mat &feature,const std::vector<cv::Point2f> &templ,\
+			const cv::Rect &roi,const cv::Mat &test,std::vector<cv::Point2f> &indices);
 		/** Compute the features from the SIFT descriptors by doing vector
 		 * quantization.
 		 */
-		cv::Mat getSIFT(cv::Mat feature,std::vector<cv::Point2f> templ,\
-			std::vector<cv::Point2f> &indices,cv::Rect roi,cv::Mat test=cv::Mat());
+		cv::Mat getSIFT(const cv::Mat &feature,const std::vector<cv::Point2f> &templ,\
+			const cv::Rect &roi,const cv::Mat &test,std::vector<cv::Point2f> &indices);
 		/** Creates a "histogram" of interest points + number of blobs.
 		 */
-		cv::Mat getPointsGrid(cv::Mat feature,cv::Rect roi,\
-			featureExtractor::templ aTempl,cv::Mat test=cv::Mat());
+		cv::Mat getPointsGrid(const cv::Mat &feature,const cv::Rect &roi,\
+			const featureExtractor::templ &aTempl,const cv::Mat &test);
 		/** Convolves an image with a Gabor filter with the given parameters and
 		 * returns the response image.
 		 */
-		cv::Mat getGabor(cv::Mat feature,cv::Mat thresholded,cv::Rect roi,\
-			cv::Size foregrSize,float rotAngle,int aheight);
+		cv::Mat getGabor(cv::Mat &feature,const cv::Mat &thresholded,\
+			const cv::Rect &roi,const cv::Size &foregrSize,float rotAngle,\
+			int aheight);
 		/** Creates a gabor with the parameters given by the parameter vector.
 		 */
-		cv::Mat createGabor(float *params = NULL);
+		void createGabor(cv::Mat &gabor,float *params = NULL);
 		/** Returns the row corresponding to the indicated feature type.
 		 */
-		cv::Mat getDataRow(cv::Mat image,featureExtractor::templ aTempl,cv::Rect roi,\
-		featureExtractor::people person,cv::Mat thresholded,cv::vector<cv::Point2f> &keys,\
-		std::string imgName,cv::Point2f absRotCenter,cv::Point2f rotBorders,float rotAngle);
+		cv::Mat getDataRow(cv::Mat &image,const featureExtractor::templ &aTempl,\
+			const cv::Rect &roi,const featureExtractor::people &person,\
+			const cv::Mat &thresholded,const std::string &imgName,\
+			cv::Point2f &absRotCenter,cv::Point2f &rotBorders,float rotAngle,\
+			cv::vector<cv::Point2f> &keys);
 		/** Compares SURF 2 descriptors and returns the boolean value of their comparison.
 		 */
-		static bool compareDescriptors(const featureExtractor::keyDescr k1,\
-			const featureExtractor::keyDescr k2);
+		static bool compareDescriptors(const featureExtractor::keyDescr &k1,\
+			const featureExtractor::keyDescr &k2);
 		/** Checks to see if a given pixel is inside a template.
 		 */
 		static bool isInTemplate(unsigned pixelX,unsigned pixelY,\
-			std::vector<cv::Point2f> templ);
+			const std::vector<cv::Point2f> &templ);
 		/** Rotate a matrix/a template/keypoints wrt to the camera location.
 		 */
-		cv::Mat rotate2Zero(float rotAngle,cv::Mat toRotate,cv::Point2f \
-			&rotBorders,cv::Point2f rotCenter,featureExtractor::ROTATE what,\
-			std::vector<cv::Point2f> &pts,cv::Rect roi = cv::Rect());
+		void rotate2Zero(float rotAngle,featureExtractor::ROTATE what,\
+			const cv::Rect roi,cv::Point2f &rotCenter,cv::Point2f &rotBorders,\
+			std::vector<cv::Point2f> &pts,cv::Mat &toRotate);
 		/**Return number of means.
 		 */
 		unsigned readNoMeans();

@@ -73,7 +73,8 @@ void annotationsHandle::mouseHandlerAnn(int event,int x,int y,int flags,void *pa
 				temp.poses.assign(poseSize,0);
 				temp.poses[(int)LATITUDE] = 90;
 				annotations.push_back(temp);
-				showMenu(cv::Point2f(x,y));
+				cv::Point2f aCenter(x,y);
+				showMenu(aCenter);
 				for(unsigned i=0;i!=annotations.size();++i){
 					Annotate::plotArea(image,(float)annotations[i].location.x,\
 						(float)annotations[i].location.y);
@@ -85,8 +86,8 @@ void annotationsHandle::mouseHandlerAnn(int event,int x,int y,int flags,void *pa
 //==============================================================================
 /** Rotate matrix wrt to the camera location.
  */
-cv::Mat annotationsHandle::rotateWrtCamera(cv::Point2f headLocation,\
-cv::Point2f feetLocation,cv::Mat toRotate,cv::Point2f &borders){
+cv::Mat annotationsHandle::rotateWrtCamera(const cv::Point2f &headLocation,\
+const cv::Point2f &feetLocation,const cv::Mat &toRotate,cv::Point2f &borders){
 	// GET THE ANGLE TO ROTATE WITH
 	float cameraAngle = std::atan2((headLocation.y-feetLocation.y),\
 						(headLocation.x-feetLocation.x));
@@ -121,7 +122,7 @@ cv::Point2f feetLocation,cv::Mat toRotate,cv::Point2f &borders){
 //==============================================================================
 /** Shows how the selected orientation looks on the image.
  */
-void annotationsHandle::drawLatitude(cv::Point2f head,cv::Point2f feet,\
+void annotationsHandle::drawLatitude(const cv::Point2f &head,const cv::Point2f &feet,\
 unsigned int orient,annotationsHandle::POSE pose){
 	unsigned int length = 80;
 	float angle = (M_PI * orient)/180;
@@ -186,8 +187,8 @@ unsigned int orient,annotationsHandle::POSE pose){
 //==============================================================================
 /** Shows how the selected orientation looks on the image.
  */
-void annotationsHandle::drawOrientation(cv::Point2f center,unsigned int orient,\
-annotationsHandle::POSE pose){
+void annotationsHandle::drawOrientation(const cv::Point2f &center,\
+unsigned int orient,annotationsHandle::POSE pose){
 	unsigned int length = 60;
 	float angle = (M_PI * orient)/180;
 	cv::Point point1,point2;
@@ -226,7 +227,7 @@ annotationsHandle::POSE pose){
 //==============================================================================
 /** Draws the "menu" of possible poses for the current position.
  */
-void annotationsHandle::showMenu(cv::Point2f center){
+void annotationsHandle::showMenu(const cv::Point2f &center){
 	int pose0 = 0;
 	int pose1 = 0;
 	int pose2 = 0;
@@ -360,8 +361,8 @@ void annotationsHandle::plotHull(IplImage *img,std::vector<cv::Point2f> &hull){
  * \li argv[2]    -- the file contains the calibration data of the camera
  * \li argv[3]    -- the file in which the annotation data needs to be stored
  */
-int annotationsHandle::runAnn(int argc,char **argv,unsigned step,std::string \
-usedImages,int imgIndex){
+int annotationsHandle::runAnn(int argc,char **argv,unsigned step,const std::string \
+&usedImages,int imgIndex){
 	init();
 	if(imgIndex!= -1){
 		imgIndex += step;
@@ -505,7 +506,7 @@ usedImages,int imgIndex){
  * image name).
  */
 int annotationsHandle::runAnnArtificial(int argc,char **argv,unsigned step,\
-std::string usedImages,int imgIndex,int imoffset,unsigned set){
+const std::string &usedImages,int imgIndex,int imoffset,unsigned set){
 	init();
 	if(imgIndex!= -1){
 		imgIndex += step;
@@ -726,7 +727,8 @@ std::deque<annotationsHandle::FULL_ANNOTATIONS> &loadedAnno){
 /** Writes a given FULL_ANNOTATIONS structure into a given file.
  */
 void annotationsHandle::writeAnnoToFile(\
-std::deque<annotationsHandle::FULL_ANNOTATIONS> fullAnno,std::string fileName){
+const std::deque<annotationsHandle::FULL_ANNOTATIONS> &fullAnno,\
+const std::string &fileName){
 	// OPEN THE FILE TO WRITE ANNOTATIONS
 	std::ofstream annoOut;
 	annoOut.open(fileName.c_str(),std::ios::out | std::ios::app);
@@ -1022,8 +1024,9 @@ std::deque<annotationsHandle::ANNOTATION> annotationsHandle::annotations;
 //==============================================================================
 /*
 int main(int argc,char **argv){
-	annotationsHandle::runAnn(argc,argv,1,"_train",-1);
-	//annotationsHandle::runAnnArtificial(argc,argv,1,"_train",-1,146,3);
+	std::string folderSuffix = "_train";
+	annotationsHandle::runAnn(argc,argv,1,folderSuffix,-1);
+	//annotationsHandle::runAnnArtificial(argc,argv,1,folderSuffix,-1,146,3);
 	//annotationsHandle::runEvaluation(argc,argv);
 	//annotationsHandle::checkCalibration(argc,argv);
 }

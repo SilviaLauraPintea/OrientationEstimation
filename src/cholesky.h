@@ -53,19 +53,19 @@ class cholesky {
 
 		/** Decomposes the (covariance) matrix A into A = LL*.
 		 */
-		int decomposeCov(cv::Mat a);
+		int decomposeCov(const cv::Mat &a);
 
 		/** Solves the general linear system: Ax = b and returns x.
 		 */
-		void solve(cv::Mat b,cv::Mat &x);
+		void solve(const cv::Mat &b,cv::Mat &x);
 
 		/** Solve the simplified equation Ly = b,and return y (where A=LL*).
 		 */
-		void solveL(cv::Mat b,cv::Mat &y);
+		void solveL(const cv::Mat &b,cv::Mat &y);
 
 		/** Solve the simplified equation L'y = b,and return y (where A=LL*).
 		 */
-		void solveLTranspose(cv::Mat b,cv::Mat &y);
+		void solveLTranspose(const cv::Mat &b,cv::Mat &y);
 
 		/** Returns the inverse of the covariance: A^{-1}.
 		 */

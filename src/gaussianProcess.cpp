@@ -35,8 +35,12 @@ void gaussianProcess::init(gaussianProcess::kernelFunction theKFunction){
 /** Generates a selected distribution of the functions given the parameters (the
  * mean: mu,the covariance: cov,the data x).
  */
-float gaussianProcess::distribution(cv::Mat x,gaussianProcess::DISTRIBUTION distrib,
-cv::Mat mu,cv::Mat cov,float a,float b,float s){
+float gaussianProcess::distribution(const cv::Mat &x,\
+const gaussianProcess::DISTRIBUTION &distrib,const cv::Mat &mu,const cv::Mat &cov,\
+float a,float b,float s){
+	assert(cov.type()==CV_32FC1);
+	assert(mu.type()==CV_32FC1);
+
 	float det2,result;
 	cv::Mat diff;
 	cv::Mat inv;
@@ -129,15 +133,16 @@ cv::Mat mu,cv::Mat cov,float a,float b,float s){
 //==============================================================================
 /** Trains the Gaussian process.
  */
-void gaussianProcess::train(cv::Mat X,cv::Mat y,float (gaussianProcess::*fFunction)\
-(cv::Mat,cv::Mat,float),float sigmasq,float length){
+void gaussianProcess::train(const cv::Mat &X,const cv::Mat &y,\
+float (gaussianProcess::*fFunction)(const cv::Mat&,const cv::Mat&,float),\
+float sigmasq,float length){
 	if(y.rows != X.rows){
 		std::cerr<<"In Gaussian Process - train: X and y need to be defined for the"<<\
 			" same number of points"<<std::endl;
 		return;
 	}
-	X.convertTo(X,CV_32FC1);
-	y.convertTo(y,CV_32FC1);
+	assert(X.type()==CV_32FC1);
+	assert(y.type()==CV_32FC1);
 	this->chlsky.init();
 	this->kFunction = fFunction;
 	this->N         = X.rows;// NUMBER OF TRAINING DATA POINTS!
@@ -180,9 +185,9 @@ void gaussianProcess::train(cv::Mat X,cv::Mat y,float (gaussianProcess::*fFuncti
 //==============================================================================
 /** Returns the prediction for the test data,x (only one test data point).
  */
-void gaussianProcess::predict(cv::Mat x,gaussianProcess::prediction &predi,\
+void gaussianProcess::predict(const cv::Mat &x,gaussianProcess::prediction &predi,\
 float length){
-	x.convertTo(x,CV_32FC1);
+	assert(x.type()==CV_32FC1);
 	cv::Mat kstar(cv::Size(1,this->N),CV_32FC1);
 	for(int indy=0;indy<this->N;++indy){
 		kstar.at<float>(indy,0) = (this->*kFunction)(this->data.row(indy),x,length);
@@ -192,6 +197,7 @@ float length){
 		predi.mean.push_back(kstar.dot(this->alpha.col(i)));
 	}
 	cv::Mat v;
+	kstar.convertTo(kstar,CV_32FC1);
 	this->chlsky.solveL(kstar,v);
 	v.convertTo(v,CV_32FC1);
 	predi.variance.push_back((this->*kFunction)(x,x,length) - v.dot(v));
@@ -201,7 +207,7 @@ float length){
 //==============================================================================
 /** Samples the process that generates the inputs.
  */
-void gaussianProcess::sample(cv::Mat inputs,cv::Mat &smpl){
+void gaussianProcess::sample(const cv::Mat &inputs,cv::Mat &smpl){
 	cv::Mat Kxstarx(this->N,inputs.cols,CV_32FC1);
 	cv::Mat Kxstarxstar(inputs.cols,inputs.cols,CV_32FC1);
 
@@ -237,7 +243,9 @@ void gaussianProcess::sample(cv::Mat inputs,cv::Mat &smpl){
 //==============================================================================
 /** Samples an N-dimensional Gaussian.
  */
-void gaussianProcess::sampleGaussND(cv::Mat mu,cv::Mat cov,cv::Mat &smpl){
+void gaussianProcess::sampleGaussND(const cv::Mat &mu,const cv::Mat &cov,cv::Mat &smpl){
+	assert(cov.type()==CV_32FC1);
+	assert(mu.type()==CV_32FC1);
 	if(!this->chlsky.checkDecomposition()){
 		this->chlsky.decomposeCov(cov);
 	}
@@ -273,8 +281,8 @@ float gaussianProcess::rand_normal(){
 //==============================================================================
 /** Samples the Gaussian Process Prior.
  */
-void gaussianProcess::sampleGPPrior(float (gaussianProcess::*fFunction)(cv::Mat,\
-cv::Mat,float),cv::Mat inputs,cv::Mat &smpl){
+void gaussianProcess::sampleGPPrior(float (gaussianProcess::*fFunction)\
+(const cv::Mat&,const cv::Mat&,float),const cv::Mat &inputs,cv::Mat &smpl){
 	this->kFunction = fFunction;
 	cv::Mat mu;
 	cv::Mat cov;
@@ -296,9 +304,9 @@ cv::Mat,float),cv::Mat inputs,cv::Mat &smpl){
 }
 //==============================================================================
 // Squared exponential kernel function.
-float gaussianProcess::sqexp(cv::Mat x1,cv::Mat x2,float l){
-	x1.convertTo(x1,CV_32FC1);
-	x2.convertTo(x2,CV_32FC1);
+float gaussianProcess::sqexp(const cv::Mat &x1,const cv::Mat &x2,float l){
+	assert(x1.type()==CV_32FC1);
+	assert(x2.type()==CV_32FC1);
 	cv::Mat diff  = x1-x2;
 	diff.convertTo(diff,CV_32FC1);
 	float result = std::exp(-1.0 * diff.dot(diff)/(2.0*l));
@@ -307,7 +315,9 @@ float gaussianProcess::sqexp(cv::Mat x1,cv::Mat x2,float l){
 }
 //==============================================================================
 // Matern05 kernel function.
-float gaussianProcess::matern05(cv::Mat x1,cv::Mat x2,float l){
+float gaussianProcess::matern05(const cv::Mat &x1,const cv::Mat &x2,float l){
+	assert(x1.type()==CV_32FC1);
+	assert(x2.type()==CV_32FC1);
 	cv::Mat diff  = x1-x2;
 	diff.convertTo(diff,CV_32FC1);
 	float result = std::sqrt(diff.dot(diff));
@@ -316,9 +326,9 @@ float gaussianProcess::matern05(cv::Mat x1,cv::Mat x2,float l){
 }
 //==============================================================================
 // Exponential Covariance kernel function.
-float gaussianProcess::expCovar(cv::Mat x1,cv::Mat x2,float l){
-	x1.convertTo(x1,CV_32FC1);
-	x2.convertTo(x1,CV_32FC1);
+float gaussianProcess::expCovar(const cv::Mat &x1,const cv::Mat &x2,float l){
+	assert(x1.type()==CV_32FC1);
+	assert(x2.type()==CV_32FC1);
 	cv::Mat diff  = x1-x2;
 	diff.convertTo(diff,CV_32FC1);
 	float result = std::sqrt(diff.dot(diff));
@@ -327,9 +337,9 @@ float gaussianProcess::expCovar(cv::Mat x1,cv::Mat x2,float l){
 }
 //==============================================================================
 // Matern15 kernel function.
-float gaussianProcess::matern15(cv::Mat x1,cv::Mat x2,float l){
-	x1.convertTo(x1,CV_32FC1);
-	x2.convertTo(x1,CV_32FC1);
+float gaussianProcess::matern15(const cv::Mat &x1,const cv::Mat &x2,float l){
+	assert(x1.type()==CV_32FC1);
+	assert(x2.type()==CV_32FC1);
 	cv::Mat diff  = x1-x2;
 	diff.convertTo(diff,CV_32FC1);
 	float result = std::sqrt(diff.dot(diff));
@@ -338,9 +348,9 @@ float gaussianProcess::matern15(cv::Mat x1,cv::Mat x2,float l){
 }
 //==============================================================================
 // Matern25 kernel function.
-float gaussianProcess::matern25(cv::Mat x1,cv::Mat x2,float l){
-	x1.convertTo(x1,CV_32FC1);
-	x2.convertTo(x1,CV_32FC1);
+float gaussianProcess::matern25(const cv::Mat &x1,const cv::Mat &x2,float l){
+	assert(x1.type()==CV_32FC1);
+	assert(x2.type()==CV_32FC1);
 	cv::Mat diff  = x1-x2;
 	diff.convertTo(diff,CV_32FC1);
 	float result = std::sqrt(diff.dot(diff));
@@ -351,7 +361,9 @@ float gaussianProcess::matern25(cv::Mat x1,cv::Mat x2,float l){
 //==============================================================================
 // Chamfer 2D distance metric.
 /*
-float gaussianProcess::chamfer(cv::Mat x1,cv::Mat x2,float l){
+float gaussianProcess::chamfer(const cv::Mat &x1,const cv::Mat &x2,float l){
+	assert(x1.type()==CV_32FC1);
+	assert(x2.type()==CV_32FC1);
 	for(int x=0;x<x1.cols;++x){
 		float m1 = x
 	}

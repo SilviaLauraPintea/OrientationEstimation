@@ -25,7 +25,7 @@ class classifyImages {
 
 		/** Build dictionary for vector quantization.
 		 */
-		void buildDictionary(int colorSp = -1,bool toUseGT = true);
+		void buildDictionary(int colorSp=-1,bool toUseGT=true);
 
 		/** Creates the training data (according to the options),the labels and
 		 * trains the a \c GaussianProcess on the data.
@@ -42,23 +42,23 @@ class classifyImages {
 		/** Initialize the options for the Gaussian Process regression.
 		 */
 		void init(float theNoise,float theLength,featureExtractor::FEATURE \
-			theFeature,gaussianProcess::kernelFunction theKFunction = \
-			&gaussianProcess::sqexp,bool toUseGT = false);
+			theFeature,gaussianProcess::kernelFunction theKFunction=\
+			&gaussianProcess::sqexp,bool toUseGT=false);
 
 		/** Evaluate one prediction versus its target.
 		 */
-		void evaluate(std::deque<std::deque<float> > prediAngles,float &error,\
-			float &normError,float &meanDiff);
+		void evaluate(const std::deque<std::deque<float> > &prediAngles,\
+			float &error,float &normError,float &meanDiff);
 
 		/** Do k-fold cross-validation by splitting the training folder into
 		 * training-set and validation-set.
 		 */
-		void crossValidation(unsigned k,unsigned fold,bool onTrain = false);
+		void crossValidation(unsigned k,unsigned fold,bool onTrain=false);
 
 		/** Does the cross-validation and computes the average error over all folds.
 		 */
 		float runCrossValidation(unsigned k,annotationsHandle::POSE what,\
-			int colorSp = -1,bool onTrain = false);
+			int colorSp=-1,bool onTrain=false);
 		/** Runs the final evaluation (test).
 		 */
 		std::deque<std::deque<float> > runTest(int colorSp,\
@@ -66,26 +66,26 @@ class classifyImages {
 		/** Try to optimize the prediction of the angle considering the variance
 		 * of sin and cos.
 		 */
-		float optimizePrediction(gaussianProcess::prediction predictionsSin,\
-			gaussianProcess::prediction predictionsCos);
+		float optimizePrediction(const gaussianProcess::prediction &predictionsSin,\
+			const gaussianProcess::prediction &predictionsCos);
 		/** Reset the features object when the training and testing might have different
 		 * calibration,background models...
 		 */
-		void resetFeatures(std::string dir,std::string imStr,int colorSp);
+		void resetFeatures(const std::string &dir,const std::string &imStr,int colorSp);
 		/** Just build data matrix and store it;it can be called over multiple
 		 * datasets by adding the the new data rows at the end to the stored
 		 * matrix.
 		 */
-		void buildDataMatrix(int colorSp);
+		void buildDataMatrix(int colorSp=-1);
 		/** Concatenate the loaded data from the files to the currently computed data.
 		 */
-		void loadData(cv::Mat tmpData1,cv::Mat tmpTargets1,unsigned i);
+		void loadData(const cv::Mat &tmpData1,const cv::Mat &tmpTargets1,unsigned i);
 		/** Run over multiple settings of the parameters to find the best ones.
 		 */
-		friend void parameterSetting(std::string errorsOnTrain,std::string errorsOnTest,\
-			classifyImages &classi,int argc,char** argv,featureExtractor::FEATURE feat,\
-			int colorSp,bool useGt,annotationsHandle::POSE what,\
-			gaussianProcess::kernelFunction kernel);
+		friend void parameterSetting(const std::string &errorsOnTrain,\
+			const std::string &errorsOnTest,classifyImages &classi,int argc,\
+			char** argv,featureExtractor::FEATURE feat,int colorSp,bool useGt,\
+			annotationsHandle::POSE what,gaussianProcess::kernelFunction kernel);
 		/** Combine the output of multiple classifiers (only on testing,no multiple
 		 * predictions).
 		 */

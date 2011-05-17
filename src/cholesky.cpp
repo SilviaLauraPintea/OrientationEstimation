@@ -29,12 +29,12 @@ void cholesky::init(){
 //==============================================================================
 /** Decomposes the (covariance) matrix A into A = LL*.
  */
-int cholesky::decomposeCov(cv::Mat a){
+int cholesky::decomposeCov(const cv::Mat &a){
 	if(a.cols!=a.rows){
 		std::cerr<<"For Cholesky decomposeCov: the input matrix needs to be square"<<std::endl;
 		exit(1);
 	}
-	a.convertTo(a,CV_32FC1);
+	assert(a.type()==CV_32FC1);
 	if(!this->covar.empty()){
 		this->covar.release();
 	}
@@ -70,12 +70,12 @@ int cholesky::decomposeCov(cv::Mat a){
 //==============================================================================
 /** Solves the general linear system: Ax = b and returns x.
  */
-void cholesky::solve(cv::Mat b,cv::Mat &x){
+void cholesky::solve(const cv::Mat &b,cv::Mat &x){
+	assert(b.type()==CV_32FC1);
 	if(b.rows != this->n){
 		std::cerr<<"In Cholesky solve: in Ax=b,b has the wrong size"<<std::endl;
 		exit(1);
 	}
-	b.convertTo(b,CV_32FC1);
 	x = cv::Mat::zeros(cv::Size(b.cols,this->n),CV_32FC1);
 	for(int indx=0;indx<b.cols; ++indx){ // NOT REALLY NEEDED (JUST 1 COL)
 		for(int indy=0;indy<this->n;++indy){
@@ -101,13 +101,12 @@ void cholesky::solve(cv::Mat b,cv::Mat &x){
 //==============================================================================
 /** Solve the simplified equation Ly = b,and return y (where A=LL*).
  */
-void cholesky::solveL(cv::Mat b,cv::Mat &y){
+void cholesky::solveL(const cv::Mat &b,cv::Mat &y){
+	assert(b.type()==CV_32FC1);
 	if(b.rows != this->n){
 		std::cerr<<"In Cholesky solveL: in Ly=b,b has the wrong size"<<std::endl;
 		exit(1);
 	}
-
-	b.convertTo(b,CV_32FC1);
 	y = cv::Mat::zeros(cv::Size(1,this->n),CV_32FC1);
 	for(int indy=0;indy<this->n;++indy){
 		float sum = b.at<float>(indy,0);
@@ -121,13 +120,12 @@ void cholesky::solveL(cv::Mat b,cv::Mat &y){
 //==============================================================================
 /** Solve the simplified equation L'y = b,and return y (where A=LL*).
  */
-void cholesky::solveLTranspose(cv::Mat b,cv::Mat &y){
+void cholesky::solveLTranspose(const cv::Mat &b,cv::Mat &y){
+	assert(b.type()==CV_32FC1);
 	if(b.rows != this->n){
 		std::cerr<<"In Cholesky solveLTranspose: in L'y=b,b has the wrong size"<<std::endl;
 		exit(1);
 	}
-
-	b.convertTo(b,CV_32FC1);
 	y = cv::Mat::zeros(cv::Size(1,this->n),CV_32FC1);
 	for(int indy=this->n-1;indy>=0;--indy){
 		float sum = b.at<float>(indy,0);

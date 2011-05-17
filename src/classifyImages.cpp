@@ -163,33 +163,33 @@ bool toUseGT){
 	this->useGroundTruth = toUseGT;
 	switch(this->feature){
 		case(featureExtractor::IPOINTS):
-			this->modelName = "data/models/IPOINTS/";
+			this->modelName += "IPOINTS/";
 			file_exists(this->modelName.c_str(),true);
 			break;
 		case(featureExtractor::EDGES):
 			this->useGroundTruth = false;
-			this->modelName      = "data/models/EDGES/";
+			this->modelName     += "EDGES/";
 			file_exists(this->modelName.c_str(),true);
 			break;
 		case(featureExtractor::SURF):
-			this->modelName = "data/models/SURF/";
+			this->modelName += "SURF/";
 			file_exists(this->modelName.c_str(),true);
 			break;
 		case(featureExtractor::GABOR):
 			this->useGroundTruth = false;
-			this->modelName = "data/models/GABOR/";
+			this->modelName += "GABOR/";
 			file_exists(this->modelName.c_str(),true);
 			break;
 		case(featureExtractor::SIFT):
-			this->modelName = "data/models/SIFT/";
+			this->modelName += "SIFT/";
 			file_exists(this->modelName.c_str(),true);
 			break;
 		case(featureExtractor::PIXELS):
-			this->modelName = "data/models/PIXELS/";
+			this->modelName += "PIXELS/";
 			file_exists(this->modelName.c_str(),true);
 			break;
 		case(featureExtractor::HOG):
-			this->modelName = "data/models/HOG/";
+			this->modelName += "HOG/";
 			file_exists(this->modelName.c_str(),true);
 			break;
 	}
@@ -197,7 +197,8 @@ bool toUseGT){
 //==============================================================================
 /** Concatenate the loaded data from the files to the currently computed data.
  */
-void classifyImages::loadData(cv::Mat tmpData1,cv::Mat tmpTargets1,unsigned i){
+void classifyImages::loadData(const cv::Mat &tmpData1,const cv::Mat &tmpTargets1,\
+unsigned i){
 	if(!this->trainData[i].empty()){
 		this->trainData[i].release();
 	}
@@ -343,6 +344,7 @@ void classifyImages::buildDataMatrix(int colorSp){
 	names.push_back("CLOSE");names.push_back("MEDIUM");	names.push_back("FAR");
 	for(peopleDetector::CLASSES i=peopleDetector::CLOSE;i<=peopleDetector::FAR;++i){
 		// CHECK TO SEE IF THE FOLDER IS ALREADY CREATED
+		file_exists((this->modelName+names[i]).c_str(),true);
 		std::string modelNameData   = this->modelName+names[i]+"/Data.bin";
 		std::string modelNameLabels = this->modelName+names[i]+"/Labels.bin";
 
@@ -364,7 +366,7 @@ void classifyImages::buildDataMatrix(int colorSp){
 		this->features->targets[i].copyTo(tmpTargets2);
 
 		// NOW COPY THEM TOGETHER INTO A FINAL MATRIX AND STORE IT.
-		if(!tmpData1.empty()){
+		if(!tmpData1.empty() && !tmpData2.empty()){
 			if(tmpData1.cols!=tmpData2.cols){
 				std::cerr<<"The sizes of the stored data matrix and the newly generated "\
 					<<"data matrix do not agree: "<<tmpData1.size()<<" VS. "<<\
@@ -390,10 +392,16 @@ void classifyImages::buildDataMatrix(int colorSp){
 		tmpTargets2.copyTo(dumTargets2);
 
 		// WRITE THE FINAL MATRIX TO THE FILES
-		mat2BinFile(this->trainData[i],const_cast<char*>(modelNameData.c_str()),false);
-		mat2BinFile(this->trainTargets[i],const_cast<char*>(modelNameLabels.c_str()),false);
-		std::cout<<"Data stored to: "<<modelNameData<<" and "<<modelNameLabels<<std::endl;
-
+		if(!this->trainData[i].empty()){
+			mat2BinFile(this->trainData[i],const_cast<char*>\
+				(modelNameData.c_str()),false);
+			mat2BinFile(this->trainTargets[i],const_cast<char*>\
+				(modelNameLabels.c_str()),false);
+			std::cout<<"Data size: "<<this->trainData[i].size()<<std::endl;
+			std::cout<<"Labels size: "<<this->trainTargets[i].size()<<std::endl;
+			std::cout<<"Data stored to: "<<modelNameData<<" and "<<\
+				modelNameLabels<<std::endl;
+		}
 		// RELEASE THE BILLION OF ALLOCATED MATRIXES
 		dumData1.release();
 		dumData2.release();
@@ -473,7 +481,7 @@ annotationsHandle::POSE what,bool fromFolder){
 //==============================================================================
 /** Evaluate one prediction versus its target.
  */
-void classifyImages::evaluate(std::deque<std::deque<float> > prediAngles,\
+void classifyImages::evaluate(const std::deque<std::deque<float> > &prediAngles,\
 float &error,float &normError,float &meanDiff){
 	error = 0.0;normError = 0.0;meanDiff = 0.0;
 	unsigned noPeople = 0;
@@ -516,8 +524,8 @@ float &error,float &normError,float &meanDiff){
 /** Try to optimize the prediction of the angle considering the variance of sin
  * and cos.
  */
-float classifyImages::optimizePrediction(gaussianProcess::prediction \
-predictionsSin,gaussianProcess::prediction predictionsCos){
+float classifyImages::optimizePrediction(const gaussianProcess::prediction \
+&predictionsSin,const gaussianProcess::prediction &predictionsCos){
 	float y          = predictionsSin.mean[0];
 	float x          = predictionsCos.mean[0];
 	float prediction = std::atan2(y,x);
@@ -592,7 +600,7 @@ void classifyImages::buildDictionary(int colorSp,bool toUseGT){
 		if(this->features->data[i].empty()) continue;
 		cv::Mat dictData;
 		this->features->data[i].copyTo(dictData);
-		this->features->extractor->setImageClass(i,this->features->datasetPath);
+		this->features->extractor->setImageClass(static_cast<unsigned>(i));
 
 		// DO K-means IN ORDER TO RETRIEVE BACK THE CLUSTER MEANS
 		cv::Mat labels = cv::Mat::zeros(cv::Size(1,dictData.rows),CV_32FC1);
@@ -767,7 +775,8 @@ void classifyImages::crossValidation(unsigned k,unsigned fold,bool onTrain){
 /** Reset the features object when the training and testing might have different
  * calibration,background models...
  */
-void classifyImages::resetFeatures(std::string dir,std::string imStr,int colorSp){
+void classifyImages::resetFeatures(const std::string &dir,const std::string &imStr,\
+int colorSp){
 	if(this->features){
 		delete this->features;
 		this->features = NULL;
@@ -860,7 +869,7 @@ kernel,bool useGT){
 	switch(classi.feature){
 		case(featureExtractor::IPOINTS):
 			classi.feature = featureExtractor::IPOINTS;
-			tmpPrediction  = classi.runTest(colorSp,what,dummy);
+			tmpPrediction = classi.runTest(colorSp,what,dummy);
 			predictions.push_back(tmpPrediction);
 			tmpPrediction.clear();
 /*
@@ -947,7 +956,7 @@ kernel,bool useGT){
 //==============================================================================
 /** Run over multiple settings of the parameters to find the best ones.
  */
-void parameterSetting(std::string errorsOnTrain,std::string errorsOnTest,\
+void parameterSetting(const std::string &errorsOnTrain,const std::string &errorsOnTest,\
 classifyImages &classi,int argc,char** argv,featureExtractor::FEATURE feat,\
 int colorSp,bool useGt,annotationsHandle::POSE what,\
 gaussianProcess::kernelFunction kernel){
@@ -982,7 +991,7 @@ int main(int argc,char **argv){
 
 	// build data matrix
  	classifyImages classi(argc,argv,classifyImages::EVALUATE);
-	classi.init(0.85,85.0,featureExtractor::PIXELS,&gaussianProcess::sqexp,true);
+	classi.init(0.85,85.0,featureExtractor::SURF,&gaussianProcess::sqexp,true);
 	classi.buildDataMatrix();
 
 	//--------------------------------------------------------------------------

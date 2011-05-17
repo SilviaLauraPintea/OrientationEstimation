@@ -123,7 +123,7 @@ class annotationsHandle {
 
 		/** Draws the "menu" of possible poses for the current position.
 		 */
-		static void showMenu(cv::Point2f center);
+		static void showMenu(const cv::Point2f &center);
 
 		/** Plots the hull indicated by the parameter \c hull on the given image.
 		 */
@@ -138,8 +138,8 @@ class annotationsHandle {
 		 * \li argv[2]    -- the file contains the calibration data of the camera
 		 * \li argv[3]    -- the file in which the annotation data needs to be stored
 		 */
-		static int runAnn(int argc,char **argv,unsigned step, std::string \
-			usedImages,int imgIndex=-1);
+		static int runAnn(int argc,char **argv,unsigned step, const std::string \
+			&usedImages,int imgIndex=-1);
 
 		/** The "on change" handler for the track-bars.
 		 */
@@ -173,8 +173,8 @@ class annotationsHandle {
 		/** Checks to see if a location can be assigned to a specific ID given the
 		 * new distance.
 		 */
-		static bool canBeAssigned(std::deque<annotationsHandle::ASSIGNED> &idAssignedTo,short int id,\
-			float newDist,short int to);
+		static bool canBeAssigned(std::deque<annotationsHandle::ASSIGNED> &idAssignedTo,\
+			short int id,float newDist,short int to);
 
 		/** Displays the complete annotations for all images.
 		 */
@@ -191,21 +191,21 @@ class annotationsHandle {
 
 		/** Shows how the selected orientation looks on the image.
 		 */
-		static void drawOrientation(cv::Point2f center,unsigned int orient,\
+		static void drawOrientation(const cv::Point2f &center,unsigned int orient,\
 			annotationsHandle::POSE pose);
 
 		/** Shows how the selected orientation looks on the image.
 		 */
-		static void drawLatitude(cv::Point2f head,cv::Point2f feet,\
+		static void drawLatitude(const cv::Point2f &head,const cv::Point2f &feet,\
 			unsigned int orient,annotationsHandle::POSE pose);
 
-		static cv::Mat rotateWrtCamera(cv::Point2f headLocation,\
-			cv::Point2f feetLocation,cv::Mat toRotate,cv::Point2f &borders);
+		static cv::Mat rotateWrtCamera(const cv::Point2f &headLocation,\
+			const cv::Point2f &feetLocation,const cv::Mat &toRotate,cv::Point2f &borders);
 
 		/** Writes a given FULL_ANNOTATIONS structure into a given file.
 		 */
-		static void writeAnnoToFile(std::deque<annotationsHandle::FULL_ANNOTATIONS>\
-			fullAnno,std::string fileName);
+		static void writeAnnoToFile(const std::deque<annotationsHandle::FULL_ANNOTATIONS>\
+			&fullAnno,const std::string &fileName);
 
 		/** Initializes all the values of the class variables.
 		 */
@@ -218,7 +218,7 @@ class annotationsHandle {
 		 * image name).
 		 */
 		static int runAnnArtificial(int argc,char **argv,unsigned step,\
-			std::string usedImages,int imgIndex,int imoffset,unsigned set);
+			const std::string &usedImages,int imgIndex,int imoffset,unsigned set);
 		//======================================================================
 	protected:
 		/** @var image
