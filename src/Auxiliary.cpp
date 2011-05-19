@@ -12,25 +12,23 @@
 #include <dirent.h>
 #include <iostream>
 #include <fstream>
-#include "eigenbackground/src/defines.hh"
-#include "eigenbackground/src/Helpers.hh"
 #include "Auxiliary.h"
 //==============================================================================
 /** Converts a pointer to an IplImage to an OpenCV Mat.
  */
-void ipl2mat(IplImage* ipl_image,cv::Mat &mat_image){
+void Auxiliary::ipl2mat(IplImage* ipl_image,cv::Mat &mat_image){
 	mat_image = cv::Mat(ipl_image);
 }
 //==============================================================================
 /** Converts an OpenCV Mat to a pointer to an IplImage.
  */
-void mat2ipl(const cv::Mat &image,IplImage* ipl_image){
+void Auxiliary::mat2ipl(const cv::Mat &image,IplImage* ipl_image){
 	ipl_image = new IplImage(image);
 }
 //==============================================================================
 /** Convert the values from a cv::Mat of doubles to be between 0 and 1.
  */
-void normalizeMat(cv::Mat &matrix){
+void Auxiliary::normalizeMat(cv::Mat &matrix){
 	matrix.convertTo(matrix,CV_32FC1);
 	float mini = matrix.at<float>(0,0),maxi = matrix.at<float>(0,0);
 	for(int x=0;x<matrix.cols;++x){
@@ -51,7 +49,7 @@ void normalizeMat(cv::Mat &matrix){
 //==============================================================================
 /** Changes the values of the matrix to be between [-1,1].
  */
-void range1Mat(cv::Mat &matrix){
+void Auxiliary::range1Mat(cv::Mat &matrix){
 	normalizeMat(matrix);
 	matrix -= 0.5;
 	matrix *= 2.0;
@@ -59,7 +57,7 @@ void range1Mat(cv::Mat &matrix){
 //==============================================================================
 /** Write a 2D-matrix to a text file (first row is the dimension of the matrix).
  */
-void mat2TxtFile(cv::Mat &matrix,char* fileName,bool append){
+void Auxiliary::mat2TxtFile(cv::Mat &matrix,char* fileName,bool append){
 	std::ofstream dictOut;
 	try{
 		if(append){
@@ -86,15 +84,15 @@ void mat2TxtFile(cv::Mat &matrix,char* fileName,bool append){
 //==============================================================================
 /** Reads a 2D-matrix from a text file (first row is the dimension of the matrix).
  */
-void txtFile2Mat(cv::Mat &matrix,char* fileName){
+void Auxiliary::txtFile2Mat(cv::Mat &matrix,char* fileName){
 	std::ifstream dictFile(fileName);
 	int y=0;
 	if(dictFile.is_open()){
 		// FIRST LINE IS THE SIZE OF THE MATRIX
 		std::string fline;
 		std::getline(dictFile,fline);
-		std::deque<std::string> flineVect = splitLine(const_cast<char*>\
-											(fline.c_str()),' ');
+		std::deque<std::string> flineVect = Helpers::splitLine(const_cast<char*>\
+			(fline.c_str()),' ');
 		if(flineVect.size() == 2){
 			char *pRows,*pCols;
 			int cols = strtol(flineVect[0].c_str(),&pCols,10);
@@ -108,8 +106,8 @@ void txtFile2Mat(cv::Mat &matrix,char* fileName){
 		while(dictFile.good()){
 			std::string line;
 			std::getline(dictFile,line);
-			std::deque<std::string> lineVect = splitLine(const_cast<char*>\
-												(line.c_str()),' ');
+			std::deque<std::string> lineVect = Helpers::splitLine(const_cast<char*>\
+				(line.c_str()),' ');
 			if(lineVect.size()>=1){
 				for(std::size_t x=0;x<lineVect.size();++x){
 					char *pValue;
@@ -128,7 +126,7 @@ void txtFile2Mat(cv::Mat &matrix,char* fileName){
 //==============================================================================
 /** Write a 2D-matrix to a binary file (first the dimension of the matrix).
  */
-void mat2BinFile(cv::Mat &matrix,char* fileName,bool append){
+void Auxiliary::mat2BinFile(cv::Mat &matrix,char* fileName,bool append){
 	std::ofstream mxFile;
 	try{
 		if(append){
@@ -160,8 +158,8 @@ void mat2BinFile(cv::Mat &matrix,char* fileName,bool append){
 //==============================================================================
 /** Reads a 2D-matrix from a binary file (first the dimension of the matrix).
  */
-void binFile2mat(cv::Mat &matrix,char* fileName){
-	if(!file_exists(fileName)){
+void Auxiliary::binFile2mat(cv::Mat &matrix,char* fileName){
+	if(!Helpers::file_exists(fileName)){
 		std::cerr<<"Error opening the file: "<<fileName<<std::endl;
 		exit(1);
 	}
@@ -188,7 +186,7 @@ void binFile2mat(cv::Mat &matrix,char* fileName){
 //==============================================================================
 /** Convert int to string.
  */
-std::string int2string(int i){
+std::string Auxiliary::int2string(int i){
 	std::stringstream out;
 	out << i;
 	return out.str();
@@ -196,7 +194,7 @@ std::string int2string(int i){
 //==============================================================================
 /** Changes a given angle in RADIANS to be positive and between [0,2*M_PI).
  */
-void angle0to360(float &angle){
+void Auxiliary::angle0to360(float &angle){
 	while(angle >= 2.0*M_PI){
 		angle -= 2.0*M_PI;
 	}
@@ -207,7 +205,7 @@ void angle0to360(float &angle){
 //==============================================================================
 /** Changes a given angle in RADIANS to be positive and between [-M_PI,M_PI).
  */
-void angle180to180(float &angle){
+void Auxiliary::angle180to180(float &angle){
 	while(angle >= 2.0*M_PI){
 		angle -= 2.0*M_PI;
 	}
@@ -219,7 +217,8 @@ void angle180to180(float &angle){
 //==============================================================================
 /** Checks to see if a point is on the same side of a line like another given point.
  */
-bool sameSubplane(const cv::Point2f &test,const cv::Point2f &point,float m,float b){
+bool Auxiliary::sameSubplane(const cv::Point2f &test,const cv::Point2f &point,\
+float m,float b){
 	if(isnan(m)){
 		return (point.x*test.x)>=0.0;
 	}else if(m == 0){
@@ -231,7 +230,7 @@ bool sameSubplane(const cv::Point2f &test,const cv::Point2f &point,float m,float
 //==============================================================================
 /** Get perpendicular to a line given by 2 points A,B in point C.
  */
-void perpendicularLine(const cv::Point2f &A,const cv::Point2f &B,\
+void Auxiliary::perpendicularLine(const cv::Point2f &A,const cv::Point2f &B,\
 const cv::Point2f &C,float &m,float &b){
 	float slope = (float)(B.y - A.y)/(float)(B.x - A.x);
 	m            = -1.0/slope;
@@ -240,7 +239,7 @@ const cv::Point2f &C,float &m,float &b){
 //==============================================================================
 /** Just displaying an image a bit larger to visualize it better.
  */
-void showZoomedImage(const cv::Mat &image,const std::string &title){
+void Auxiliary::showZoomedImage(const cv::Mat &image,const std::string &title){
 	cv::Mat large;
 	cv::resize(image,large,cv::Size(0,0),5,5,cv::INTER_CUBIC);
 	cv::imshow(title,large);
@@ -252,7 +251,7 @@ void showZoomedImage(const cv::Mat &image,const std::string &title){
 /** A function that transforms the data such that it has zero mean and unit
  * variance: img = (img-mean(img(:)))/std(img(:)).
  */
-void mean0Variance1(cv::Mat &mat){
+void Auxiliary::mean0Variance1(cv::Mat &mat){
 	mat.convertTo(mat,CV_32FC1);
 	unsigned rows = mat.rows;
 	if(rows != 1){

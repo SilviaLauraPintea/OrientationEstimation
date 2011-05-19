@@ -11,8 +11,6 @@
 #include <exception>
 #include "Auxiliary.h"
 #include "eigenbackground/src/Tracker.hh"
-#include "eigenbackground/src/Helpers.hh"
-#include "eigenbackground/src/defines.hh"
 #include "classifyImages.h"
 //==============================================================================
 classifyImages::classifyImages(int argc,char **argv,classifyImages::USES use){
@@ -106,7 +104,7 @@ classifyImages::classifyImages(int argc,char **argv,classifyImages::USES use){
 				break;
 		}
 		for(std::size_t i=0;i<files2check.size();++i){
-			if(!file_exists(files2check[i].c_str())){
+			if(!Helpers::file_exists(files2check[i].c_str())){
 				std::cerr<<"File/folder not found: "<<files2check[i]<<std::endl;
 				exit(1);
 			}
@@ -117,7 +115,7 @@ classifyImages::classifyImages(int argc,char **argv,classifyImages::USES use){
 		}else if(use == classifyImages::EVALUATE){
 			this->modelName = "data/EVALUATE/";
 		}
-		file_exists(this->modelName.c_str(),true);
+		Helpers::file_exists(this->modelName.c_str(),true);
 	}
 }
 //==============================================================================
@@ -164,33 +162,33 @@ bool toUseGT){
 	switch(this->feature){
 		case(featureExtractor::IPOINTS):
 			this->modelName += "IPOINTS/";
-			file_exists(this->modelName.c_str(),true);
+			Helpers::file_exists(this->modelName.c_str(),true);
 			break;
 		case(featureExtractor::EDGES):
 			this->useGroundTruth = false;
 			this->modelName     += "EDGES/";
-			file_exists(this->modelName.c_str(),true);
+			Helpers::file_exists(this->modelName.c_str(),true);
 			break;
 		case(featureExtractor::SURF):
 			this->modelName += "SURF/";
-			file_exists(this->modelName.c_str(),true);
+			Helpers::file_exists(this->modelName.c_str(),true);
 			break;
 		case(featureExtractor::GABOR):
 			this->useGroundTruth = false;
 			this->modelName += "GABOR/";
-			file_exists(this->modelName.c_str(),true);
+			Helpers::file_exists(this->modelName.c_str(),true);
 			break;
 		case(featureExtractor::SIFT):
 			this->modelName += "SIFT/";
-			file_exists(this->modelName.c_str(),true);
+			Helpers::file_exists(this->modelName.c_str(),true);
 			break;
 		case(featureExtractor::PIXELS):
 			this->modelName += "PIXELS/";
-			file_exists(this->modelName.c_str(),true);
+			Helpers::file_exists(this->modelName.c_str(),true);
 			break;
 		case(featureExtractor::HOG):
 			this->modelName += "HOG/";
-			file_exists(this->modelName.c_str(),true);
+			Helpers::file_exists(this->modelName.c_str(),true);
 			break;
 	}
 }
@@ -213,13 +211,13 @@ unsigned i){
 	cv::Mat tmpData2,tmpTargets2;
 	std::string modelDataName    = this->modelName+names[i]+"/Data.bin";
 	std::string modelTargetsName = this->modelName+names[i]+"/Labels.bin";
-	if(file_exists(modelDataName.c_str())){
-		binFile2mat(tmpData2,const_cast<char*>(modelDataName.c_str()));
+	if(Helpers::file_exists(modelDataName.c_str())){
+		Auxiliary::binFile2mat(tmpData2,const_cast<char*>(modelDataName.c_str()));
 	}else{
 		tmpData2 = cv::Mat();
 	}
-	if(file_exists(modelTargetsName.c_str())){
-		binFile2mat(tmpTargets2,const_cast<char*>(modelTargetsName.c_str()));
+	if(Helpers::file_exists(modelTargetsName.c_str())){
+		Auxiliary::binFile2mat(tmpTargets2,const_cast<char*>(modelTargetsName.c_str()));
 	}else{
 		tmpTargets2 = cv::Mat();
 	}
@@ -344,19 +342,19 @@ void classifyImages::buildDataMatrix(int colorSp){
 	names.push_back("CLOSE");names.push_back("MEDIUM");	names.push_back("FAR");
 	for(peopleDetector::CLASSES i=peopleDetector::CLOSE;i<=peopleDetector::FAR;++i){
 		// CHECK TO SEE IF THE FOLDER IS ALREADY CREATED
-		file_exists((this->modelName+names[i]).c_str(),true);
+		Helpers::file_exists((this->modelName+names[i]).c_str(),true);
 		std::string modelNameData   = this->modelName+names[i]+"/Data.bin";
 		std::string modelNameLabels = this->modelName+names[i]+"/Labels.bin";
 
 		// LOAD THE DATA AND TARGET MATRIX FROM THE FILE IF IT'S THERE
 		cv::Mat tmpData1,tmpTargets1,tmpData2,tmpTargets2;
-		if(file_exists(modelNameData.c_str())){
-			binFile2mat(tmpData1,const_cast<char*>(modelNameData.c_str()));
+		if(Helpers::file_exists(modelNameData.c_str())){
+			Auxiliary::binFile2mat(tmpData1,const_cast<char*>(modelNameData.c_str()));
 		}else{
 			tmpData1 = cv::Mat();
 		}
-		if(file_exists(modelNameLabels.c_str())){
-			binFile2mat(tmpTargets1,const_cast<char*>(modelNameLabels.c_str()));
+		if(Helpers::file_exists(modelNameLabels.c_str())){
+			Auxiliary::binFile2mat(tmpTargets1,const_cast<char*>(modelNameLabels.c_str()));
 		}else{
 			tmpTargets1 = cv::Mat();
 		}
@@ -393,9 +391,9 @@ void classifyImages::buildDataMatrix(int colorSp){
 
 		// WRITE THE FINAL MATRIX TO THE FILES
 		if(!this->trainData[i].empty()){
-			mat2BinFile(this->trainData[i],const_cast<char*>\
+			Auxiliary::mat2BinFile(this->trainData[i],const_cast<char*>\
 				(modelNameData.c_str()),false);
-			mat2BinFile(this->trainTargets[i],const_cast<char*>\
+			Auxiliary::mat2BinFile(this->trainTargets[i],const_cast<char*>\
 				(modelNameLabels.c_str()),false);
 			std::cout<<"Data size: "<<this->trainData[i].size()<<std::endl;
 			std::cout<<"Labels size: "<<this->trainTargets[i].size()<<std::endl;
@@ -440,8 +438,7 @@ annotationsHandle::POSE what,bool fromFolder){
 	for(peopleDetector::CLASSES i=peopleDetector::CLOSE;i<=peopleDetector::FAR;++i){
 		// CHECK TO SEE IF THERE IS ANY DATA IN THE CURRENT CLASS
 		std::deque<float> oneClassPredictions;
-		if(this->features->data[i].empty() || !this->gpSin[i].N ||\
-		!this->gpCos[i].N){
+		if(this->features->data[i].empty() || !this->gpSin[i].N || !this->gpCos[i].N){
 			predictions.push_back(oneClassPredictions);
 			continue;
 		}
@@ -494,7 +491,7 @@ float &error,float &normError,float &meanDiff){
 		for(int y=0;y<this->testTargets[i].rows;++y){
 			float targetAngle = std::atan2(this->testTargets[i].at<float>(y,0),\
 									this->testTargets[i].at<float>(y,1));
-			angle0to360(targetAngle);
+			Auxiliary::angle0to360(targetAngle);
 
 			std::cout<<"Target: "<<targetAngle<<"("<<(targetAngle*180.0/M_PI)<<\
 				") VS "<<prediAngles[i][y]<<"("<<(prediAngles[i][y]*180.0/M_PI)<<\
@@ -529,7 +526,7 @@ float classifyImages::optimizePrediction(const gaussianProcess::prediction \
 	float y          = predictionsSin.mean[0];
 	float x          = predictionsCos.mean[0];
 	float prediction = std::atan2(y,x);
-	angle0to360(prediction);
+	Auxiliary::angle0to360(prediction);
 	return prediction;
 /*
 	float betaS = 1.0/(predictionsSin.variance[0]);
@@ -621,7 +618,7 @@ void classifyImages::buildDictionary(int colorSp,bool toUseGT){
 		std::cout<<"Size("<<names[i]<<"): "<<this->features->data[i].size()<<\
 			" stored in: "<<dictName<<std::endl;
 
-		mat2BinFile(matrix,const_cast<char*>(dictName.c_str()));
+		Auxiliary::mat2BinFile(matrix,const_cast<char*>(dictName.c_str()));
 		centers->release();
 		matrix.release();
 		delete centers;
@@ -685,6 +682,7 @@ int colorSp,bool onTrain){
 			predictionsCos.clear();
 			predicted.clear();
 		}
+		sleep(6);
 	}
 	finalError     /= static_cast<float>(k);
 	finalNormError /= static_cast<float>(k);
@@ -701,7 +699,7 @@ int colorSp,bool onTrain){
 void classifyImages::crossValidation(unsigned k,unsigned fold,bool onTrain){
 	// READ ALL IMAGES ONCE AND NOT THEY ARE SORTED
 	if(this->imageList.empty()){
-		this->imageList = readImages(this->trainFolder.c_str());
+		this->imageList = Helpers::readImages(this->trainFolder.c_str());
 		this->foldSize  = this->imageList.size()/k;
 
 		std::ifstream annoIn(this->annotationsTrain.c_str());
@@ -728,7 +726,7 @@ void classifyImages::crossValidation(unsigned k,unsigned fold,bool onTrain){
 	unsigned pos       = this->trainFolder.find_first_of("/\\");
 	std::string root   = this->trainFolder.substr(0,pos+1);
 	std::string folder = root+"trash/";
-	file_exists(folder.c_str(),true);
+	Helpers::file_exists(folder.c_str(),true);
 	this->trainFolder      = root+"trash/targets.txt";
 	this->annotationsTrain = root+"trash/annoTargets.txt";
 	this->testFolder       = root+"trash/ttargets.txt";
@@ -844,9 +842,9 @@ float &angleMin,float &angleMax){
 		angleMin = 0.0;
 	}else{
 		angleMin = this->features->dataMotionVectors[classNo][predNo]-M_PI/2.0;
-		angle0to360(angleMin);
+		Auxiliary::angle0to360(angleMin);
 		angleMax = this->features->dataMotionVectors[classNo][predNo]+M_PI/2.0;
-		angle0to360(angleMax);
+		Auxiliary::angle0to360(angleMax);
 		if(angleMin>angleMax){
 			float aux = angleMin;
 			angleMin  = angleMax;
@@ -988,19 +986,19 @@ int main(int argc,char **argv){
  	classi.runTest(CV_BGR2Luv,annotationsHandle::LONGITUDE,normError);
 */
 	//--------------------------------------------------------------------------
-
+/*
 	// build data matrix
  	classifyImages classi(argc,argv,classifyImages::EVALUATE);
 	classi.init(0.85,85.0,featureExtractor::SURF,&gaussianProcess::sqexp,true);
 	classi.buildDataMatrix();
-
+*/
 	//--------------------------------------------------------------------------
-/*
+
 	// evaluate
  	classifyImages classi(argc,argv,classifyImages::EVALUATE);
 	classi.init(0.85,85.0,featureExtractor::HOG,&gaussianProcess::sqexp,true);
-	classi.runCrossValidation(7,annotationsHandle::LONGITUDE,CV_BGR2XYZ,false);
-*/
+	classi.runCrossValidation(5,annotationsHandle::LONGITUDE,-1,false);
+
 	//--------------------------------------------------------------------------
 /*
 	// BUILD THE SIFT DICTIONARY

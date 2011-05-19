@@ -5,11 +5,8 @@
  */
 #ifndef ANNOTATIONSHANDLE_H_
 #define ANNOTATIONSHANDLE_H_
-#include <deque>
-#include <opencv2/opencv.hpp>
 #include <boost/thread.hpp>
-#include <vnl/vnl_vector.h>
-#include "eigenbackground/src/defines.hh"
+#include "eigenbackground/src/Helpers.hh"
 
 /** Class for annotating both positions and poses of the people in the images.
  */
@@ -218,7 +215,8 @@ class annotationsHandle {
 		 * image name).
 		 */
 		static int runAnnArtificial(int argc,char **argv,unsigned step,\
-			const std::string &usedImages,int imgIndex,int imoffset,unsigned set);
+			const std::string &usedImages,int imgIndex,int imoffset,unsigned lati,\
+			unsigned set);
 		//======================================================================
 	protected:
 		/** @var image

@@ -5,8 +5,8 @@
  */
 #ifndef FEATUREEXTRACTOR_H_
 #define FEATUREEXTRACTOR_H_
-#include <opencv2/opencv.hpp>
 #include <deque>
+#include "eigenbackground/src/Helpers.hh"
 /** Extracts the actual features from the images and stores them in data matrix.
  */
 class featureExtractor {

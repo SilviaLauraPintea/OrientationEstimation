@@ -5,7 +5,7 @@
  */
 #ifndef CLASSIFYIMAGES_H_
 #define CLASSIFYIMAGES_H_
-#include <opencv2/opencv.hpp>
+#include "eigenbackground/src/Helpers.hh"
 #include "annotationsHandle.h"
 #include "gaussianProcess.h"
 #include "peopleDetector.h"

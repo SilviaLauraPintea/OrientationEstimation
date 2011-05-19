@@ -5,9 +5,7 @@
  */
 #ifndef PEOPLEDETECTOR_H_
 #define PEOPLEDETECTOR_H_
-#include <opencv2/opencv.hpp>
-#include <vnl/vnl_vector.h>
-#include "eigenbackground/src/defines.hh"
+#include "eigenbackground/src/Helpers.hh"
 #include "eigenbackground/src/Tracker.hh"
 #include "featureExtractor.h"
 #include "annotationsHandle.h"
@@ -115,11 +113,15 @@ class peopleDetector:public Tracker{
 		/** Find the class in which we can store the current image (the data is
 		 * split in 3 classes depending on the position of the person wrt camera).
 		 */
-		peopleDetector::CLASSES findImageClass(const cv::Point2f &feet,\
-			const cv::Point2f &head);
+		peopleDetector::CLASSES findImageClass(const cv::Point2f &feet);
 		/** Initialize the inverse value of the color space used in feature extraction.
 		 */
 		void initInvColoprSp();
+		/** Find the class in which we can store the current image (the data is split in
+		 * 3 classes depending on the position of the person wrt camera).
+		 */
+		peopleDetector::CLASSES findImageClass(const cv::Point2f &feet,\
+			const cv::Point2f &head);
 		//======================================================================
 	public:
 		/** @var print
