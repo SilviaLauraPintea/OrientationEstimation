@@ -216,7 +216,7 @@ class annotationsHandle {
 		 */
 		static int runAnnArtificial(int argc,char **argv,unsigned step,\
 			const std::string &usedImages,int imgIndex,int imoffset,unsigned lati,\
-			unsigned set);
+			int setoffset);
 		//======================================================================
 	protected:
 		/** @var image

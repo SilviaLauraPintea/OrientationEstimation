@@ -983,20 +983,20 @@ int main(int argc,char **argv){
 	float normError = 0.0f;
 	classifyImages classi(argc,argv,classifyImages::TEST);
 	classi.init(0.85,85.0,featureExtractor::HOG,&gaussianProcess::sqexp,true);
- 	classi.runTest(CV_BGR2Luv,annotationsHandle::LONGITUDE,normError);
+ 	classi.runTest(-1,annotationsHandle::LONGITUDE,normError);
 */
 	//--------------------------------------------------------------------------
 /*
 	// build data matrix
  	classifyImages classi(argc,argv,classifyImages::EVALUATE);
-	classi.init(0.85,85.0,featureExtractor::SURF,&gaussianProcess::sqexp,true);
+	classi.init(0.85,85.0,featureExtractor::HOG,&gaussianProcess::sqexp,true);
 	classi.buildDataMatrix();
 */
 	//--------------------------------------------------------------------------
 
 	// evaluate
  	classifyImages classi(argc,argv,classifyImages::EVALUATE);
-	classi.init(0.85,85.0,featureExtractor::HOG,&gaussianProcess::sqexp,true);
+	classi.init(0.85,85.0,featureExtractor::HOG,&gaussianProcess::sqexp,false);
 	classi.runCrossValidation(5,annotationsHandle::LONGITUDE,-1,false);
 
 	//--------------------------------------------------------------------------
@@ -1010,13 +1010,13 @@ int main(int argc,char **argv){
 	// find parmeteres
 	classifyImages classi(argc,argv,classifyImages::TEST);
 	parameterSetting("train.txt","text.txt",classi,argc,argv,featureExtractor::HOG,\
-		CV_BGR2Luv,true,annotationsHandle::LONGITUDE,&gaussianProcess::sqexp);
+		-1,true,annotationsHandle::LONGITUDE,&gaussianProcess::sqexp);
 */
 	//--------------------------------------------------------------------------
 /*
 	// multiple classifiers
 	classifyImages classi(argc,argv,classifyImages::TEST);
-	multipleClassifier(CV_BGR2Luv,annotationsHandle::LONGITUDE,classi,0.85,\
+	multipleClassifier(-1,annotationsHandle::LONGITUDE,classi,0.85,\
 		85,&gaussianProcess::sqexp,false);
 */
 }

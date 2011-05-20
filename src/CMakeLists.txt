@@ -51,8 +51,8 @@ ADD_LIBRARY(helpers
 #TARGET_LINK_LIBRARIES(Annotate helpers opencv_calib3d opencv_core opencv_imgproc opencv_highgui cmn tools iberty vnl_algo vnl v3p_netlib boost_date_time-mt boost_thread-mt ${XML2_LDFLAGS})
 #_______________________________________________________________train___________________________________________________________________________
 # FROM NOW ON MY FILES WILL COME
-ADD_EXECUTABLE(annotationsHandle ${MT_SRC}/annotationsHandle.cpp)
-TARGET_LINK_LIBRARIES(annotationsHandle helpers opencv_core opencv_imgproc opencv_highgui opencv_calib3d cmn tools iberty vnl_algo vnl v3p_netlib boost_filesystem boost_date_time-mt boost_thread-mt ${XML2_LDFLAGS})
+#ADD_EXECUTABLE(annotationsHandle ${MT_SRC}/annotationsHandle.cpp)
+#TARGET_LINK_LIBRARIES(annotationsHandle helpers opencv_core opencv_imgproc opencv_highgui opencv_calib3d cmn tools iberty vnl_algo vnl v3p_netlib boost_filesystem boost_date_time-mt boost_thread-mt ${XML2_LDFLAGS})
 
 #ADD_EXECUTABLE(peopleDetector ${MT_SRC}/peopleDetector.cpp)
 #TARGET_LINK_LIBRARIES(peopleDetector helpers opencv_core opencv_objdetect opencv_calib3d opencv_video opencv_imgproc opencv_highgui opencv_features2d cmn tools iberty vnl_algo vnl v3p_netlib boost_filesystem boost_date_time-mt boost_thread-mt ${XML2_LDFLAGS})
@@ -60,8 +60,8 @@ TARGET_LINK_LIBRARIES(annotationsHandle helpers opencv_core opencv_imgproc openc
 #ADD_EXECUTABLE(gaussianProcess ${MT_SRC}/gaussianProcess.cpp)
 #TARGET_LINK_LIBRARIES(gaussianProcess helpers opencv_core opencv_imgproc opencv_highgui cmn tools iberty vnl_algo vnl v3p_netlib ${XML2_LDFLAGS})
 
-#ADD_EXECUTABLE(classifyImages ${MT_SRC}/classifyImages.cpp)
-#TARGET_LINK_LIBRARIES(classifyImages helpers opencv_core opencv_ml opencv_objdetect opencv_imgproc opencv_video opencv_highgui opencv_features2d cmn tools iberty vnl_algo vnl v3p_netlib boost_filesystem boost_date_time-mt boost_thread-mt ${XML2_LDFLAGS})
+ADD_EXECUTABLE(classifyImages ${MT_SRC}/classifyImages.cpp)
+TARGET_LINK_LIBRARIES(classifyImages helpers opencv_core opencv_ml opencv_objdetect opencv_imgproc opencv_video opencv_highgui opencv_features2d cmn tools iberty vnl_algo vnl v3p_netlib boost_filesystem boost_date_time-mt boost_thread-mt ${XML2_LDFLAGS})
 
 
 

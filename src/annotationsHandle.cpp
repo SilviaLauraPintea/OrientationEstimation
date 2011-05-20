@@ -503,7 +503,7 @@ int annotationsHandle::runAnn(int argc,char **argv,unsigned step,const std::stri
  * image name).
  */
 int annotationsHandle::runAnnArtificial(int argc,char **argv,unsigned step,\
-const std::string &usedImages,int imgIndex,int imoffset,unsigned lati,unsigned set){
+const std::string &usedImages,int imgIndex,int imoffset,unsigned lati,int setoffset){
 	annotationsHandle::init();
 	if(imgIndex!= -1){
 		imgIndex += step;
@@ -556,14 +556,6 @@ const std::string &usedImages,int imgIndex,int imoffset,unsigned lati,unsigned s
 	while((char)key != 'q' && (char)key != 'Q' && index<imgs.size()) {
 		std::string imageName = imgs[index].substr(imgs[index].rfind("/")+1);
 		unsigned pos;int picIndx;
-		int setoffset;
-		if(set == 1){
-			setoffset = 1;
-		}else if(set == 2){
-			setoffset = 72;
-		}else if(set == 3){
-			setoffset = 147;
-		}
 		Helpers::imageNumber(imageName,pos,picIndx);
 		picIndx = ((picIndx-setoffset)*5)+270;
 		while(picIndx>=360){
@@ -993,11 +985,19 @@ void annotationsHandle::checkCalibration(int argc,char **argv){
 	cv::Point2f cam = (*Helpers::proj)(cv::Point3f(Helpers::camPosX,Helpers::camPosY,0));
 	std::cout<<"Camera position: "<<cam<<std::endl;
 
+	float ratio,step;
+	if(cam.x>0 && cam.x<Helpers::width && cam.y>0 && cam.y<Helpers::height){
+		ratio = 0.30;
+		step  = (ratio-0.01)/3.0;
+	}else{
+		ratio = 0.40;
+		step  = (ratio-0.01)/3.0;
+	}
 	float dimension = std::sqrt(Helpers::width*Helpers::width+Helpers::height*\
-		Helpers::height)/2.0;
-	for(float in=0;in<0.5;in+=0.16){
+		Helpers::height)/2;
+	for(float in=0.0;in<ratio;in+=step){
 		image = cvLoadImage(argv[1]);
-		cv::Point2f pt(std::abs(in*dimension-cam.x),std::abs(in*dimension-cam.y));
+		cv::Point2f pt(cam.x,in*dimension+cam.y);
 		std::vector<cv::Point2f> points;
 		Helpers::genTemplate2(pt,Helpers::persHeight,Helpers::camHeight,points);
 		for(int i =0;i<points.size();++i){
@@ -1021,12 +1021,11 @@ boost::mutex annotationsHandle::trackbarMutex;
 IplImage *annotationsHandle::image;
 std::deque<annotationsHandle::ANNOTATION> annotationsHandle::annotations;
 //==============================================================================
-
+/*
 int main(int argc,char **argv){
 	std::string folderSuffix = "_train";
 	//annotationsHandle::runAnn(argc,argv,1,folderSuffix,-1);
-	annotationsHandle::runAnnArtificial(argc,argv,1,folderSuffix,-1,362,110,2);
+	//annotationsHandle::runAnnArtificial(argc,argv,1,folderSuffix,-1,435,80,145);
 	//annotationsHandle::runEvaluation(argc,argv);
-	//annotationsHandle::checkCalibration(argc,argv);
 }
-
+*/

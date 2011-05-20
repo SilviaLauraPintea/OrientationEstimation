@@ -709,10 +709,17 @@ void featureExtractor::extractFeatures(cv::Mat &image,const std::string &sourceN
 /** Extract the interest points in a gird and returns them.
  */
 cv::Mat featureExtractor::extractPointsGrid(cv::Mat &image){
+	// EXTRACT THE NORMALIZED GREY IMAGE
+	cv::Mat gray;
+	if(this->colorspaceCode!=-1){
+		cv::cvtColor(image,image,this->invColorspaceCode);
+	}
+	cv::cvtColor(image,gray,CV_BGR2GRAY);
+
 	// EXTRACT MAXIMALLY STABLE BLOBS
 	std::vector<std::vector<cv::Point> > msers;
 	cv::MSER aMSER;
-	aMSER(image,msers,cv::Mat());
+	aMSER(gray,msers,cv::Mat());
 	unsigned msersNo = 0;
 	for(std::size_t x=0;x<msers.size();++x){
 		msersNo += msers[x].size();
@@ -725,7 +732,7 @@ cv::Mat featureExtractor::extractPointsGrid(cv::Mat &image){
 	cv::GridAdaptedFeatureDetector gafd(detector,5000,10,10);
 	std::vector<cv::KeyPoint> keys;
 	std::deque<unsigned> indices;
-	gafd.detect(image,keys);
+	gafd.detect(gray,keys);
 
 	// WRITE THE MSERS LOCATIONS IN THE MATRIX
 	cv::Mat result = cv::Mat::zeros(cv::Size(2,msersNo+keys.size()),CV_32FC1);
@@ -760,6 +767,7 @@ cv::Mat featureExtractor::extractPointsGrid(cv::Mat &image){
 		cv::waitKey(0);
 	}
 	result.convertTo(result,CV_32FC1);
+	gray.release();
 	return result;
 }
 //==============================================================================
@@ -983,12 +991,12 @@ const std::vector<cv::Point2f> &templ,const cv::Rect &roi){
 //==============================================================================
 /** Returns the row corresponding to the indicated feature type.
  */
-cv::Mat featureExtractor::getDataRow(cv::Mat &image,\
+cv::Mat featureExtractor::getDataRow(int imageRows,\
 const featureExtractor::templ &aTempl,const cv::Rect &roi,\
 const featureExtractor::people &person,const cv::Mat &thresholded,\
 const std::string &imgName,cv::Point2f &absRotCenter,cv::Point2f &rotBorders,\
 float rotAngle,cv::vector<cv::Point2f> &keys){
-	cv::Mat feature,dictImage,result;
+	cv::Mat feature,result,dictImg;
 	std::string toRead;
 	std::cout<<"Image class (CLOSE/MEDIUM/FAR): "<<this->imageClass<<std::endl;
 	switch(this->featureType){
@@ -1015,13 +1023,11 @@ float rotAngle,cv::vector<cv::Point2f> &keys){
 			toRead = (this->featureFile+"GABOR/"+imgName+".bin");
 			Auxiliary::binFile2mat(feature,const_cast<char*>(toRead.c_str()));
 			result = this->getGabor(feature,thresholded,roi,person.pixels.size(),\
-				rotAngle,image.rows);
+				rotAngle,imageRows);
 			break;
 		case featureExtractor::SIFT_DICT:
-			dictImage = cv::Mat(image.clone(),roi);
-			this->rotate2Zero(rotAngle,featureExtractor::MATRIX,roi,absRotCenter,\
-				rotBorders,keys,dictImage);
-			result = this->extractSIFT(dictImage,aTempl.points,roi);
+			person.pixels.copyTo(dictImg);
+			result = this->extractSIFT(dictImg,aTempl.points,roi);
 			break;
 		case featureExtractor::SIFT:
 			toRead = (this->featureFile+"SIFT/"+imgName+".bin");
@@ -1039,7 +1045,7 @@ float rotAngle,cv::vector<cv::Point2f> &keys){
 			result = this->getHOG(person.pixels,aTempl,roi);
 			break;
 	}
-	dictImage.release();
+	dictImg.release();
 	if(!feature.empty()){
 		feature.release();
 	}
@@ -1055,17 +1061,22 @@ const featureExtractor::templ &aTempl,const cv::Rect &roi){
 	cv::Rect up(std::max(0.0f,aTempl.extremes[0]-roi.x),\
 		std::max(0.0f,aTempl.extremes[2]-roi.y),aTempl.extremes[1]-\
 		aTempl.extremes[0],aTempl.extremes[3]-aTempl.extremes[2]);
-	cv::Mat tmp(feature.clone(),up),large;
+	cv::Mat tmp(feature.clone(),up),large,gray;
 	cv::resize(tmp,large,cv::Size(64,64),0,0,cv::INTER_CUBIC);
-	cv::HOGDescriptor hogD(large.size(),cv::Size(32,32),cv::Size(8,8),\
+	if(this->colorspaceCode!=-1){
+		cv::cvtColor(large,large,this->invColorspaceCode);
+	}
+	cv::cvtColor(large,gray,CV_BGR2GRAY);
+	cv::medianBlur(gray,gray,3);
+	cv::HOGDescriptor hogD(gray.size(),cv::Size(32,32),cv::Size(8,8),\
 		cv::Size(8,8),9,1,-1,cv::HOGDescriptor::L2Hys,0.2,true);
 	std::vector<float> descriptors;
 
 	if(this->plot){
-		cv::imshow("image4HOG",large);
+		cv::imshow("image4HOG",gray);
 		cv::waitKey(0);
 	}
-	hogD.compute(large,descriptors,cv::Size(8,8),cv::Size(0,0),std::vector<cv::Point>());
+	hogD.compute(gray,descriptors,cv::Size(8,8),cv::Size(0,0),std::vector<cv::Point>());
 	cv::Mat result(descriptors);
 	result.convertTo(result,CV_32FC1);
 
@@ -1083,6 +1094,7 @@ const featureExtractor::templ &aTempl,const cv::Rect &roi){
 	}
 	tmp.release();
 	large.release();
+	gray.release();
 	return result.t();
 }
 //==============================================================================

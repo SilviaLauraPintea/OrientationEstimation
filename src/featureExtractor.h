@@ -43,7 +43,7 @@ class featureExtractor {
 				cv::Point2f absoluteLoc;
 				cv::Point2f relativeLoc;
 				std::deque<unsigned> borders;
-				cv::Mat_<cv::Vec3b> pixels;
+				cv::Mat pixels;
 				people(){
 					this->absoluteLoc = cv::Point2f(0,0);
 					this->relativeLoc = cv::Point2f(0,0);
@@ -182,7 +182,7 @@ class featureExtractor {
 		void createGabor(cv::Mat &gabor,float *params = NULL);
 		/** Returns the row corresponding to the indicated feature type.
 		 */
-		cv::Mat getDataRow(cv::Mat &image,const featureExtractor::templ &aTempl,\
+		cv::Mat getDataRow(int imageRows,const featureExtractor::templ &aTempl,\
 			const cv::Rect &roi,const featureExtractor::people &person,\
 			const cv::Mat &thresholded,const std::string &imgName,\
 			cv::Point2f &absRotCenter,cv::Point2f &rotBorders,float rotAngle,\

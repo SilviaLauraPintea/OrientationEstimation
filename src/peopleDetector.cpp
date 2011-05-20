@@ -576,10 +576,9 @@ const IplImage *oldBg){
 		}
 
 		// ANF FINALLY EXTRACT THE DATA ROW
-		cv::Mat borderedMat(this->borderedIpl);
-		cv::Mat dataRow = this->extractor->getDataRow(borderedMat,this->templates[i],\
-			roi,allPeople[i],thresholded,imgName,absRotCenter,rotBorders,rotAngle,keys);
-		borderedMat.release();
+		cv::Mat dataRow = this->extractor->getDataRow(this->borderedIpl->width,\
+			this->templates[i],roi,allPeople[i],thresholded,imgName,absRotCenter,\
+			rotBorders,rotAngle,keys);
 
 		// CHECK THE DIRECTION OF THE MOVEMENT
 		bool moved;
@@ -1223,10 +1222,10 @@ peopleDetector::CLASSES peopleDetector::findImageClass(const cv::Point2f &feet){
 		float ratio,step;
 		if(cam.x>0 && cam.x<Helpers::width && cam.y>0 && cam.y<Helpers::height){
 			ratio = 0.50;
-			step  = (ratio-1)/3.0;
+			step  = (ratio-0.001)/3.0;
 		}else{
 			ratio = 1.0;
-			step  = (ratio-1)/3.0;
+			step  = (ratio-0.001)/3.0;
 		}
 		float previous  = 0.0;
 		float dimension = std::sqrt(Helpers::width*Helpers::width+\
@@ -1262,31 +1261,18 @@ peopleDetector::CLASSES peopleDetector::findImageClass(const cv::Point2f &feet){
  */
 peopleDetector::CLASSES peopleDetector::findImageClass(const cv::Point2f &feet,\
 const cv::Point2f &head){
+	if(!Helpers::maxPersHeightPixels){this->findImageClass(feet);}
 	if(this->classesRange.empty()){
 		// GET THE CAMERA POSITION IN THE IMAGE PLANE
 		cv::Point2f cam = (*Helpers::proj)(cv::Point3f(Helpers::camPosX,\
 			Helpers::camPosY,0));
 		float ratio,step;
-		if(cam.x>0 && cam.x<Helpers::width && cam.y>0 && cam.y<Helpers::height){
-			ratio = 0.30;
-			step  = (ratio-0.01)/3.0;
-		}else{
-			ratio = 0.60;
-			step  = (ratio-0.01)/3.0;
-		}
-		float dimension = std::sqrt(Helpers::width*Helpers::width+\
-			Helpers::height*Helpers::height);
+		step  = (Helpers::maxPersHeightPixels-0.001)/3.0;
 		float previous = 0.0;
-		for(float in=step;in<=ratio;in+=step){
-			cv::Point2f pt(cam.x,cam.y+in*dimension);
-			std::vector<cv::Point2f> points;
-			Helpers::genTemplate2(pt,Helpers::persHeight,Helpers::camHeight,points);
-			cv::Point2f pHead = cv::Point2f((points[12].x+points[14].x)/2,\
-				(points[12].y+points[14].y)/2);
-			float current = Helpers::dist(pHead,pt);
-			this->classesRange.push_back(cv::Point2f(previous,current));
-			std::cout<<"previousRange:"<<previous<<" currentRange"<<current<<std::endl;
-			previous = current;
+		for(float in=step;in<=Helpers::maxPersHeightPixels;in+=step){
+			this->classesRange.push_back(cv::Point2f(previous,in));
+			std::cout<<"previousRange:"<<previous<<" currentRange"<<in<<std::endl;
+			previous = in;
 		}
 		sleep(6);
 	}
