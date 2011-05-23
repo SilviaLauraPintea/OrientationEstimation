@@ -117,7 +117,7 @@ class featureExtractor {
 		/** Initializes the class elements.
 		 */
 		void init(featureExtractor::FEATURE fType,const std::string &featFile,\
-			int colorSp,int invColorSp);
+			int colorSp,int invColorSp,bool part);
 		/** Resets the variables to the default values.
 		 */
 		void reset();
@@ -148,16 +148,15 @@ class featureExtractor {
 		/** Gets the plain pixels corresponding to the upper part of the body.
 		 */
 		cv::Mat getPixels(const cv::Mat &image,const featureExtractor::templ &aTempl,\
-			const cv::Rect &roi);
+			const cv::Rect &roi,const cv::Mat &thresh);
 		/** Gets the HOG descriptors over an image.
 		 */
 		cv::Mat getHOG(const cv::Mat &pixels,const featureExtractor::templ &aTempl,\
-			const cv::Rect &roi);
+			const cv::Rect &roi,const cv::Mat &thresh);
 		/** Gets the edges in an image.
 		 */
 		cv::Mat getEdges(cv::Mat &feature,const cv::Mat &thresholded,\
-			const cv::Rect &roi,const featureExtractor::templ &aTempl,\
-			float rotAngle);
+			const cv::Rect &roi,float rotAngle);
 		/** SURF descriptors (Speeded Up Robust Features).
 		 */
 		cv::Mat getSURF(cv::Mat &feature,const std::vector<cv::Point2f> &templ,\
@@ -186,7 +185,7 @@ class featureExtractor {
 			const cv::Rect &roi,const featureExtractor::people &person,\
 			const cv::Mat &thresholded,const std::string &imgName,\
 			cv::Point2f &absRotCenter,cv::Point2f &rotBorders,float rotAngle,\
-			cv::vector<cv::Point2f> &keys);
+			std::vector<cv::Point2f> &keys);
 		/** Compares SURF 2 descriptors and returns the boolean value of their comparison.
 		 */
 		static bool compareDescriptors(const featureExtractor::keyDescr &k1,\
@@ -209,6 +208,14 @@ class featureExtractor {
 		/** Sets the image class and resets the dictionary name.
 		 */
 		unsigned setImageClass(unsigned aClass);
+		/** Find the extremities of the thresholded image.
+		 */
+		void getThresholdBorderes(int &minX,int &maxX,int &minY,\
+			int &maxY,const cv::Mat &thresh);
+		/** Cut the image around the template or bg bordered depending on which
+		 * is used and resize to a common size.
+		 */
+		cv::Mat cutAndResizeImage(const cv::Rect &roiCut,const cv::Mat &img);
 	//==========================================================================
 	private:
 		/** @var isInit
@@ -263,6 +270,10 @@ class featureExtractor {
 		 * The code to be used to convert an image to gray.
 		 */
 		int colorspaceCode;
+		/** @var bodyPart
+		 * It is true if only the upper/lower part of the body is used for training.
+		 */
+		bool bodyPart;
 		//======================================================================
 	private:
 		DISALLOW_COPY_AND_ASSIGN(featureExtractor);

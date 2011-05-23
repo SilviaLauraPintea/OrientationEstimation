@@ -310,18 +310,7 @@ void annotationsHandle::trackBarHandleFct(int position,void *param){
 		exit(1);
 	}
 	annotations.push_back(lastAnno);
-
-	// FIX TRACKBARS
-	if((POSE)(*ii) == LATITUDE || (POSE)(*ii) == LONGITUDE){
-		if(position % 10 != 0){
-			position = (int)(position / 10) * 10;
-			if((POSE)(*ii) == LATITUDE){
-				cv::setTrackbarPos("Latitude","Poses",position);
-			}else{
-				cv::setTrackbarPos("Longitude","Poses",position);
-			}
-		}
-	}else if((POSE)(*ii) == SITTING){
+	if((POSE)(*ii) == SITTING){
 		int oppPos = cv::getTrackbarPos("Standing","Poses");
 		if(oppPos == position){
 			cv::setTrackbarPos("Standing","Poses",(1-oppPos));
@@ -1024,7 +1013,7 @@ std::deque<annotationsHandle::ANNOTATION> annotationsHandle::annotations;
 /*
 int main(int argc,char **argv){
 	std::string folderSuffix = "_train";
-	//annotationsHandle::runAnn(argc,argv,1,folderSuffix,-1);
+	annotationsHandle::runAnn(argc,argv,1,folderSuffix,-1);
 	//annotationsHandle::runAnnArtificial(argc,argv,1,folderSuffix,-1,435,80,145);
 	//annotationsHandle::runEvaluation(argc,argv);
 }

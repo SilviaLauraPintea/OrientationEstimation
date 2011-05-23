@@ -198,7 +198,7 @@ void Auxiliary::angle0to360(float &angle){
 	while(angle >= 2.0*M_PI){
 		angle -= 2.0*M_PI;
 	}
-	if(angle < 0.0){
+	while(angle < 0.0){
 		angle += 2.0*M_PI;
 	}
 }
@@ -209,7 +209,7 @@ void Auxiliary::angle180to180(float &angle){
 	while(angle >= 2.0*M_PI){
 		angle -= 2.0*M_PI;
 	}
-	if(angle < 0.0){
+	while(angle < 0.0){
 		angle += 2.0*M_PI;
 	}
 	angle = angle - M_PI;

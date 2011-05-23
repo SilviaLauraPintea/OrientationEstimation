@@ -259,9 +259,9 @@ unsigned i){
 	}
 	this->trainData[i].convertTo(this->trainData[i],CV_32FC1);
 	this->trainTargets[i].convertTo(this->trainTargets[i],CV_32FC1);
-	std::cout<<names[i]<<" SIZE: "<<this->trainData[i].size()<<"=("<<\
+	std::cout<<names[i]<<" data: "<<this->trainData[i].size()<<"=("<<\
 		tmpData1.size()<<"+"<<tmpData2.size()<<")"<<std::endl;
-	std::cout<<names[i]<<" SIZE: "<<this->trainTargets.size()<<"=("<<\
+	std::cout<<names[i]<<" targets: "<<this->trainTargets[i].size()<<"=("<<\
 		tmpTargets1.size()<<"+"<<tmpTargets2.size()<<")"<<std::endl;
 
 	// RELEASE THE BILLION OF ALLOCATED MATRIXES
@@ -301,6 +301,7 @@ void classifyImages::trainGP(annotationsHandle::POSE what,bool fromFolder){
 
 		// CHECK TO SEE IF THERE IS ANY DATA IN THE CURRENT CLASS
 		if(this->features->data[i].empty()) continue;
+		assert(this->trainData[i].rows==this->trainTargets[i].rows);
 
 		// TRAIN THE SIN AND COS SEPARETELY FOR LONGITUDE || LATITUDe
 		if(what == annotationsHandle::LONGITUDE){
@@ -454,6 +455,7 @@ annotationsHandle::POSE what,bool fromFolder){
 			dum.copyTo(this->testTargets[i]);
 			dum.release();
 		}
+		assert(this->testData[i].rows==this->testTargets[i].rows);
 		this->testData[i].convertTo(this->testData[i],CV_32FC1);
 		this->testTargets[i].convertTo(this->testTargets[i],CV_32FC1);
 
@@ -490,7 +492,7 @@ float &error,float &normError,float &meanDiff){
 		assert(this->testTargets[i].rows == prediAngles[i].size());
 		for(int y=0;y<this->testTargets[i].rows;++y){
 			float targetAngle = std::atan2(this->testTargets[i].at<float>(y,0),\
-									this->testTargets[i].at<float>(y,1));
+				this->testTargets[i].at<float>(y,1));
 			Auxiliary::angle0to360(targetAngle);
 
 			std::cout<<"Target: "<<targetAngle<<"("<<(targetAngle*180.0/M_PI)<<\
@@ -498,7 +500,7 @@ float &error,float &normError,float &meanDiff){
 				")"<<std::endl;
 			float absDiff = std::abs(targetAngle-prediAngles[i][y]);
 			if(absDiff > M_PI){
-				absDiff = 2*M_PI - absDiff;
+				absDiff = 2.0*M_PI - absDiff;
 			}
 			std::cout<<"Difference: "<< absDiff <<std::endl;
 			error     += absDiff*absDiff;
@@ -959,17 +961,16 @@ classifyImages &classi,int argc,char** argv,featureExtractor::FEATURE feat,\
 int colorSp,bool useGt,annotationsHandle::POSE what,\
 gaussianProcess::kernelFunction kernel){
   	std::ofstream train,test;
-	train.open(errorsOnTrain.c_str(),std::ios::out);
-	test.open(errorsOnTest.c_str(),std::ios::out);
-	for(float v=0.1;v<5;v+=0.1){
-		for(float l=1;l<125;l+=1){
+	train.open(errorsOnTrain.c_str(),std::ios::out | std::ios::app);
+	test.open(errorsOnTest.c_str(),std::ios::out | std::ios::app);
+	for(float v=0.2;v<5.0;v+=0.1){
+		for(float l=68.0;l<150.0;l+=1.0){
 			classi.init(v,l,feat,kernel,useGt);
-			float errorTrain;
-			classi.runTest(colorSp,what,errorTrain);
+			float errorTrain = classi.runCrossValidation(2,what,colorSp,true);
 			train<<v<<" "<<l<<" "<<errorTrain<<std::endl;
+			//-------------------------------------------
 			classi.init(v,l,feat,kernel,useGt);
-			float errorTest;
-			classi.runTest(colorSp,what,errorTest);
+			float errorTest = classi.runCrossValidation(2,what,colorSp,false);
 			test<<v<<" "<<l<<" "<<errorTest<<std::endl;
 		}
 	}
@@ -986,19 +987,19 @@ int main(int argc,char **argv){
  	classi.runTest(-1,annotationsHandle::LONGITUDE,normError);
 */
 	//--------------------------------------------------------------------------
-/*
+
 	// build data matrix
  	classifyImages classi(argc,argv,classifyImages::EVALUATE);
-	classi.init(0.85,85.0,featureExtractor::HOG,&gaussianProcess::sqexp,true);
-	classi.buildDataMatrix();
-*/
-	//--------------------------------------------------------------------------
+	classi.init(0.8,150.0,featureExtractor::EDGES,&gaussianProcess::sqexp,true);
+	classi.buildDataMatrix(-1);
 
+	//--------------------------------------------------------------------------
+/*
 	// evaluate
  	classifyImages classi(argc,argv,classifyImages::EVALUATE);
-	classi.init(0.85,85.0,featureExtractor::HOG,&gaussianProcess::sqexp,false);
-	classi.runCrossValidation(5,annotationsHandle::LONGITUDE,-1,false);
-
+	classi.init(0.8,150.0,featureExtractor::EDGES,&gaussianProcess::sqexp,true);
+	classi.runCrossValidation(5,annotationsHandle::LONGITUDE,-1,true);
+*/
 	//--------------------------------------------------------------------------
 /*
 	// BUILD THE SIFT DICTIONARY
@@ -1008,9 +1009,9 @@ int main(int argc,char **argv){
 	//--------------------------------------------------------------------------
 /*
 	// find parmeteres
-	classifyImages classi(argc,argv,classifyImages::TEST);
-	parameterSetting("train.txt","text.txt",classi,argc,argv,featureExtractor::HOG,\
-		-1,true,annotationsHandle::LONGITUDE,&gaussianProcess::sqexp);
+	classifyImages classi(argc,argv,classifyImages::EVALUATE);
+	parameterSetting("train.txt","test.txt",classi,argc,argv,featureExtractor::HOG,\
+		CV_BGR2Lab,true,annotationsHandle::LONGITUDE,&gaussianProcess::sqexp);
 */
 	//--------------------------------------------------------------------------
 /*

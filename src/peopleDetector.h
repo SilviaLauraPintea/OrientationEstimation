@@ -56,7 +56,8 @@ class peopleDetector:public Tracker{
 		/** Initializes the parameters of the tracker.
 		 */
 		void init(const std::string &dataFolder,const std::string &theAnnotationsFile,\
-			const featureExtractor::FEATURE feat,const bool readFromFolder = true);
+			const featureExtractor::FEATURE feat,const bool readFromFolder = true,\
+			peopleDetector::FEATUREPART part=peopleDetector::WHOLE);
 		/** Checks to see if an annotation can be assigned to a detection.
 		 */
 		bool canBeAssigned(unsigned l,std::deque<float> &minDistances,\
@@ -110,10 +111,6 @@ class peopleDetector:public Tracker{
 		 * creates the bordered image.
 		 */
 		void fixLocationsTracksBorderes(std::deque<unsigned> &existing);
-		/** Find the class in which we can store the current image (the data is
-		 * split in 3 classes depending on the position of the person wrt camera).
-		 */
-		peopleDetector::CLASSES findImageClass(const cv::Point2f &feet);
 		/** Initialize the inverse value of the color space used in feature extraction.
 		 */
 		void initInvColoprSp();
