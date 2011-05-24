@@ -156,7 +156,7 @@ class featureExtractor {
 		/** Gets the edges in an image.
 		 */
 		cv::Mat getEdges(cv::Mat &feature,const cv::Mat &thresholded,\
-			const cv::Rect &roi,float rotAngle);
+			const cv::Rect &roi,const featureExtractor::templ &aTempl,float rotAngle);
 		/** SURF descriptors (Speeded Up Robust Features).
 		 */
 		cv::Mat getSURF(cv::Mat &feature,const std::vector<cv::Point2f> &templ,\
@@ -174,8 +174,8 @@ class featureExtractor {
 		 * returns the response image.
 		 */
 		cv::Mat getGabor(cv::Mat &feature,const cv::Mat &thresholded,\
-			const cv::Rect &roi,const cv::Size &foregrSize,float rotAngle,\
-			int aheight);
+			const cv::Rect &roi,const cv::Size &foregrSize,\
+			const featureExtractor::templ &aTempl,float rotAngle,int aheight);
 		/** Creates a gabor with the parameters given by the parameter vector.
 		 */
 		void createGabor(cv::Mat &gabor,float *params = NULL);

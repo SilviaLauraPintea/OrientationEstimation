@@ -227,8 +227,8 @@ cv::Mat featureExtractor::getPixels(const cv::Mat &feature,const featureExtracto
 		cutROI.width  -= cutROI.x;
 		cutROI.height -= cutROI.y;
 	}else{
-		cutROI.x      = aTempl.extremes[0];
-		cutROI.y      = aTempl.extremes[2];
+		cutROI.x      = aTempl.extremes[0]-roi.x;
+		cutROI.y      = aTempl.extremes[2]-roi.y;
 		cutROI.width  = aTempl.extremes[1]-aTempl.extremes[0];
 		cutROI.height = aTempl.extremes[3]-aTempl.extremes[2];
 	}
@@ -246,7 +246,7 @@ cv::Mat featureExtractor::getPixels(const cv::Mat &feature,const featureExtracto
 
 	// MATCH SOME HEADS ON TOP AND GET THE RESULTS
 	int radius     = Helpers::dist(aTempl.points[12],aTempl.points[13]);
-	cv::Mat result = cv::Mat::zeros(cv::Size(12*20*30+2,1),CV_32FC1);
+	cv::Mat result = cv::Mat::zeros(cv::Size(12*20*30+3,1),CV_32FC1);
 	cv::medianBlur(gray,gray,3);
 	for(int i=0;i<12;++i){
 		std::string imgName = "templates/templ"+Auxiliary::int2string(i)+".jpg";
@@ -313,12 +313,7 @@ int &maxY,const cv::Mat &thresh){
 /** Gets the edges in an image.
  */
 cv::Mat featureExtractor::getEdges(cv::Mat &feature,const cv::Mat &thresholded,\
-const cv::Rect &roi,float rotAngle){
-	if(thresholded.empty()){
-		std::cerr<<"Edge-feature needs a background model"<<std::endl;
-		exit(1);
-	}
-
+const cv::Rect &roi,const featureExtractor::templ &aTempl,float rotAngle){
 	// EXTRACT THE EDGES AND ROTATE THE EDGES TO THE RIGHT POSSITION
 	cv::Point2f rotBorders;
 	feature.convertTo(feature,CV_8UC1);
@@ -330,27 +325,32 @@ const cv::Rect &roi,float rotAngle){
 
 	// PICK OUT ONLY THE THRESHOLDED ARES RESHAPE IT AND RETURN IT
 	cv::Mat toResize;
-	tmpFeat.copyTo(toResize,thresholded);
-	tmpFeat.release();
-
-	// READ THE ROI TO BE USED TO GET THE AREA AROUND THE IMAGE
 	cv::Rect cutROI;
-	this->getThresholdBorderes(cutROI.x,cutROI.width,cutROI.y,cutROI.height,\
-		thresholded);
-	cutROI.width   -= cutROI.x;
-	cutROI.height  -= cutROI.y;
+	if(!thresholded.empty()){
+		tmpFeat.copyTo(toResize,thresholded);
+		this->getThresholdBorderes(cutROI.x,cutROI.width,cutROI.y,cutROI.height,\
+			thresholded);
+		cutROI.width   -= cutROI.x;
+		cutROI.height  -= cutROI.y;
+	}else{
+		tmpFeat.copyTo(toResize);
+		cutROI.x      = aTempl.extremes[0]-roi.x;
+		cutROI.y      = aTempl.extremes[2]-roi.y;
+		cutROI.width  = aTempl.extremes[1]-aTempl.extremes[0];
+		cutROI.height = aTempl.extremes[3]-aTempl.extremes[2];
+	}
+	tmpFeat.release();
 	cv::Mat tmpEdge = this->cutAndResizeImage(cutROI,toResize);
 	toResize.release();
 
 	// IF WE WANT TO SEE HOW THE EXTRACTED EDGES LOOK LIKE
 	if(this->plot){
-		cv::imshow("Thresholded",thresholded);
 		cv::imshow("Edges",tmpEdge);
 		cv::waitKey(0);
 	}
 
 	// WRITE IT ON ONE ROW
-	cv::Mat result = cv::Mat::zeros(cv::Size(tmpEdge.cols*tmpEdge.rows+2,1),CV_32FC1);
+	cv::Mat result = cv::Mat::zeros(cv::Size(tmpEdge.cols*tmpEdge.rows+3,1),CV_32FC1);
 	cv::Mat dumm   = result.colRange(0,tmpEdge.cols*tmpEdge.rows);
 	tmpEdge        = tmpEdge.reshape(0,1);
 	tmpEdge.convertTo(tmpEdge,CV_32FC1);
@@ -406,7 +406,7 @@ cv::Mat featureExtractor::getSURF(cv::Mat &feature,const std::vector<cv::Point2f
 	}
 
 	// COPY THE DESCRIPTORS IN THE FINAL MATRIX
-	cv::Mat result = cv::Mat::zeros(cv::Size(tmp.rows*tmp.cols+2,1),CV_32FC1);
+	cv::Mat result = cv::Mat::zeros(cv::Size(tmp.rows*tmp.cols+3,1),CV_32FC1);
 	tmp            = tmp.reshape(0,1);
 	tmp.convertTo(tmp,CV_32FC1);
 	cv::Mat dummy = result.colRange(0,tmp.rows*tmp.cols);
@@ -433,7 +433,7 @@ cv::Mat featureExtractor::getPointsGrid(const cv::Mat &feature,const cv::Rect &r
 const featureExtractor::templ &aTempl,const cv::Mat &test){
 	// GET THE GRID SIZE FROM THE TEMPLATE SIZE
 	unsigned no    = 30;
-	cv::Mat result = cv::Mat::zeros(cv::Size(no*no+2,1),CV_32FC1);
+	cv::Mat result = cv::Mat::zeros(cv::Size(no*no+3,1),CV_32FC1);
 	float rateX    = (aTempl.extremes[1]-aTempl.extremes[0])/static_cast<float>(no);
 	float rateY    = (aTempl.extremes[3]-aTempl.extremes[2])/static_cast<float>(no);
 
@@ -532,20 +532,28 @@ void featureExtractor::createGabor(cv::Mat &gabor, float *params){
  * returns the response image.
  */
 cv::Mat featureExtractor::getGabor(cv::Mat &feature,const cv::Mat &thresholded,\
-const cv::Rect &roi,const cv::Size &foregrSize,float rotAngle,int aheight){
+const cv::Rect &roi,const cv::Size &foregrSize,\
+const featureExtractor::templ &aTempl,const float rotAngle,int aheight){
 	unsigned gaborNo    = std::ceil(feature.rows/aheight);
 	int gaborRows       = std::ceil(feature.rows/gaborNo);
 	unsigned resultCols = foregrSize.width*foregrSize.height;
-	cv::Mat result      = cv::Mat::zeros(cv::Size(gaborNo*resultCols+2,1),CV_32FC1);
+	cv::Mat result      = cv::Mat::zeros(cv::Size(gaborNo*resultCols+3,1),CV_32FC1);
 	cv::Point2f rotCenter(foregrSize.width/2+roi.x,foregrSize.height/2+roi.y);
 	std::vector<cv::Point2f> dummy;
 
 	// READ THE BORDERS OF THE THRESHOLDED IMAGE
 	cv::Rect cutROI;
-	this->getThresholdBorderes(cutROI.x,cutROI.width,cutROI.y,cutROI.height,\
-		thresholded);
-	cutROI.width   -= cutROI.x;
-	cutROI.height  -= cutROI.y;
+	if(!thresholded.empty()){
+		this->getThresholdBorderes(cutROI.x,cutROI.width,cutROI.y,cutROI.height,\
+			thresholded);
+		cutROI.width  -= cutROI.x;
+		cutROI.height -= cutROI.y;
+	}else{
+		cutROI.x      = aTempl.extremes[0]-roi.x;
+		cutROI.y      = aTempl.extremes[2]-roi.y;
+		cutROI.width  = aTempl.extremes[1]-aTempl.extremes[0];
+		cutROI.height = aTempl.extremes[3]-aTempl.extremes[2];
+	}
 	for(unsigned i=0;i<gaborNo;++i){
 		// GET THE ROI OUT OF THE iTH GABOR
 		cv::Mat tmp1 = feature.rowRange(i*gaborRows,(i+1)*gaborRows);
@@ -559,7 +567,11 @@ const cv::Rect &roi,const cv::Size &foregrSize,float rotAngle,int aheight){
 
 		// KEEP ONLY THE THRESHOLDED VALUES
 		cv::Mat toResize;
-		tmp2.copyTo(toResize,thresholded);
+		if(!thresholded.empty()){
+			tmp2.copyTo(toResize,thresholded);
+		}else{
+			tmp2.copyTo(toResize);
+		}
 
 		// READ THE ROI TO BE USED TO GET THE AREA AROUND THE IMAGE
 		cv::Mat tmp3 = this->cutAndResizeImage(cutROI,toResize);
@@ -656,7 +668,7 @@ std::vector<cv::Point2f> &indices){
 	}
 
 	// CREATE A HISTOGRAM(COUNT TO WHICH DICT FEATURE WAS ASSIGNED EACH NEW ONE)
-	cv::Mat result = cv::Mat::zeros(cv::Size(this->dictionarySIFT.rows+2,1),CV_32FC1);
+	cv::Mat result = cv::Mat::zeros(cv::Size(this->dictionarySIFT.rows+3,1),CV_32FC1);
 	for(int i=0;i<minLabel.cols;++i){
 		int which = minLabel.at<float>(0,i);
 		result.at<float>(0,which) += 1.0;
@@ -1058,7 +1070,7 @@ float rotAngle,std::vector<cv::Point2f> &keys){
 		case featureExtractor::EDGES:
 			toRead = (this->featureFile+"EDGES/"+imgName+".bin");
 			Auxiliary::binFile2mat(feature,const_cast<char*>(toRead.c_str()));
-			result = this->getEdges(feature,thresholded,roi,rotAngle);
+			result = this->getEdges(feature,thresholded,roi,aTempl,rotAngle);
 			break;
 		case featureExtractor::SURF:
 			toRead = (this->featureFile+"SURF/"+imgName+".bin");
@@ -1071,7 +1083,7 @@ float rotAngle,std::vector<cv::Point2f> &keys){
 			toRead = (this->featureFile+"GABOR/"+imgName+".bin");
 			Auxiliary::binFile2mat(feature,const_cast<char*>(toRead.c_str()));
 			result = this->getGabor(feature,thresholded,roi,person.pixels.size(),\
-				rotAngle,imageRows);
+				aTempl,rotAngle,imageRows);
 			break;
 		case featureExtractor::SIFT_DICT:
 			person.pixels.copyTo(dictImg);
@@ -1113,12 +1125,21 @@ const featureExtractor::templ &aTempl,const cv::Rect &roi,const cv::Mat &thresh)
 		cutROI.width   -= cutROI.x;
 		cutROI.height  -= cutROI.y;
 	}else{
-		cutROI.x      = aTempl.extremes[0];
-		cutROI.y      = aTempl.extremes[2];
+		cutROI.x      = aTempl.extremes[0]-roi.x;
+		cutROI.y      = aTempl.extremes[2]-roi.y;
 		cutROI.width  = aTempl.extremes[1]-aTempl.extremes[0];
 		cutROI.height = aTempl.extremes[3]-aTempl.extremes[2];
 	}
+
+std::cout<<"image_size="<<feature.size()<<std::endl;
+std::cout<<"roi="<<roi<<std::endl;
+std::cout<<"cut_roi="<<cutROI<<std::endl;
+
+
 	cv::Mat large = this->cutAndResizeImage(cutROI,feature);
+
+
+
 	if(this->colorspaceCode!=-1){
 		cv::cvtColor(large,large,this->invColorspaceCode);
 	}
@@ -1126,16 +1147,24 @@ const featureExtractor::templ &aTempl,const cv::Rect &roi,const cv::Mat &thresh)
 	cv::cvtColor(large,gray,CV_BGR2GRAY);
 	large.release();
 	cv::medianBlur(gray,gray,3);
-	cv::HOGDescriptor hogD(gray.size(),cv::Size(25,30),cv::Size(5,10),\
-		cv::Size(5,10),9,1,-1,cv::HOGDescriptor::L2Hys,0.2,true);
+	unsigned stepX = (gray.cols%10==0?10:(10+gray.cols%10));
+	unsigned stepY = (gray.rows%10==0?10:(10+gray.rows%10));
+	cv::HOGDescriptor hogD(gray.size(),cv::Size(stepX,stepY),cv::Size(10,10),\
+		cv::Size(stepX,stepY),15,1,-1,cv::HOGDescriptor::L2Hys,0.2,true);
 	std::vector<float> descriptors;
 
 	if(this->plot){
 		cv::imshow("image4HOG",gray);
 		cv::waitKey(0);
 	}
-	hogD.compute(gray,descriptors,cv::Size(5,10),cv::Size(0,0),std::vector<cv::Point>());
-	cv::Mat result(descriptors);
+	hogD.compute(gray,descriptors,cv::Size(stepX,stepY),cv::Size(0,0),\
+		std::vector<cv::Point>());
+	cv::Mat dummy1(descriptors);
+	cv::Mat result = cv::Mat::zeros(cv::Size(dummy1.cols+3,dummy1.rows),CV_32FC1);
+	cv::Mat dummy2 = result.colRange(0,dummy1.cols);
+	dummy1.copyTo(dummy2);
+	dummy1.release();
+	dummy2.release();
 	result.convertTo(result,CV_32FC1);
 
 	std::cout<<"In HOG: descriptorSize = "<<descriptors.size()<<std::endl;
@@ -1186,24 +1215,24 @@ const cv::Mat &img){
 	cv::Mat tmp(img.clone(),roiCut),large;
 	cv::Size aSize;
 	if(this->imageClass=="CLOSE"){
-		aSize.height = 33;
+		aSize.height = 50;
 		aSize.width  = aSize.height*6/5;
 	}else if(this->imageClass=="FAR"){
+		int pHeight = 150;
 		if(this->bodyPart){
-			aSize.height = 99/2;
-			aSize.width  = aSize.height*4/5;
+			aSize.height = pHeight/2;
 		}else{
-			aSize.height = 99;
-			aSize.width  = aSize.height*1/2;
+			aSize.height = pHeight;
 		}
+		aSize.width  = pHeight*1/2;
 	}else if(this->imageClass=="MEDIUM"){
+		int pHeight = 100;
 		if(this->bodyPart){
-			aSize.height = 66/2;
-			aSize.width  = aSize.height*4/5;
+			aSize.height = pHeight/2;
 		}else{
-			aSize.height = 66;
-			aSize.width  = aSize.height*2/3;
+			aSize.height = pHeight;
 		}
+		aSize.width  = pHeight*3/4;
 	}
 	cv::medianBlur(tmp,tmp,3);
 	cv::resize(tmp,large,aSize,0,0,cv::INTER_CUBIC);

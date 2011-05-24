@@ -58,7 +58,8 @@ class classifyImages {
 		/** Does the cross-validation and computes the average error over all folds.
 		 */
 		float runCrossValidation(unsigned k,annotationsHandle::POSE what,\
-			int colorSp=-1,bool onTrain=false);
+			int colorSp=-1,bool onTrain=false,peopleDetector::FEATUREPART part=\
+			peopleDetector::WHOLE);
 		/** Runs the final evaluation (test).
 		 */
 		std::deque<std::deque<float> > runTest(int colorSp,\
@@ -71,12 +72,14 @@ class classifyImages {
 		/** Reset the features object when the training and testing might have different
 		 * calibration,background models...
 		 */
-		void resetFeatures(const std::string &dir,const std::string &imStr,int colorSp);
+		void resetFeatures(const std::string &dir,const std::string &imStr,\
+			int colorSp,peopleDetector::FEATUREPART part=peopleDetector::WHOLE);
 		/** Just build data matrix and store it;it can be called over multiple
 		 * datasets by adding the the new data rows at the end to the stored
 		 * matrix.
 		 */
-		void buildDataMatrix(int colorSp=-1);
+		void buildDataMatrix(int colorSp=-1,peopleDetector::FEATUREPART part=\
+			peopleDetector::WHOLE);
 		/** Concatenate the loaded data from the files to the currently computed data.
 		 */
 		void loadData(const cv::Mat &tmpData1,const cv::Mat &tmpTargets1,unsigned i);

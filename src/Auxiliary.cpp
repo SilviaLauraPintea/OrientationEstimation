@@ -259,7 +259,9 @@ void Auxiliary::mean0Variance1(cv::Mat &mat){
 	}
 	cv::Scalar mean,stddev;
 	cv::meanStdDev(mat,mean,stddev);
-	mat = (mat-mean.val[0])/stddev.val[0];
+	if(stddev.val[0]){
+		mat = (mat-mean.val[0])/stddev.val[0];
+	}
 	mat.convertTo(mat,CV_32FC1);
 	if(rows != 1){
 		mat = mat.reshape(0,rows);

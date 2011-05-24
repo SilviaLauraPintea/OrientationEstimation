@@ -14,15 +14,35 @@
  */
 class peopleDetector:public Tracker{
 	public:
-		peopleDetector(int argc,char** argv,bool extract=false,bool buildBg=\
-			false,int colorSp=-1);
-		virtual ~peopleDetector();
+		/** Structure to store the existing/detected locations.
+		 */
+		struct Existing{
+			cv::Point2f location;
+			unsigned int groupNo;
+			Existing(const cv::Point2f &exi=cv::Point2f(0,0),unsigned int grNo=0):\
+				location(exi),groupNo(grNo){}
+			virtual ~Existing(){}
+			Existing(const Existing &exi){
+				this->location = exi.location;
+				this->groupNo  = exi.groupNo;
+			}
+			Existing& operator=(const Existing &exi){
+				if(this == &exi) return *this;
+				this->location = exi.location;
+				this->groupNo  = exi.groupNo;
+				return *this;
+			}
+		};
 		/** Classes/groups (wrt the camera) in which to store the image data.
 		 */
 		enum CLASSES {CLOSE,MEDIUM,FAR};
 		/** What values can be used for the feature part to be extracted.
 		 */
 		enum FEATUREPART {TOP,BOTTOM,WHOLE};
+		peopleDetector(int argc,char** argv,bool extract=false,bool buildBg=\
+			false,int colorSp=-1,peopleDetector::FEATUREPART part=\
+			peopleDetector::WHOLE);
+		virtual ~peopleDetector();
 		/** Overwrites the \c doFindPeople function from the \c Tracker class
 		 * to make it work with the feature extraction.
 		 */
@@ -35,8 +55,7 @@ class peopleDetector:public Tracker{
 		/** Get the foreground pixels corresponding to each person.
 		 */
 		void allForegroundPixels(std::deque<featureExtractor::people> &allPeople,\
-			const std::deque<unsigned> &existing,const IplImage *bg,\
-			float threshold);
+			const IplImage *bg,float threshold);
 		/** Gets the distance to the given template from a given pixel location.
 		 */
 		float getDistToTemplate(const int pixelX,const int pixelY,\
@@ -44,11 +63,12 @@ class peopleDetector:public Tracker{
 		/** Creates on data row in the final data matrix by getting the feature
 		 * descriptors.
 		 */
-		void extractDataRow(std::deque<unsigned> &existing,const IplImage *oldBg);
+		void extractDataRow(const IplImage *oldBg,const std::deque<unsigned> &existing=\
+			std::deque<unsigned>(),float threshVal=100.0);
 		/** For each row added in the data matrix (each person detected for which we
 		 * have extracted some features) find the corresponding label.
 		 */
-		void fixLabels(std::deque<unsigned> &existing);
+		void fixLabels(const std::deque<unsigned> &existing);
 		/** Returns the size of a window around a template centered in a given point.
 		 */
 		void templateWindow(const cv::Size &imgSize,int &minX,int &maxX,\
@@ -56,8 +76,7 @@ class peopleDetector:public Tracker{
 		/** Initializes the parameters of the tracker.
 		 */
 		void init(const std::string &dataFolder,const std::string &theAnnotationsFile,\
-			const featureExtractor::FEATURE feat,const bool readFromFolder = true,\
-			peopleDetector::FEATUREPART part=peopleDetector::WHOLE);
+			const featureExtractor::FEATURE feat,const bool readFromFolder = true);
 		/** Checks to see if an annotation can be assigned to a detection.
 		 */
 		bool canBeAssigned(unsigned l,std::deque<float> &minDistances,\
@@ -92,13 +111,13 @@ class peopleDetector:public Tracker{
 		/** Reads the locations at which there are people in the current frame (for the
 		 * case in which we do not want to use the tracker or build a bgModel).
 		 */
-		void readLocations(std::deque<unsigned> &locations);
+		void readLocations();
 		/** Starts running something (either the tracker or just mimics it).
 		 */
 		void start(bool readFromFolder,bool useGT);
 		/** Adds a templates to the vector of templates at detected positions.
 		 */
-		void add2Templates(const std::deque<unsigned> &existing);
+		void add2Templates();
 		/** Assigns pixels to templates based on proximity.
 		 */
 		void pixels2Templates(int maxX,int minX,int maxY,int minY,int k,\
@@ -110,7 +129,7 @@ class peopleDetector:public Tracker{
 		/** Fixes the existing/detected locations of people and updates the tracks and
 		 * creates the bordered image.
 		 */
-		void fixLocationsTracksBorderes(std::deque<unsigned> &existing);
+		void fixLocationsTracksBorderes(const std::deque<unsigned> &existing);
 		/** Initialize the inverse value of the color space used in feature extraction.
 		 */
 		void initInvColoprSp();
@@ -119,6 +138,9 @@ class peopleDetector:public Tracker{
 		 */
 		peopleDetector::CLASSES findImageClass(const cv::Point2f &feet,\
 			const cv::Point2f &head);
+		/** Get distance wrt the camera in the image.
+		 */
+		float distanceWRTcamera(const cv::Point2f &feet);
 		//======================================================================
 	public:
 		/** @var print
@@ -190,9 +212,15 @@ class peopleDetector:public Tracker{
 		 * The motion vectors for all the images in the data matrix
 		 */
 		std::deque<std::deque<float> > dataMotionVectors;
-		/** The minimum/maximum template size for each class as a vector of points
+		/** @var classesRange
+		 * The minimum/maximum template size for each class as a vector of points
 		 */
 		std::vector<cv::Point2f> classesRange;
+		/** @var existing
+		 * Stores the annotated/detected locations of the people and the
+		 * corresponding class.
+		 */
+		std::vector<peopleDetector::Existing> existing;
 		//======================================================================
 	private:
 		DISALLOW_COPY_AND_ASSIGN(peopleDetector);

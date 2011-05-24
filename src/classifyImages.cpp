@@ -165,7 +165,6 @@ bool toUseGT){
 			Helpers::file_exists(this->modelName.c_str(),true);
 			break;
 		case(featureExtractor::EDGES):
-			this->useGroundTruth = false;
 			this->modelName     += "EDGES/";
 			Helpers::file_exists(this->modelName.c_str(),true);
 			break;
@@ -174,7 +173,6 @@ bool toUseGT){
 			Helpers::file_exists(this->modelName.c_str(),true);
 			break;
 		case(featureExtractor::GABOR):
-			this->useGroundTruth = false;
 			this->modelName += "GABOR/";
 			Helpers::file_exists(this->modelName.c_str(),true);
 			break;
@@ -324,9 +322,9 @@ void classifyImages::trainGP(annotationsHandle::POSE what,bool fromFolder){
 /** Just build data matrix and store it;it can be called over multiple datasets
  * by adding the the new data rows at the end to the stored matrix.
  */
-void classifyImages::buildDataMatrix(int colorSp){
+void classifyImages::buildDataMatrix(int colorSp,peopleDetector::FEATUREPART part){
 	// SET THE CALIBRATION AND OTHER FEATURE SETTINGS
-	this->resetFeatures(this->trainDir,this->trainImgString,colorSp);
+	this->resetFeatures(this->trainDir,this->trainImgString,colorSp,part);
 	for(std::size_t i=0;i<this->trainData.size();++i){
 		if(!this->trainData[i].empty()){
 			this->trainData[i].release();
@@ -630,11 +628,11 @@ void classifyImages::buildDictionary(int colorSp,bool toUseGT){
 /** Does the cross-validation and computes the average error over all folds.
  */
 float classifyImages::runCrossValidation(unsigned k,annotationsHandle::POSE what,\
-int colorSp,bool onTrain){
+int colorSp,bool onTrain,peopleDetector::FEATUREPART part){
 	float finalError=0.0,finalNormError=0.0,finalMeanDiff=0.0;
 
 	// SET THE CALIBRATION ONLY ONCE (ALL IMAGES ARE READ FROM THE SAME DIR)
-	this->resetFeatures(this->trainDir,this->trainImgString,colorSp);
+	this->resetFeatures(this->trainDir,this->trainImgString,colorSp,part);
 	for(unsigned i=0;i<k;++i){
 		std::cout<<"Round "<<i<<"___________________________________________"<<\
 			"_____________________________________________________"<<std::endl;
@@ -776,7 +774,7 @@ void classifyImages::crossValidation(unsigned k,unsigned fold,bool onTrain){
  * calibration,background models...
  */
 void classifyImages::resetFeatures(const std::string &dir,const std::string &imStr,\
-int colorSp){
+int colorSp,peopleDetector::FEATUREPART part){
 	if(this->features){
 		delete this->features;
 		this->features = NULL;
@@ -785,7 +783,7 @@ int colorSp){
 	args[0] = const_cast<char*>("peopleDetector");
 	args[1] = const_cast<char*>(dir.c_str());
 	args[2] = const_cast<char*>(imStr.c_str());
-	this->features = new peopleDetector(3,args,false,false,colorSp);
+	this->features = new peopleDetector(3,args,false,false,colorSp,part);
 	delete [] args;
 }
 //==============================================================================
@@ -987,19 +985,20 @@ int main(int argc,char **argv){
  	classi.runTest(-1,annotationsHandle::LONGITUDE,normError);
 */
 	//--------------------------------------------------------------------------
-
+/*
 	// build data matrix
  	classifyImages classi(argc,argv,classifyImages::EVALUATE);
-	classi.init(0.8,150.0,featureExtractor::EDGES,&gaussianProcess::sqexp,true);
-	classi.buildDataMatrix(-1);
-
+	classi.init(0.8,150.0,featureExtractor::HOG,&gaussianProcess::sqexp,true);
+	classi.buildDataMatrix(-1,peopleDetector::TOP);
+*/
 	//--------------------------------------------------------------------------
-/*
+
 	// evaluate
  	classifyImages classi(argc,argv,classifyImages::EVALUATE);
-	classi.init(0.8,150.0,featureExtractor::EDGES,&gaussianProcess::sqexp,true);
-	classi.runCrossValidation(5,annotationsHandle::LONGITUDE,-1,true);
-*/
+	classi.init(0.8,150.0,featureExtractor::HOG,&gaussianProcess::sqexp,true);
+	classi.runCrossValidation(5,annotationsHandle::LONGITUDE,-1,false,\
+		peopleDetector::TOP);
+
 	//--------------------------------------------------------------------------
 /*
 	// BUILD THE SIFT DICTIONARY

@@ -192,7 +192,6 @@ float length){
 	for(int indy=0;indy<this->N;++indy){
 		kstar.at<float>(indy,0) = (this->*kFunction)(this->data.row(indy),x,length);
 	}
-
 	for(int i=0;i<this->alpha.cols;++i){
 		predi.mean.push_back(kstar.dot(this->alpha.col(i)));
 	}
