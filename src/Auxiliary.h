@@ -44,25 +44,35 @@ class Auxiliary{
 		static std::string int2string(int i);
 		/** Changes a given angle in RADIANS to be positive and between [0,2*M_PI).
 		 */
-		static void angle0to360(float &angle);
+		static void angle0to360(double &angle);
 		/** Changes a given angle in RADIANS to be positive and between [-M_PI,M_PI).
 		 */
-		static void angle180to180(float &angle);
+		static void angle180to180(double &angle);
 		/** Get perpendicular to a line given by 2 points A,B in point C.
 		 */
 		static void perpendicularLine(const cv::Point2f &A,const cv::Point2f &B,\
-			const cv::Point2f &C,float &m,float &b);
+			const cv::Point2f &C,double &m,double &b);
 		/** Checks to see if a point is on the same side of a line like another given point.
 		 */
 		static bool sameSubplane(const cv::Point2f &test,const cv::Point2f &point,\
-			float m,float b);
+			double m,double b);
 		/** Just displaying an image a bit larger to visualize it better.
 		 */
 		static void showZoomedImage(const cv::Mat &image,const std::string &title);
 		/** A function that transforms the data such that it has zero mean and unit
 		 * variance: img = (img-mean(img(:)))/std(img(:)).
 		 */
-		static void mean0Variance1(cv::Mat &mat);
+		static void mean0Variance1(cv::Mat &mat,bool justMean=false);
+		/** Used to sort a vector of points -- compares points on the X coordinate.
+		 */
+		static bool isSmallerPointX(const cv::Point2f &p1,const cv::Point2f &p2);
+		/** Compares 2 keypoints based on their response.
+		 */
+		static bool isLargerKey(const cv::KeyPoint &k1,const cv::KeyPoint &k2);
+		/** Compares 2 the lengths of 2 openCV contours (vectors of vectors of cv::Point).
+		 */
+		static bool isLongerContours(const std::vector<cv::Point> &c1,\
+			const std::vector<cv::Point> &c2);
 	private:
 		DISALLOW_COPY_AND_ASSIGN(Auxiliary);
 };

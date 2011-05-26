@@ -35,20 +35,20 @@ class classifyImages {
 		/** Creates the test data and applies \c GaussianProcess prediction on the test
 		 * data.
 		 */
-		std::deque<std::deque<float> > predictGP(std::deque<gaussianProcess::prediction>\
+		std::deque<std::deque<double> > predictGP(std::deque<gaussianProcess::prediction>\
 			&predictionsSin,std::deque<gaussianProcess::prediction> &predictionsCos,\
 			annotationsHandle::POSE what,bool fromFolder);
 
 		/** Initialize the options for the Gaussian Process regression.
 		 */
-		void init(float theNoise,float theLength,featureExtractor::FEATURE \
+		void init(double theNoise,double theLength,featureExtractor::FEATURE \
 			theFeature,gaussianProcess::kernelFunction theKFunction=\
 			&gaussianProcess::sqexp,bool toUseGT=false);
 
 		/** Evaluate one prediction versus its target.
 		 */
-		void evaluate(const std::deque<std::deque<float> > &prediAngles,\
-			float &error,float &normError,float &meanDiff);
+		void evaluate(const std::deque<std::deque<double> > &prediAngles,\
+			double &error,double &normError,double &meanDiff);
 
 		/** Do k-fold cross-validation by splitting the training folder into
 		 * training-set and validation-set.
@@ -57,17 +57,17 @@ class classifyImages {
 
 		/** Does the cross-validation and computes the average error over all folds.
 		 */
-		float runCrossValidation(unsigned k,annotationsHandle::POSE what,\
+		double runCrossValidation(unsigned k,annotationsHandle::POSE what,\
 			int colorSp=-1,bool onTrain=false,peopleDetector::FEATUREPART part=\
 			peopleDetector::WHOLE);
 		/** Runs the final evaluation (test).
 		 */
-		std::deque<std::deque<float> > runTest(int colorSp,\
-			annotationsHandle::POSE what,float &normError);
+		std::deque<std::deque<double> > runTest(int colorSp,\
+			annotationsHandle::POSE what,double &normError);
 		/** Try to optimize the prediction of the angle considering the variance
 		 * of sin and cos.
 		 */
-		float optimizePrediction(const gaussianProcess::prediction &predictionsSin,\
+		double optimizePrediction(const gaussianProcess::prediction &predictionsSin,\
 			const gaussianProcess::prediction &predictionsCos);
 		/** Reset the features object when the training and testing might have different
 		 * calibration,background models...
@@ -93,12 +93,12 @@ class classifyImages {
 		 * predictions).
 		 */
 		friend void multipleClassifier(int colorSp,annotationsHandle::POSE what,\
-			classifyImages &classi,float noise,float length,\
+			classifyImages &classi,double noise,double length,\
 			gaussianProcess::kernelFunction kernel,bool useGT);
 		/** Get the minimum and maximum angle given the motion vector.
 		 */
-		void getAngleLimits(unsigned classNo,unsigned predNo,float &angleMin,\
-			float &angleMax);
+		void getAngleLimits(unsigned classNo,unsigned predNo,double &angleMin,\
+			double &angleMax);
 		//======================================================================
 	protected:
 		/** @var features
@@ -159,12 +159,12 @@ class classifyImages {
 		/** @var noise
 		 * The noise level of the data.
 		 */
-		float noise;
+		double noise;
 
 		/** @var length
 		 * The length in the Gaussian Process.
 		 */
-		float length;
+		double length;
 
 		/** @var kFunction
 		 * The kernel function in the Gaussian Process.

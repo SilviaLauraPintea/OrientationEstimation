@@ -76,7 +76,7 @@ class annotationsHandle {
 			public:
 				short int id;
 				short int to;
-				float dist;
+				double dist;
 				ASSIGNED(){
 					this->id   = 0;
 					this->to   = 0;
@@ -157,8 +157,8 @@ class annotationsHandle {
 		 */
 		static void annoDifferences(std::deque<annotationsHandle::FULL_ANNOTATIONS>\
 			&train,std::deque<annotationsHandle::FULL_ANNOTATIONS> &test,\
-			float &avgDist,float &Ndiff,float ssdLongDiff,float ssdLatDiff,\
-			float poseDiff);
+			double &avgDist,double &Ndiff,double ssdLongDiff,double ssdLatDiff,\
+			double poseDiff);
 
 		/** Correlate annotations' from locations in \c annoOld to locations in
 		 * \c annoNew through IDs.
@@ -171,7 +171,7 @@ class annotationsHandle {
 		 * new distance.
 		 */
 		static bool canBeAssigned(std::deque<annotationsHandle::ASSIGNED> &idAssignedTo,\
-			short int id,float newDist,short int to);
+			short int id,double newDist,short int to);
 
 		/** Displays the complete annotations for all images.
 		 */

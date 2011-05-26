@@ -29,15 +29,15 @@ void Auxiliary::mat2ipl(const cv::Mat &image,IplImage* ipl_image){
 /** Convert the values from a cv::Mat of doubles to be between 0 and 1.
  */
 void Auxiliary::normalizeMat(cv::Mat &matrix){
-	matrix.convertTo(matrix,CV_32FC1);
-	float mini = matrix.at<float>(0,0),maxi = matrix.at<float>(0,0);
+	matrix.convertTo(matrix,cv::DataType<double>::type);
+	double mini = matrix.at<double>(0,0),maxi = matrix.at<double>(0,0);
 	for(int x=0;x<matrix.cols;++x){
 		for(int y=0;y<matrix.rows;++y){
-			if(mini>matrix.at<float>(y,x)){
-				mini = matrix.at<float>(y,x);
+			if(mini>matrix.at<double>(y,x)){
+				mini = matrix.at<double>(y,x);
 			}
-			if(maxi<matrix.at<float>(y,x)){
-				maxi = matrix.at<float>(y,x);
+			if(maxi<matrix.at<double>(y,x)){
+				maxi = matrix.at<double>(y,x);
 			}
 		}
 	}
@@ -71,11 +71,11 @@ void Auxiliary::mat2TxtFile(cv::Mat &matrix,char* fileName,bool append){
 		exit(1);
 	}
 
-	matrix.convertTo(matrix,CV_32FC1);
+	matrix.convertTo(matrix,cv::DataType<double>::type);
 	dictOut<<matrix.cols<<" "<<matrix.rows<<std::endl;
 	for(int y=0;y<matrix.rows;++y){
 		for(int x=0;x<matrix.cols;++x){
-			dictOut<<matrix.at<float>(y,x)<<" ";
+			dictOut<<matrix.at<double>(y,x)<<" ";
 		}
 		dictOut<<std::endl;
 	}
@@ -97,7 +97,7 @@ void Auxiliary::txtFile2Mat(cv::Mat &matrix,char* fileName){
 			char *pRows,*pCols;
 			int cols = strtol(flineVect[0].c_str(),&pCols,10);
 			int rows = strtol(flineVect[1].c_str(),&pRows,10);
-			matrix   = cv::Mat::zeros(cv::Size(cols,rows),CV_32FC1);
+			matrix   = cv::Mat::zeros(cv::Size(cols,rows),cv::DataType<double>::type);
 		}else return;
 		fline.clear();
 		flineVect.clear();
@@ -111,7 +111,7 @@ void Auxiliary::txtFile2Mat(cv::Mat &matrix,char* fileName){
 			if(lineVect.size()>=1){
 				for(std::size_t x=0;x<lineVect.size();++x){
 					char *pValue;
-					matrix.at<float>(y,static_cast<int>(x)) = \
+					matrix.at<double>(y,static_cast<int>(x)) = \
 						strtod(lineVect[x].c_str(),&pValue);
 				}
 				++y;
@@ -121,7 +121,7 @@ void Auxiliary::txtFile2Mat(cv::Mat &matrix,char* fileName){
 		}
 		dictFile.close();
 	}
-	matrix.convertTo(matrix,CV_32FC1);
+	matrix.convertTo(matrix,cv::DataType<double>::type);
 }
 //==============================================================================
 /** Write a 2D-matrix to a binary file (first the dimension of the matrix).
@@ -140,7 +140,7 @@ void Auxiliary::mat2BinFile(cv::Mat &matrix,char* fileName,bool append){
 		exit(1);
 	}
 
-	matrix.convertTo(matrix,CV_32FC1);
+	matrix.convertTo(matrix,cv::DataType<double>::type);
 
 	// FIRST WRITE THE DIMENSIONS OF THE MATRIX
 	mxFile.write(reinterpret_cast<char*>(&matrix.cols),sizeof(int));
@@ -149,8 +149,8 @@ void Auxiliary::mat2BinFile(cv::Mat &matrix,char* fileName,bool append){
 	// WRITE THE MATRIX TO THE FILE
 	for(int x=0;x<matrix.cols;++x){
 		for(int y=0;y<matrix.rows;++y){
-			mxFile.write(reinterpret_cast<char*>(&matrix.at<float>(y,x)),\
-				sizeof(float));
+			mxFile.write(reinterpret_cast<char*>(&matrix.at<double>(y,x)),\
+				sizeof(double));
 		}
 	}
 	mxFile.close();
@@ -170,18 +170,18 @@ void Auxiliary::binFile2mat(cv::Mat &matrix,char* fileName){
 		int cols,rows;
 		mxFile.read(reinterpret_cast<char*>(&cols),sizeof(int));
 		mxFile.read(reinterpret_cast<char*>(&rows),sizeof(int));
-		matrix = cv::Mat::zeros(cv::Size(cols,rows),CV_32FC1);
+		matrix = cv::Mat::zeros(cv::Size(cols,rows),cv::DataType<double>::type);
 
 		// READ THE CONTENT OF THE MATRIX
 		for(int x=0;x<matrix.cols;++x){
 			for(int y=0;y<matrix.rows;++y){
-				mxFile.read(reinterpret_cast<char*>(&matrix.at<float>(y,x)),\
-					sizeof(float));
+				mxFile.read(reinterpret_cast<char*>(&matrix.at<double>(y,x)),\
+					sizeof(double));
 			}
 		}
 		mxFile.close();
 	}
-	matrix.convertTo(matrix,CV_32FC1);
+	matrix.convertTo(matrix,cv::DataType<double>::type);
 }
 //==============================================================================
 /** Convert int to string.
@@ -194,7 +194,7 @@ std::string Auxiliary::int2string(int i){
 //==============================================================================
 /** Changes a given angle in RADIANS to be positive and between [0,2*M_PI).
  */
-void Auxiliary::angle0to360(float &angle){
+void Auxiliary::angle0to360(double &angle){
 	while(angle >= 2.0*M_PI){
 		angle -= 2.0*M_PI;
 	}
@@ -205,7 +205,7 @@ void Auxiliary::angle0to360(float &angle){
 //==============================================================================
 /** Changes a given angle in RADIANS to be positive and between [-M_PI,M_PI).
  */
-void Auxiliary::angle180to180(float &angle){
+void Auxiliary::angle180to180(double &angle){
 	while(angle >= 2.0*M_PI){
 		angle -= 2.0*M_PI;
 	}
@@ -218,7 +218,7 @@ void Auxiliary::angle180to180(float &angle){
 /** Checks to see if a point is on the same side of a line like another given point.
  */
 bool Auxiliary::sameSubplane(const cv::Point2f &test,const cv::Point2f &point,\
-float m,float b){
+double m,double b){
 	if(isnan(m)){
 		return (point.x*test.x)>=0.0;
 	}else if(m == 0){
@@ -231,8 +231,8 @@ float m,float b){
 /** Get perpendicular to a line given by 2 points A,B in point C.
  */
 void Auxiliary::perpendicularLine(const cv::Point2f &A,const cv::Point2f &B,\
-const cv::Point2f &C,float &m,float &b){
-	float slope = (float)(B.y - A.y)/(float)(B.x - A.x);
+const cv::Point2f &C,double &m,double &b){
+	double slope = (double)(B.y - A.y)/(double)(B.x - A.x);
 	m            = -1.0/slope;
 	b            = C.y - m * C.x;
 }
@@ -251,23 +251,43 @@ void Auxiliary::showZoomedImage(const cv::Mat &image,const std::string &title){
 /** A function that transforms the data such that it has zero mean and unit
  * variance: img = (img-mean(img(:)))/std(img(:)).
  */
-void Auxiliary::mean0Variance1(cv::Mat &mat){
-	mat.convertTo(mat,CV_32FC1);
+void Auxiliary::mean0Variance1(cv::Mat &mat,bool justMean){
+	mat.convertTo(mat,cv::DataType<double>::type);
 	unsigned rows = mat.rows;
 	if(rows != 1){
 		mat = mat.reshape(0,1);
 	}
 	cv::Scalar mean,stddev;
 	cv::meanStdDev(mat,mean,stddev);
-	if(stddev.val[0]){
+	if(stddev.val[0] && !justMean){
 		mat = (mat-mean.val[0])/stddev.val[0];
+	}else{
+		mat = (mat-mean.val[0]);
 	}
-	mat.convertTo(mat,CV_32FC1);
+	mat.convertTo(mat,cv::DataType<double>::type);
 	if(rows != 1){
 		mat = mat.reshape(0,rows);
 	}
 }
 //==============================================================================
-
-
+/** Used to sort a vector of points -- compares points on the X coordinate.
+ */
+bool Auxiliary::isSmallerPointX(const cv::Point2f &p1,const cv::Point2f &p2){
+	return (p1.x<p2.x);
+}
+//==============================================================================
+/** Compares 2 keypoints based on their response.
+ */
+bool Auxiliary::isLargerKey(const cv::KeyPoint &k1,\
+const cv::KeyPoint &k2){
+	return (k1.response>k2.response);
+}
+//==============================================================================
+/** Compares 2 the lengths of 2 openCV contours (vectors of vectors of cv::Point).
+ */
+bool Auxiliary::isLongerContours(const std::vector<cv::Point> &c1,\
+const std::vector<cv::Point> &c2){
+	return (c1.size()<c2.size());
+}
+//==============================================================================
 

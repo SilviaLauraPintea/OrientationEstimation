@@ -18,7 +18,7 @@ class featureExtractor {
 		struct keyDescr {
 			public:
 				cv::KeyPoint keys;
-				std::deque<float> descr;
+				std::deque<double> descr;
 				keyDescr(){};
 				virtual ~keyDescr(){
 					if(!this->descr.empty()){
@@ -83,7 +83,7 @@ class featureExtractor {
 			public:
 				cv::Point2f center;
 				cv::Point2f head;
-				std::deque<float> extremes;
+				std::deque<double> extremes;
 				std::vector<cv::Point2f> points;
 				templ(cv::Point theCenter){
 					this->center = theCenter;
@@ -109,8 +109,8 @@ class featureExtractor {
 		};
 		/** All available feature types.
 		 */
-		enum FEATURE {IPOINTS,EDGES,SIFT_DICT,SURF,SIFT,GABOR,PIXELS,\
-			HOG};
+		enum FEATURE {IPOINTS,EDGES,SIFT_DICT,SURF,SIFT,GABOR,TEMPL_MATCHES,\
+			HOG,RAW_PIXELS};
 		/** What needs to be rotated.
 		 */
 		enum ROTATE {MATRIX,TEMPLATE,KEYS};
@@ -147,7 +147,7 @@ class featureExtractor {
 		cv::Mat extractSURF(cv::Mat &image);
 		/** Gets the plain pixels corresponding to the upper part of the body.
 		 */
-		cv::Mat getPixels(const cv::Mat &image,const featureExtractor::templ &aTempl,\
+		cv::Mat getTemplMatches(const cv::Mat &image,const featureExtractor::templ &aTempl,\
 			const cv::Rect &roi,const cv::Mat &thresh);
 		/** Gets the HOG descriptors over an image.
 		 */
@@ -156,7 +156,7 @@ class featureExtractor {
 		/** Gets the edges in an image.
 		 */
 		cv::Mat getEdges(cv::Mat &feature,const cv::Mat &thresholded,\
-			const cv::Rect &roi,const featureExtractor::templ &aTempl,float rotAngle);
+			const cv::Rect &roi,const featureExtractor::templ &aTempl,double rotAngle);
 		/** SURF descriptors (Speeded Up Robust Features).
 		 */
 		cv::Mat getSURF(cv::Mat &feature,const std::vector<cv::Point2f> &templ,\
@@ -175,16 +175,20 @@ class featureExtractor {
 		 */
 		cv::Mat getGabor(cv::Mat &feature,const cv::Mat &thresholded,\
 			const cv::Rect &roi,const cv::Size &foregrSize,\
-			const featureExtractor::templ &aTempl,float rotAngle,int aheight);
+			const featureExtractor::templ &aTempl,double rotAngle,int aheight);
+		/** Gets the raw pixels corresponding to body of the person +/- background pixels.
+		 */
+		cv::Mat getRawPixels(const cv::Mat &feature,const featureExtractor::templ \
+			&aTempl,const cv::Rect &roi,const cv::Mat &thresh);
 		/** Creates a gabor with the parameters given by the parameter vector.
 		 */
-		void createGabor(cv::Mat &gabor,float *params = NULL);
+		void createGabor(cv::Mat &gabor,double *params = NULL);
 		/** Returns the row corresponding to the indicated feature type.
 		 */
 		cv::Mat getDataRow(int imageRows,const featureExtractor::templ &aTempl,\
 			const cv::Rect &roi,const featureExtractor::people &person,\
 			const cv::Mat &thresholded,const std::string &imgName,\
-			cv::Point2f &absRotCenter,cv::Point2f &rotBorders,float rotAngle,\
+			cv::Point2f &absRotCenter,cv::Point2f &rotBorders,double rotAngle,\
 			std::vector<cv::Point2f> &keys);
 		/** Compares SURF 2 descriptors and returns the boolean value of their comparison.
 		 */
@@ -196,7 +200,7 @@ class featureExtractor {
 			const std::vector<cv::Point2f> &templ);
 		/** Rotate a matrix/a template/keypoints wrt to the camera location.
 		 */
-		void rotate2Zero(float rotAngle,featureExtractor::ROTATE what,\
+		void rotate2Zero(double rotAngle,featureExtractor::ROTATE what,\
 			const cv::Rect roi,cv::Point2f &rotCenter,cv::Point2f &rotBorders,\
 			std::vector<cv::Point2f> &pts,cv::Mat &toRotate);
 		/**Return number of means.

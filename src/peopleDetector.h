@@ -47,24 +47,24 @@ class peopleDetector:public Tracker{
 		 * to make it work with the feature extraction.
 		 */
 		bool doFindPerson(unsigned imgNum,IplImage *src,\
-			const vnl_vector<FLOAT> &imgVec,vnl_vector<FLOAT> &bgVec,\
-			const FLOAT logBGProb,const vnl_vector<FLOAT> &logSumPixelBGProb);
+			const vnl_vector<double> &imgVec,vnl_vector<double> &bgVec,\
+			const double logBGProb,const vnl_vector<double> &logSumPixelBGProb);
 		/** Simple "menu" for skipping to the next image or quitting the processing.
 		 */
 		bool imageProcessingMenu();
 		/** Get the foreground pixels corresponding to each person.
 		 */
 		void allForegroundPixels(std::deque<featureExtractor::people> &allPeople,\
-			const IplImage *bg,float threshold);
+			const IplImage *bg,double threshold);
 		/** Gets the distance to the given template from a given pixel location.
 		 */
-		float getDistToTemplate(const int pixelX,const int pixelY,\
+		double getDistToTemplate(const int pixelX,const int pixelY,\
 			const std::vector<cv::Point2f> &templ);
 		/** Creates on data row in the final data matrix by getting the feature
 		 * descriptors.
 		 */
 		void extractDataRow(const IplImage *oldBg,const std::deque<unsigned> &existing=\
-			std::deque<unsigned>(),float threshVal=100.0);
+			std::deque<unsigned>(),double threshVal=100.0);
 		/** For each row added in the data matrix (each person detected for which we
 		 * have extracted some features) find the corresponding label.
 		 */
@@ -79,35 +79,35 @@ class peopleDetector:public Tracker{
 			const featureExtractor::FEATURE feat,const bool readFromFolder = true);
 		/** Checks to see if an annotation can be assigned to a detection.
 		 */
-		bool canBeAssigned(unsigned l,std::deque<float> &minDistances,\
-			unsigned k,float distance,std::deque<int> &assignment);
+		bool canBeAssigned(unsigned l,std::deque<double> &minDistances,\
+			unsigned k,double distance,std::deque<int> &assignment);
 		/** Fixes the angle to be relative to the camera position with respect to the
 		 * detected position.
 		 */
-		float fixAngle(const cv::Point2f &feetLocation,\
-			const cv::Point2f &cameraLocation,float angle);
+		double fixAngle(const cv::Point2f &feetLocation,\
+			const cv::Point2f &cameraLocation,double angle);
 		/** Get template extremities (if needed,considering some borders --
 		 * relative to the ROI).
 		 */
 		void templateExtremes(const std::vector<cv::Point2f> &templ,\
-			std::deque<float> &extremes,int minX = 0,int minY = 0);
+			std::deque<double> &extremes,int minX = 0,int minY = 0);
 		/** If only a part needs to be used to extract the features then the threshold
 		 * and the template need to be changed.
 		 */
-		void templatePart(cv::Mat &thresholded,int k,float offsetX,float offsetY);
+		void templatePart(cv::Mat &thresholded,int k,double offsetX,double offsetY);
 		/** Computes the motion vector for the current image given the tracks so far.
 		 */
-		float motionVector(const cv::Point2f &head,const cv::Point2f &center,\
+		double motionVector(const cv::Point2f &head,const cv::Point2f &center,\
 			bool &moved);
 		/** Compute the dominant direction of the SIFT or SURF features.
 		 */
-		float opticalFlow(cv::Mat &currentImg,cv::Mat &nextImg,\
+		double opticalFlow(cv::Mat &currentImg,cv::Mat &nextImg,\
 			const std::vector<cv::Point2f> &keyPts,const cv::Point2f &head,\
 			const cv::Point2f &center,bool maxOrAvg);
 		/** Keeps only the largest blob from the thresholded image.
 		 */
 		void keepLargestBlob(cv::Mat &thresh,const cv::Point2f &center,\
-			float tmplArea);
+			double tmplArea);
 		/** Reads the locations at which there are people in the current frame (for the
 		 * case in which we do not want to use the tracker or build a bgModel).
 		 */
@@ -121,10 +121,10 @@ class peopleDetector:public Tracker{
 		/** Assigns pixels to templates based on proximity.
 		 */
 		void pixels2Templates(int maxX,int minX,int maxY,int minY,int k,\
-			const cv::Mat &thresh,float tmplHeight,cv::Mat &colorRoi);
+			const cv::Mat &thresh,double tmplHeight,cv::Mat &colorRoi);
 		/** Return rotation angle given the head and feet position.
 		 */
-		float rotationAngle(const cv::Point2f &headLocation,\
+		double rotationAngle(const cv::Point2f &headLocation,\
 			const cv::Point2f &feetLocation);
 		/** Fixes the existing/detected locations of people and updates the tracks and
 		 * creates the bordered image.
@@ -140,7 +140,7 @@ class peopleDetector:public Tracker{
 			const cv::Point2f &head);
 		/** Get distance wrt the camera in the image.
 		 */
-		float distanceWRTcamera(const cv::Point2f &feet);
+		double distanceWRTcamera(const cv::Point2f &feet);
 		//======================================================================
 	public:
 		/** @var print
@@ -211,7 +211,7 @@ class peopleDetector:public Tracker{
 		/** @var dataMotionVectors
 		 * The motion vectors for all the images in the data matrix
 		 */
-		std::deque<std::deque<float> > dataMotionVectors;
+		std::deque<std::deque<double> > dataMotionVectors;
 		/** @var classesRange
 		 * The minimum/maximum template size for each class as a vector of points
 		 */

@@ -72,7 +72,7 @@ class cholesky {
 
 		/** Returns the log of the determiner of the (covariance) matrix,A.
 		 */
-		float logDet();
+		double logDet();
 	//==========================================================================
 	public:
 		unsigned n;

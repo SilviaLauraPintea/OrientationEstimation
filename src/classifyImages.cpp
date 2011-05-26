@@ -151,7 +151,7 @@ classifyImages::~classifyImages(){
 //==============================================================================
 /** Initialize the options for the Gaussian Process regression.
  */
-void classifyImages::init(float theNoise,float theLength,\
+void classifyImages::init(double theNoise,double theLength,\
 featureExtractor::FEATURE theFeature,gaussianProcess::kernelFunction theKFunction,\
 bool toUseGT){
 	this->noise          = theNoise;
@@ -180,8 +180,12 @@ bool toUseGT){
 			this->modelName += "SIFT/";
 			Helpers::file_exists(this->modelName.c_str(),true);
 			break;
-		case(featureExtractor::PIXELS):
-			this->modelName += "PIXELS/";
+		case(featureExtractor::TEMPL_MATCHES):
+			this->modelName += "TEMPL_MATCHES/";
+			Helpers::file_exists(this->modelName.c_str(),true);
+			break;
+		case(featureExtractor::RAW_PIXELS):
+			this->modelName += "RAW_PIXELS/";
 			Helpers::file_exists(this->modelName.c_str(),true);
 			break;
 		case(featureExtractor::HOG):
@@ -234,9 +238,9 @@ unsigned i){
 	unsigned colsData     = std::max(tmpData2.cols,tmpData1.cols);
 	unsigned colsTargets  = std::max(tmpTargets2.cols,tmpTargets1.cols);
 	this->trainData[i]    = cv::Mat::zeros(cv::Size(colsData,tmpData1.rows+\
-		tmpData2.rows),CV_32FC1);
+		tmpData2.rows),cv::DataType<double>::type);
 	this->trainTargets[i] = cv::Mat::zeros(cv::Size(colsTargets,tmpTargets1.rows+\
-		tmpTargets2.rows),CV_32FC1);
+		tmpTargets2.rows),cv::DataType<double>::type);
 
 	// COPY DATA1 AND TARGETS1 TO THE DATA MATRIX
 	if(!tmpData1.empty() && !tmpTargets1.empty()){
@@ -255,8 +259,8 @@ unsigned i){
 			tmpTargets1.rows+tmpTargets2.rows);
 		tmpTargets2.copyTo(dumTargets2);
 	}
-	this->trainData[i].convertTo(this->trainData[i],CV_32FC1);
-	this->trainTargets[i].convertTo(this->trainTargets[i],CV_32FC1);
+	this->trainData[i].convertTo(this->trainData[i],cv::DataType<double>::type);
+	this->trainTargets[i].convertTo(this->trainTargets[i],cv::DataType<double>::type);
 	std::cout<<names[i]<<" data: "<<this->trainData[i].size()<<"=("<<\
 		tmpData1.size()<<"+"<<tmpData2.size()<<")"<<std::endl;
 	std::cout<<names[i]<<" targets: "<<this->trainTargets[i].size()<<"=("<<\
@@ -293,8 +297,8 @@ void classifyImages::trainGP(annotationsHandle::POSE what,bool fromFolder){
 		cv::Mat tmpData,tmpTargets;
 		this->features->data[i].copyTo(tmpData);
 		this->features->targets[i].copyTo(tmpTargets);
-		tmpData.convertTo(tmpData,CV_32FC1);
-		tmpTargets.convertTo(tmpTargets,CV_32FC1);
+		tmpData.convertTo(tmpData,cv::DataType<double>::type);
+		tmpTargets.convertTo(tmpTargets,cv::DataType<double>::type);
 		this->loadData(tmpData,tmpTargets,i);
 
 		// CHECK TO SEE IF THERE IS ANY DATA IN THE CURRENT CLASS
@@ -373,9 +377,9 @@ void classifyImages::buildDataMatrix(int colorSp,peopleDetector::FEATUREPART par
 		}
 		cv::Mat dumData1,dumData2,dumTargets1,dumTargets2;
 		this->trainData[i]    = cv::Mat::zeros(cv::Size(tmpData2.cols,tmpData1.rows+\
-			tmpData2.rows),CV_32FC1);
+			tmpData2.rows),cv::DataType<double>::type);
 		this->trainTargets[i] = cv::Mat::zeros(cv::Size(tmpTargets2.cols,\
-			tmpTargets1.rows+tmpTargets2.rows),CV_32FC1);
+			tmpTargets1.rows+tmpTargets2.rows),cv::DataType<double>::type);
 		if(!tmpData1.empty()){
 			dumData1 = this->trainData[i].rowRange(0,tmpData1.rows);
 			tmpData1.copyTo(dumData1);
@@ -414,7 +418,7 @@ void classifyImages::buildDataMatrix(int colorSp,peopleDetector::FEATUREPART par
 /** Creates the test data and applies \c GaussianProcess prediction on the test
  * data.
  */
-std::deque<std::deque<float> > classifyImages::predictGP\
+std::deque<std::deque<double> > classifyImages::predictGP\
 (std::deque<gaussianProcess::prediction> &predictionsSin,\
 std::deque<gaussianProcess::prediction> &predictionsCos,\
 annotationsHandle::POSE what,bool fromFolder){
@@ -433,10 +437,10 @@ annotationsHandle::POSE what,bool fromFolder){
 	// FOR TESTING WE ALWAYS BUILT THE DATA (THERE IS NOT SAVED MODEL)
 	std::deque<std::string> names;
 	names.push_back("CLOSE");names.push_back("MEDIUM");	names.push_back("FAR");
-	std::deque<std::deque<float> > predictions;
+	std::deque<std::deque<double> > predictions;
 	for(peopleDetector::CLASSES i=peopleDetector::CLOSE;i<=peopleDetector::FAR;++i){
 		// CHECK TO SEE IF THERE IS ANY DATA IN THE CURRENT CLASS
-		std::deque<float> oneClassPredictions;
+		std::deque<double> oneClassPredictions;
 		if(this->features->data[i].empty() || !this->gpSin[i].N || !this->gpCos[i].N){
 			predictions.push_back(oneClassPredictions);
 			continue;
@@ -454,8 +458,8 @@ annotationsHandle::POSE what,bool fromFolder){
 			dum.release();
 		}
 		assert(this->testData[i].rows==this->testTargets[i].rows);
-		this->testData[i].convertTo(this->testData[i],CV_32FC1);
-		this->testTargets[i].convertTo(this->testTargets[i],CV_32FC1);
+		this->testData[i].convertTo(this->testData[i],cv::DataType<double>::type);
+		this->testTargets[i].convertTo(this->testTargets[i],cv::DataType<double>::type);
 
 		// FOR EACH ROW IN THE TEST MATRIX PREDICT
 		for(int j=0;j<this->testData[i].rows;++j){
@@ -478,28 +482,35 @@ annotationsHandle::POSE what,bool fromFolder){
 //==============================================================================
 /** Evaluate one prediction versus its target.
  */
-void classifyImages::evaluate(const std::deque<std::deque<float> > &prediAngles,\
-float &error,float &normError,float &meanDiff){
+void classifyImages::evaluate(const std::deque<std::deque<double> > &prediAngles,\
+double &error,double &normError,double &meanDiff){
 	error = 0.0;normError = 0.0;meanDiff = 0.0;
 	unsigned noPeople = 0;
 	std::deque<std::string> names;
+
+	cv::Mat bins = cv::Mat::zeros(cv::Size(18,1),cv::DataType<double>::type);
+
 	names.push_back("CLOSE");names.push_back("MEDIUM");	names.push_back("FAR");
 	for(peopleDetector::CLASSES i=peopleDetector::CLOSE;i<=peopleDetector::FAR;++i){
 		std::cout<<"Class "<<names[i]<<": "<<this->testTargets[i].size()<<\
 			" people"<<std::endl;
 		assert(this->testTargets[i].rows == prediAngles[i].size());
 		for(int y=0;y<this->testTargets[i].rows;++y){
-			float targetAngle = std::atan2(this->testTargets[i].at<float>(y,0),\
-				this->testTargets[i].at<float>(y,1));
+			double targetAngle = std::atan2(this->testTargets[i].at<double>(y,0),\
+				this->testTargets[i].at<double>(y,1));
 			Auxiliary::angle0to360(targetAngle);
 
 			std::cout<<"Target: "<<targetAngle<<"("<<(targetAngle*180.0/M_PI)<<\
 				") VS "<<prediAngles[i][y]<<"("<<(prediAngles[i][y]*180.0/M_PI)<<\
 				")"<<std::endl;
-			float absDiff = std::abs(targetAngle-prediAngles[i][y]);
+			double absDiff = std::abs(targetAngle-prediAngles[i][y]);
 			if(absDiff > M_PI){
 				absDiff = 2.0*M_PI - absDiff;
 			}
+
+			int ind = ((absDiff*180.0/M_PI)/10);
+			++bins.at<double>(0,ind);
+
 			std::cout<<"Difference: "<< absDiff <<std::endl;
 			error     += absDiff*absDiff;
 			normError += (absDiff*absDiff)/(M_PI*M_PI);
@@ -516,23 +527,25 @@ float &error,float &normError,float &meanDiff){
 	std::cout<<"RMS-accuracy normalized: "<<(1-normError)<<std::endl;
 	std::cout<<"RMS-error: "<<error<<std::endl;
 	std::cout<<"Avg-Radians-Difference: "<<meanDiff<<std::endl;
+	std::cout<<"bins=["<<bins<<"]"<<std::endl;
+	bins.release();
 }
 //==============================================================================
 /** Try to optimize the prediction of the angle considering the variance of sin
  * and cos.
  */
-float classifyImages::optimizePrediction(const gaussianProcess::prediction \
+double classifyImages::optimizePrediction(const gaussianProcess::prediction \
 &predictionsSin,const gaussianProcess::prediction &predictionsCos){
-	float y          = predictionsSin.mean[0];
-	float x          = predictionsCos.mean[0];
-	float prediction = std::atan2(y,x);
+	double y          = predictionsSin.mean[0];
+	double x          = predictionsCos.mean[0];
+	double prediction = std::atan2(y,x);
 	Auxiliary::angle0to360(prediction);
 	return prediction;
 /*
-	float betaS = 1.0/(predictionsSin.variance[0]);
-	float betaC = 1.0/(predictionsCos.variance[0]);
-	float y     = predictionsSin.mean[0];
-	float x     = predictionsCos.mean[0];
+	double betaS = 1.0/(predictionsSin.variance[0]);
+	double betaC = 1.0/(predictionsCos.variance[0]);
+	double y     = predictionsSin.mean[0];
+	double x     = predictionsCos.mean[0];
 
 	if(betaS == betaC){
 		return std::atan2(betaS*y,betaC*x);
@@ -541,15 +554,15 @@ float classifyImages::optimizePrediction(const gaussianProcess::prediction \
 	}
 */
 	/*
-	float closeTo;
+	double closeTo;
 	closeTo = std::atan2(predictionsSin.mean[0],predictionsCos.mean[0]);
-	std::deque<float> alphas;
+	std::deque<double> alphas;
 	if(betaS != betaC){
 		std::cout<<"betaS="<<betaS<<" betaC="<<betaC<<" x="<<x<<" y="<<y<<std::endl;
 
-		float b = -1.0*(betaS*x + betaC*y + betaS - betaC);
-		float a = betaS - betaC;
-		float c = betaS*x;
+		double b = -1.0*(betaS*x + betaC*y + betaS - betaC);
+		double a = betaS - betaC;
+		double c = betaS*x;
 
 		std::cout<<"b="<<b<<" a="<<a<<" c="<<c<<std::endl;
 		std::cout<<"alpha1: "<<((-b + std::sqrt(b*b - 4.0*a*c))/2.0*a)<<std::endl;
@@ -561,11 +574,11 @@ float classifyImages::optimizePrediction(const gaussianProcess::prediction \
 		std::cout<<"alpha1: "<<(betaS*x/(betaS*x + betaC*y))<<std::endl;
 		alphas.push_back(betaS*x/(betaS*x + betaC*y));
 	}
-	float minDist = 2.0*M_PI,minAngle;
+	double minDist = 2.0*M_PI,minAngle;
 	for(unsigned i=0;i<alphas.size();++i){
 		if(alphas[i]>=0){
-			float alpha1 = std::asin(std::sqrt(alphas[i]));
-			float alpha2 = std::asin(-std::sqrt(alphas[i]));
+			double alpha1 = std::asin(std::sqrt(alphas[i]));
+			double alpha2 = std::asin(-std::sqrt(alphas[i]));
 			if(std::abs(alpha1-closeTo)<minDist){
 				minDist  = std::abs(alpha1-closeTo);
 				minAngle = alpha1;
@@ -600,12 +613,12 @@ void classifyImages::buildDictionary(int colorSp,bool toUseGT){
 		this->features->extractor->setImageClass(static_cast<unsigned>(i));
 
 		// DO K-means IN ORDER TO RETRIEVE BACK THE CLUSTER MEANS
-		cv::Mat labels = cv::Mat::zeros(cv::Size(1,dictData.rows),CV_32FC1);
+		cv::Mat labels = cv::Mat::zeros(cv::Size(1,dictData.rows),cv::DataType<double>::type);
 
 		//LABEL EACH SAMPLE ASSIGNMENT
 		cv::Mat* centers = new cv::Mat(cv::Size(dictData.cols,\
-			this->features->extractor->readNoMeans()),CV_32FC1);
-		dictData.convertTo(dictData,CV_32FC1);
+			this->features->extractor->readNoMeans()),cv::DataType<double>::type);
+		dictData.convertTo(dictData,cv::DataType<double>::type);
 		cv::kmeans(dictData,this->features->extractor->readNoMeans(),labels,\
 			cv::TermCriteria(cv::TermCriteria::MAX_ITER|cv::TermCriteria::EPS,2,1),\
 			5,cv::KMEANS_RANDOM_CENTERS,centers);
@@ -627,9 +640,9 @@ void classifyImages::buildDictionary(int colorSp,bool toUseGT){
 //==============================================================================
 /** Does the cross-validation and computes the average error over all folds.
  */
-float classifyImages::runCrossValidation(unsigned k,annotationsHandle::POSE what,\
+double classifyImages::runCrossValidation(unsigned k,annotationsHandle::POSE what,\
 int colorSp,bool onTrain,peopleDetector::FEATUREPART part){
-	float finalError=0.0,finalNormError=0.0,finalMeanDiff=0.0;
+	double finalError=0.0,finalNormError=0.0,finalMeanDiff=0.0;
 
 	// SET THE CALIBRATION ONLY ONCE (ALL IMAGES ARE READ FROM THE SAME DIR)
 	this->resetFeatures(this->trainDir,this->trainImgString,colorSp,part);
@@ -639,7 +652,7 @@ int colorSp,bool onTrain,peopleDetector::FEATUREPART part){
 		// SPLIT TRAINING AND TESTING ACCORDING TO THE CURRENT FOLD
 		std::deque<gaussianProcess::prediction> predictionsSin;
 		std::deque<gaussianProcess::prediction> predictionsCos;
-		std::deque<std::deque<float> > predicted;
+		std::deque<std::deque<double> > predicted;
 		this->crossValidation(k,i,onTrain);
 		//______________________________________________________________________
 		if(what == annotationsHandle::LONGITUDE){
@@ -653,7 +666,7 @@ int colorSp,bool onTrain,peopleDetector::FEATUREPART part){
 				annotationsHandle::LONGITUDE,false);
 
 			// EVALUATE PREDICITONS
-			float errorLong,normErrorLong,meanDiffLong;
+			double errorLong,normErrorLong,meanDiffLong;
 			this->evaluate(predicted,errorLong,normErrorLong,meanDiffLong);
 			finalError     += errorLong;
 			finalNormError += normErrorLong;
@@ -673,7 +686,7 @@ int colorSp,bool onTrain,peopleDetector::FEATUREPART part){
 				annotationsHandle::LATITUDE,false);
 
 			// EVALUATE PREDICITONS
-			float errorLat,normErrorLat,meanDiffLat;
+			double errorLat,normErrorLat,meanDiffLat;
 			this->evaluate(predicted,errorLat,normErrorLat,meanDiffLat);
 			finalError     += errorLat;
 			finalNormError += normErrorLat;
@@ -684,9 +697,9 @@ int colorSp,bool onTrain,peopleDetector::FEATUREPART part){
 		}
 		sleep(6);
 	}
-	finalError     /= static_cast<float>(k);
-	finalNormError /= static_cast<float>(k);
-	finalMeanDiff  /= static_cast<float>(k);
+	finalError     /= static_cast<double>(k);
+	finalNormError /= static_cast<double>(k);
+	finalMeanDiff  /= static_cast<double>(k);
 	std::cout<<">>> final-RMS-error:"<<finalError<<std::endl;
 	std::cout<<">>> final-RMS-normalized-error:"<<finalNormError<<std::endl;
 	std::cout<<">>> final-avg-difference:"<<finalMeanDiff<<std::endl;
@@ -714,7 +727,7 @@ void classifyImages::crossValidation(unsigned k,unsigned fold,bool onTrain){
 			}
 			annoIn.close();
 		}
-		sort(this->annoList.begin(),this->annoList.end());
+		std::sort(this->annoList.begin(),this->annoList.end(),(&Helpers::sortAnnotations));
 		if(this->annoList.size()!=this->imageList.size()){
 			std::cerr<<"The number of images != The number of annotations!"<<\
 				std::endl;
@@ -751,6 +764,7 @@ void classifyImages::crossValidation(unsigned k,unsigned fold,bool onTrain){
 	if(!annoTrain){
 		errx(1,"Cannot open file %s",this->annotationsTrain.c_str());
 	}
+
 	for(unsigned i=0;i<this->imageList.size();++i){
 		if(i>=(this->foldSize*fold) && i<(this->foldSize*(fold+1))){
 			testOut<<this->imageList[i]<<std::endl;
@@ -760,6 +774,7 @@ void classifyImages::crossValidation(unsigned k,unsigned fold,bool onTrain){
 			annoTrain<<this->annoList[i]<<std::endl;
 		}
 	}
+
 	testOut.close();
 	trainOut.close();
 	annoTest.close();
@@ -789,12 +804,12 @@ int colorSp,peopleDetector::FEATUREPART part){
 //==============================================================================
 /** Runs the final evaluation (test).
  */
-std::deque<std::deque<float> > classifyImages::runTest(int colorSp,\
-annotationsHandle::POSE what,float &normError){
+std::deque<std::deque<double> > classifyImages::runTest(int colorSp,\
+annotationsHandle::POSE what,double &normError){
 	// LONGITUDE TRAINING AND PREDICTING
 	std::deque<gaussianProcess::prediction> predictionsSin;
 	std::deque<gaussianProcess::prediction> predictionsCos;
-	std::deque<std::deque<float> > predicted;
+	std::deque<std::deque<double> > predicted;
 	if(what == annotationsHandle::LONGITUDE){
 		std::cout<<"Longitude >>> ______________________________________________"<<\
 			"_____________________________________________________"<<std::endl;
@@ -808,7 +823,7 @@ annotationsHandle::POSE what,float &normError){
 			annotationsHandle::LONGITUDE,true);
 
 		// EVALUATE PREDICTIONS
-		float errorLong,normErrorLong,meanDiffLong;
+		double errorLong,normErrorLong,meanDiffLong;
 		this->evaluate(predicted,errorLong,normErrorLong,meanDiffLong);
 		normError = normErrorLong;
 	}else if(what == annotationsHandle::LATITUDE){
@@ -826,7 +841,7 @@ annotationsHandle::POSE what,float &normError){
 			annotationsHandle::LATITUDE,true);
 
 		// EVALUATE PREDICTIONS
-		float errorLat,normErrorLat,meanDiffLat;
+		double errorLat,normErrorLat,meanDiffLat;
 		this->evaluate(predicted,errorLat,normErrorLat,meanDiffLat);
 		normError = normErrorLat;
 	}
@@ -836,7 +851,7 @@ annotationsHandle::POSE what,float &normError){
 /** Get the minimum and maximum angle given the motion vector.
  */
 void classifyImages::getAngleLimits(unsigned classNo,unsigned predNo,\
-float &angleMin,float &angleMax){
+double &angleMin,double &angleMax){
 	if(this->features->dataMotionVectors[classNo][predNo] == -1.0){
 		angleMax = 2*M_PI;
 		angleMin = 0.0;
@@ -846,7 +861,7 @@ float &angleMin,float &angleMax){
 		angleMax = this->features->dataMotionVectors[classNo][predNo]+M_PI/2.0;
 		Auxiliary::angle0to360(angleMax);
 		if(angleMin>angleMax){
-			float aux = angleMin;
+			double aux = angleMin;
 			angleMin  = angleMax;
 			angleMax  = aux;
 		}
@@ -857,13 +872,13 @@ float &angleMin,float &angleMax){
  * predictions).
  */
 void multipleClassifier(int colorSp,annotationsHandle::POSE what,\
-classifyImages &classi,float noise,float length,gaussianProcess::kernelFunction \
+classifyImages &classi,double noise,double length,gaussianProcess::kernelFunction \
 kernel,bool useGT){
 	classi.init(noise,length,featureExtractor::IPOINTS,kernel,useGT);
 
-	std::deque<std::deque<std::deque<float> > > predictions;
-	std::deque<std::deque<float> > tmpPrediction;
-	float dummy = 0;
+	std::deque<std::deque<std::deque<double> > > predictions;
+	std::deque<std::deque<double> > tmpPrediction;
+	double dummy = 0;
 	switch(classi.feature){
 		case(featureExtractor::IPOINTS):
 			classi.feature = featureExtractor::IPOINTS;
@@ -905,16 +920,16 @@ kernel,bool useGT){
 	}
 
 	// HOW TO COMBINE THEM?BIN VOTES EVERY 20DEGREES AND AVERAGE THE WINNING BIN
-	std::deque<std::deque<float> > finalPreds;
+	std::deque<std::deque<double> > finalPreds;
 	for(std::size_t n=0;n<predictions[0].size();++n){// CLASSES
-		std::deque<float> preFinalPreds;
+		std::deque<double> preFinalPreds;
 		for(std::size_t o=0;o<predictions[0][n].size();++o){// PREDICTIONS
 			// FOR EACH PREDICTION BIN THE VOTES AND FIND THE "WINNING" ANGLE
 			std::deque<unsigned> votes(18,0);
-			std::deque<float> bins(18,0.0);
+			std::deque<double> bins(18,0.0);
 			unsigned winningLabel   = 0;
 			unsigned winningNoVotes = 0;
-			float angleMin,angleMax;
+			double angleMin,angleMax;
 			classi.getAngleLimits(n,o,angleMin,angleMax);
 			for(std::size_t m=0;m<predictions.size();++m){ // OVER FEATURES
 				// CHECK IF THE PREDICTIONS ARE IN THE GOOD RANGE
@@ -931,11 +946,11 @@ kernel,bool useGT){
 				}
 			}
 			// IF NOT PREDICTION WAS WITHIN THE LIMITS:
-			float guess;
+			double guess;
 			if(winningNoVotes==0){
 				guess = classi.features->dataMotionVectors[n][o];
 			}else{
-				guess = bins[winningLabel]/static_cast<float>(votes[winningLabel]);
+				guess = bins[winningLabel]/static_cast<double>(votes[winningLabel]);
 			}
 			// STORE THE FINAL PREDICTIONS
 			preFinalPreds.push_back(guess);
@@ -948,7 +963,7 @@ kernel,bool useGT){
 	// FINALLY EVALUATE THE FINAL PREDICTIONS
 	std::cout<<"FINAL EVALUATION________________________________________________"<<\
 		"________________________"<<std::endl;
-	float error = 0.0,normError=0.0,meanDiff=0.0;
+	double error = 0.0,normError=0.0,meanDiff=0.0;
 	classi.evaluate(finalPreds,error,normError,meanDiff);
 }
 //==============================================================================
@@ -961,14 +976,14 @@ gaussianProcess::kernelFunction kernel){
   	std::ofstream train,test;
 	train.open(errorsOnTrain.c_str(),std::ios::out | std::ios::app);
 	test.open(errorsOnTest.c_str(),std::ios::out | std::ios::app);
-	for(float v=0.2;v<5.0;v+=0.1){
-		for(float l=68.0;l<150.0;l+=1.0){
+	for(double v=0.2;v<5.0;v+=0.1){
+		for(double l=68.0;l<150.0;l+=1.0){
 			classi.init(v,l,feat,kernel,useGt);
-			float errorTrain = classi.runCrossValidation(2,what,colorSp,true);
+			double errorTrain = classi.runCrossValidation(2,what,colorSp,true);
 			train<<v<<" "<<l<<" "<<errorTrain<<std::endl;
 			//-------------------------------------------
 			classi.init(v,l,feat,kernel,useGt);
-			float errorTest = classi.runCrossValidation(2,what,colorSp,false);
+			double errorTest = classi.runCrossValidation(2,what,colorSp,false);
 			test<<v<<" "<<l<<" "<<errorTest<<std::endl;
 		}
 	}
@@ -979,7 +994,7 @@ gaussianProcess::kernelFunction kernel){
 int main(int argc,char **argv){
 /*
 	// test
-	float normError = 0.0f;
+	double normError = 0.0f;
 	classifyImages classi(argc,argv,classifyImages::TEST);
 	classi.init(0.85,85.0,featureExtractor::HOG,&gaussianProcess::sqexp,true);
  	classi.runTest(-1,annotationsHandle::LONGITUDE,normError);
@@ -995,8 +1010,8 @@ int main(int argc,char **argv){
 
 	// evaluate
  	classifyImages classi(argc,argv,classifyImages::EVALUATE);
-	classi.init(0.8,150.0,featureExtractor::HOG,&gaussianProcess::sqexp,true);
-	classi.runCrossValidation(5,annotationsHandle::LONGITUDE,-1,false,\
+	classi.init(0.01,10.0,featureExtractor::RAW_PIXELS,&gaussianProcess::sqexp,true);
+	classi.runCrossValidation(4,annotationsHandle::LONGITUDE,-1,false,\
 		peopleDetector::TOP);
 
 	//--------------------------------------------------------------------------

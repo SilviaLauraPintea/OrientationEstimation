@@ -14,15 +14,15 @@ class gaussianProcess {
 	public:
 		/** Define a pointer to the kernel function
 		 */
-		typedef float (gaussianProcess::*kernelFunction)(const cv::Mat&,\
-			const cv::Mat&,float);
+		typedef double (gaussianProcess::*kernelFunction)(const cv::Mat&,\
+			const cv::Mat&,double);
 
 		/** A structure used to define predictions.
 		 */
 		struct prediction {
 			public:
-			  std::deque<float> mean;
-			  std::deque<float> variance;
+			  std::deque<double> mean;
+			  std::deque<double> variance;
 			  prediction(){};
 			  virtual ~prediction(){
 				  if(!this->mean.empty()){
@@ -101,19 +101,19 @@ class gaussianProcess {
 		/** Generates a selected distribution of the functions given the parameters (the
 		 * mean: mu,the covariance: cov,the data x).
 		 */
-		float distribution(const cv::Mat &x,const gaussianProcess::DISTRIBUTION \
-			&distrib,const cv::Mat &mu,const cv::Mat &cov,float a=0,float b=0,\
-			float s=0);
+		double distribution(const cv::Mat &x,const gaussianProcess::DISTRIBUTION \
+			&distrib,const cv::Mat &mu,const cv::Mat &cov,double a=0,double b=0,\
+			double s=0);
 
 		/** Trains the Gaussian process.
 		 */
-		void train(const cv::Mat &X,const cv::Mat &y,float (gaussianProcess::*fFunction)\
-			(const cv::Mat&,const cv::Mat&,float),float sigmasq,float length);
+		void train(const cv::Mat &X,const cv::Mat &y,double (gaussianProcess::*fFunction)\
+			(const cv::Mat&,const cv::Mat&,double),double sigmasq,double length);
 
 		/** Returns the prediction for the test data,x (only one test data point).
 		 */
 		void predict(const cv::Mat &x,gaussianProcess::prediction &predi,\
-			float length);
+			double length);
 
 		/** Samples an N-dimensional Gaussian.
 		 */
@@ -121,7 +121,7 @@ class gaussianProcess {
 
 		/** Returns a random number from the normal distribution.
 		 */
-		float rand_normal();
+		double rand_normal();
 
 		/** Samples the process that generates the inputs.
 		 */
@@ -129,27 +129,30 @@ class gaussianProcess {
 
 		/** Samples the Gaussian Process Prior.
 		 */
-		void sampleGPPrior(float (gaussianProcess::*fFunction)\
-		(const cv::Mat&,const cv::Mat&,float),const cv::Mat &inputs,cv::Mat &smpl);
+		void sampleGPPrior(double (gaussianProcess::*fFunction)\
+		(const cv::Mat&,const cv::Mat&,double),const cv::Mat &inputs,cv::Mat &smpl);
 
 		// Squared exponential kernel function.
-		float sqexp(const cv::Mat &x1,const cv::Mat &x2,float l=1.0);
+		double sqexp(const cv::Mat &x1,const cv::Mat &x2,double l=1.0);
 
 		// Matern05 kernel function.
-		float matern05(const cv::Mat &x1,const cv::Mat &x2,float l=1.0);
+		double matern05(const cv::Mat &x1,const cv::Mat &x2,double l=1.0);
 
 		// Exponential Covariance kernel function.
-		float expCovar(const cv::Mat &x1,const cv::Mat &x2,float l=1.0);
+		double expCovar(const cv::Mat &x1,const cv::Mat &x2,double l=1.0);
 
 		// Matern15 kernel function.
-		float matern15(const cv::Mat &x1,const cv::Mat &x2,float l=1.0);
+		double matern15(const cv::Mat &x1,const cv::Mat &x2,double l=1.0);
 
 		// Matern25 kernel function.
-		float matern25(const cv::Mat &x1,const cv::Mat &x2,float l=1.0);
+		double matern25(const cv::Mat &x1,const cv::Mat &x2,double l=1.0);
 		/** Initializes or re-initializes a Gaussian Process.
 		 */
 		void init(gaussianProcess::kernelFunction theKFunction =\
 			&gaussianProcess::sqexp);
+		/** Useful to compute the distance between 2 edges.
+		 */
+		double matchShapes(const cv::Mat &x1,const cv::Mat &x2,double l);
 		//======================================================================
 	public:
 		/** @var chlsky
@@ -178,7 +181,7 @@ class gaussianProcess {
 		kernelFunction kFunction;
 
 		bool _norm_fast;
-		float _norm_next,_norm_max;
+		double _norm_next,_norm_max;
 		int rand_x,rand_y;
 };
 #endif /* GAUSSIANPROCESS_H_ */

@@ -58,7 +58,7 @@ bool buildBg,int colorSp,peopleDetector::FEATUREPART part):Tracker\
 	for(unsigned i=0;i<3;++i){
 		this->data.push_back(cv::Mat());
 		this->targets.push_back(cv::Mat());
-		this->dataMotionVectors.push_back(std::deque<float>());
+		this->dataMotionVectors.push_back(std::deque<double>());
 	}
 }
 //==============================================================================
@@ -175,7 +175,8 @@ const bool readFromFolder){
 	}
 
 	if(this->onlyExtract){
-		assert(feat!=featureExtractor::HOG && feat!=featureExtractor::PIXELS);
+		assert(feat!=featureExtractor::HOG && feat!=featureExtractor::TEMPL_MATCHES &&\
+			feat!=featureExtractor::RAW_PIXELS);
 	}
 	this->extractor->init(feat,this->datasetPath+"features/",this->colorspaceCode,\
 		this->invColorspaceCode,(this->featurePart!=peopleDetector::WHOLE));
@@ -187,7 +188,7 @@ const bool readFromFolder){
 	for(unsigned i=0;i<3;++i){
 		this->data.push_back(cv::Mat());
 		this->targets.push_back(cv::Mat());
-		this->dataMotionVectors.push_back(std::deque<float>());
+		this->dataMotionVectors.push_back(std::deque<double>());
 	}
 }
 //==============================================================================
@@ -195,9 +196,9 @@ const bool readFromFolder){
  * relative to the ROI).
  */
 void peopleDetector::templateExtremes(const std::vector<cv::Point2f> &templ,\
-std::deque<float> &extremes,int minX,int minY){
+std::deque<double> &extremes,int minX,int minY){
 	if(extremes.empty()){
-		extremes = std::deque<float>(4,0.0);
+		extremes = std::deque<double>(4,0.0);
 	}
 	extremes[0] = std::max(0.0f,templ[0].x-minX); // MINX
 	extremes[1] = std::max(0.0f,templ[0].x-minX); // MAXX
@@ -213,16 +214,16 @@ std::deque<float> &extremes,int minX,int minY){
 //==============================================================================
 /** Gets the distance to the given template from a given pixel location.
  */
-float peopleDetector::getDistToTemplate(const int pixelX,const int pixelY,\
+double peopleDetector::getDistToTemplate(const int pixelX,const int pixelY,\
 const std::vector<cv::Point2f> &templ){
 	std::vector<cv::Point2f> hull;
 	Helpers::convexHull(templ,hull);
-	float minDist=-1;
+	double minDist=-1;
 	unsigned i=0,j=1;
 	while(i<hull.size() && j<hull.size()-1){
-		float midX  = (hull[i].x + hull[j].x)/2;
-		float midY  = (hull[i].y + hull[j].y)/2;
-		float aDist = std::sqrt((midX - pixelX)*(midX - pixelX) + \
+		double midX  = (hull[i].x + hull[j].x)/2;
+		double midY  = (hull[i].y + hull[j].y)/2;
+		double aDist = std::sqrt((midX - pixelX)*(midX - pixelX) + \
 						(midY - pixelY)*(midY - pixelY));
 		if(minDist == -1 || minDist>aDist){
 			minDist = aDist;
@@ -272,16 +273,16 @@ int &minY,int &maxY,const featureExtractor::templ &aTempl){
 /** Assigns pixels to templates based on proximity.
  */
 void peopleDetector::pixels2Templates(int maxX,int minX,int maxY,int minY,\
-int k,const cv::Mat &thresh,float tmplHeight,cv::Mat &colorRoi){
+int k,const cv::Mat &thresh,double tmplHeight,cv::Mat &colorRoi){
 	// LOOP OVER THE AREA OF OUR TEMPLATE AND THERESHOLD ONLY THOSE PIXELS
 	int x1Border = std::max(minX,static_cast<int>(this->templates[k].extremes[0]-\
-		tmplHeight/2/2));
+		tmplHeight/2));
 	int x2Border = std::min(maxX,static_cast<int>(this->templates[k].extremes[1]+\
-		tmplHeight/2/2));
+		tmplHeight/2));
 	int y1Border = std::max(minY,static_cast<int>(this->templates[k].extremes[2]-\
-		tmplHeight/2/2));
+		tmplHeight/2));
 	int y2Border = std::min(maxY,static_cast<int>(this->templates[k].extremes[3]+\
-		tmplHeight/2/2));
+		tmplHeight/2));
 
 	cv::Rect roi(x1Border-minX,y1Border-minY,x2Border-x1Border,y2Border-y1Border);
 	cv::Mat threshROI(thresh.clone(),cv::Rect(minX,minY,maxX-minX,maxY-minY));
@@ -307,11 +308,11 @@ int k,const cv::Mat &thresh,float tmplHeight,cv::Mat &colorRoi){
 					cv::Point2f mid((this->templates[k].center.x+\
 						this->templates[k].head.x)/2.0,(this->templates[k].center.y+\
 						this->templates[k].head.y)/2.0);
-					float minDist = Helpers::dist(cv::Point2f(x+minX,y+minY),mid);
+					double minDist = Helpers::dist(cv::Point2f(x+minX,y+minY),mid);
 					int label     = k;
 					for(int l=0;l<this->templates.size();++l){
 						if(l==k){continue;}
-						float tempDist = Helpers::dist(this->templates[k].center,\
+						double tempDist = Helpers::dist(this->templates[k].center,\
 							this->templates[l].center);
 						if(tempDist >= tmplHeight*1.5){continue;}
 
@@ -327,7 +328,7 @@ int k,const cv::Mat &thresh,float tmplHeight,cv::Mat &colorRoi){
 								this->templates[l].head.x)/2.0,\
 								(this->templates[l].center.y+\
 								this->templates[l].head.y)/2.0);
-							float ptDist = Helpers::dist(cv::Point2f(x+minX,y+minY),\
+							double ptDist = Helpers::dist(cv::Point2f(x+minX,y+minY),\
 								middle);
 							if(minDist>ptDist){
 								minDist = ptDist;label = l;
@@ -367,7 +368,7 @@ void peopleDetector::add2Templates(){
 /** Get the foreground pixels corresponding to each person.
  */
 void peopleDetector::allForegroundPixels(std::deque<featureExtractor::people>\
-&allPeople,const IplImage *bg,float threshold){
+&allPeople,const IplImage *bg,double threshold){
 	// INITIALIZING STUFF
 	cv::Mat thsh,thrsh;
 	if(bg){
@@ -381,8 +382,8 @@ void peopleDetector::allForegroundPixels(std::deque<featureExtractor::people>\
 	// FOR EACH EXISTING TEMPLATE LOOK ON AN AREA OF 100 PIXELS AROUND IT
 	for(unsigned k=0;k<this->existing.size();++k){
 		allPeople[k].absoluteLoc = this->existing[k].location;
-		float tmplHeight = dist(this->templates[k].head,this->templates[k].center);
-		float tmplArea   = tmplHeight*Helpers::dist(this->templates[k].points[0],\
+		double tmplHeight = Helpers::dist(this->templates[k].head,this->templates[k].center);
+		double tmplArea   = tmplHeight*Helpers::dist(this->templates[k].points[0],\
 			this->templates[k].points[1]);
 
 		// GET THE 100X100 WINDOW ON THE TEMPLATE
@@ -435,7 +436,7 @@ void peopleDetector::allForegroundPixels(std::deque<featureExtractor::people>\
 /** Keeps only the largest blob from the thresholded image.
  */
 void peopleDetector::keepLargestBlob(cv::Mat &thresh,const cv::Point2f &center,\
-float tmplArea){
+double tmplArea){
 	std::vector<std::vector<cv::Point> > contours;
 	cv::findContours(thresh,contours,CV_RETR_EXTERNAL,CV_CHAIN_APPROX_SIMPLE);
 	cv::drawContours(thresh,contours,-1,cv::Scalar(255,255,255),CV_FILLED);
@@ -444,7 +445,7 @@ float tmplArea){
 		return;
 	}
 	int contourIdx =-1;
-	float minDist = thresh.cols*thresh.rows;
+	double minDist = thresh.cols*thresh.rows;
 	for(size_t i=0;i<contours.size();++i){
 		unsigned minX=contours[i][0].x,maxX=contours[i][0].x,minY=contours[i][0].y,\
 			maxY=contours[i][0].y;
@@ -454,8 +455,8 @@ float tmplArea){
 			if(minY>=contours[i][j].y){minY = contours[i][j].y;}
 			if(maxY<contours[i][j].y){maxY = contours[i][j].y;}
 		}
-		float ptDist = dist(center,cv::Point2f((maxX+minX)/2,(maxY+minY)/2));
-		float area   = (maxX-minX)*(maxY-minY);
+		double ptDist = dist(center,cv::Point2f((maxX+minX)/2,(maxY+minY)/2));
+		double area   = (maxX-minX)*(maxY-minY);
 		if(ptDist<minDist && area>=tmplArea/2){
 			contourIdx = i;
 			minDist    = ptDist;
@@ -491,7 +492,7 @@ void peopleDetector::fixLocationsTracksBorderes(const std::deque<unsigned> &exi)
 	this->add2Templates();
 
 	//4) FIX THE LOCATIONS TO CORRESPOND TO THE BORDERED IMAGE:
-	for(size_t i=0;i<this->existing.size();++i){
+	for(std::size_t i=0;i<this->existing.size();++i){
 		this->existing[i].location.x += this->border/2;
 		this->existing[i].location.y += this->border/2;
 	}
@@ -519,7 +520,7 @@ void peopleDetector::fixLocationsTracksBorderes(const std::deque<unsigned> &exi)
  * descriptors.
  */
 void peopleDetector::extractDataRow(const IplImage *oldBg,\
-const std::deque<unsigned> &exi,float threshVal){
+const std::deque<unsigned> &exi,double threshVal){
 	this->fixLocationsTracksBorderes(exi);
 
 	// ADD A BORDER AROUND THE BACKGROUND TO HAVE THE TEMPLATES CENTERED
@@ -558,6 +559,7 @@ const std::deque<unsigned> &exi,float threshVal){
 	// FOR EACH LOCATION IN THE IMAGE EXTRACT FEATURES,FILTER THEM AND RESHAPE
 	std::deque<std::string> names;
 	names.push_back("CLOSE");names.push_back("MEDIUM");	names.push_back("FAR");
+
 	for(std::size_t i=0;i<this->existing.size();++i){
 		// DEFINE THE IMAGE ROI OF THE SAME SIZE AS THE FOREGROUND
 		cv::Rect roi(allPeople[i].borders[0],allPeople[i].borders[2],\
@@ -565,7 +567,7 @@ const std::deque<unsigned> &exi,float threshVal){
 			allPeople[i].borders[3]-allPeople[i].borders[2]);
 
 		// COMPUTE THE ROTATION ANGLE ONCE AND FOR ALL
-		float rotAngle = this->rotationAngle(this->templates[i].head,\
+		double rotAngle = this->rotationAngle(this->templates[i].head,\
 						this->templates[i].center);
 
 		// ROTATE THE FOREGROUND PIXELS,THREHSOLD AND THE TEMPLATE
@@ -609,27 +611,27 @@ const std::deque<unsigned> &exi,float threshVal){
 		cv::Mat dataRow = this->extractor->getDataRow(this->borderedIpl->width,\
 			this->templates[i],roi,allPeople[i],thresholded,imgName,absRotCenter,\
 			rotBorders,rotAngle,keys);
-		dataRow.at<float>(0,dataRow.cols-3) = this->distanceWRTcamera\
+		dataRow.at<double>(0,dataRow.cols-3) = this->distanceWRTcamera\
 			(this->templates[i].center);
 
 		// CHECK THE DIRECTION OF THE MOVEMENT
 		bool moved;
-		float direction = this->motionVector(this->templates[i].head,\
+		double direction = this->motionVector(this->templates[i].head,\
 			this->templates[i].center,moved);
 		if(!moved){direction = -1.0;}
 		this->dataMotionVectors[this->existing[i].groupNo].push_back(direction);
 
 		if(this->tracking && !this->entireNext.empty()){
-			dataRow.at<float>(0,dataRow.cols-1) = direction;
+			dataRow.at<double>(0,dataRow.cols-1) = direction;
 			cv::Mat nextImg(this->entireNext,roi);
 			this->extractor->rotate2Zero(rotAngle,featureExtractor::MATRIX,roi,\
 				absRotCenter,rotBorders,keys,nextImg);
-			dataRow.at<float>(0,dataRow.cols-2) = \
+			dataRow.at<double>(0,dataRow.cols-2) = \
 				this->opticalFlow(allPeople[i].pixels,nextImg,keys,\
 				this->templates[i].head,this->templates[i].center,false);
 			nextImg.release();
 		}
-		dataRow.convertTo(dataRow,CV_32FC1);
+		dataRow.convertTo(dataRow,cv::DataType<double>::type);
 		Auxiliary::mean0Variance1(dataRow);
 
 		// STORE THE EXTRACTED ROW INTO THE DATA MATRIX
@@ -640,11 +642,10 @@ const std::deque<unsigned> &exi,float threshVal){
 		}
 		if(!thresholded.empty()){thresholded.release();}
 		dataRow.release();
-
-		float label = std::atan2(this->targets[this->existing[i].groupNo].\
-			at<float>(this->data[this->existing[i].groupNo].rows-1,0),\
+		double label = std::atan2(this->targets[this->existing[i].groupNo].\
+			at<double>(this->data[this->existing[i].groupNo].rows-1,0),\
 			this->targets[this->existing[i].groupNo].\
-			at<float>(this->data[this->existing[i].groupNo].rows-1,1));
+			at<double>(this->data[this->existing[i].groupNo].rows-1,1));
 		Auxiliary::angle0to360(label);
 		std::cout<<names[this->existing[i].groupNo]<<":"<<\
 			this->templates[i].center<<">>>"<<"LONGITUDE>>>"<<(label*180.0/M_PI)<<\
@@ -657,11 +658,11 @@ const std::deque<unsigned> &exi,float threshVal){
 //==============================================================================
 /** Compute the dominant direction of the SIFT or SURF features.
  */
-float peopleDetector::opticalFlow(cv::Mat &currentImg,cv::Mat &nextImg,\
+double peopleDetector::opticalFlow(cv::Mat &currentImg,cv::Mat &nextImg,\
 const std::vector<cv::Point2f> &keyPts,const cv::Point2f &head,\
 const cv::Point2f &center,bool maxOrAvg){
 	// GET THE OPTICAL FLOW MATRIX FROM THE FEATURES
-	float direction = -1;
+	double direction = -1;
 	cv::Mat currGray,nextGray;
 	if(this->colorspaceCode!=-1){
 		cv::cvtColor(currentImg,currentImg,this->invColorspaceCode);
@@ -677,14 +678,14 @@ const cv::Point2f &center,bool maxOrAvg){
 		cv::TermCriteria::EPS,30,0.01),0.5,0);
 
 	//GET THE DIRECTION OF THE MAXIMUM OPTICAL FLOW
-	float flowX = 0.0,flowY = 0.0,resFlowX = 0.0,resFlowY = 0.0,magni = 0.0;
+	double flowX = 0.0,flowY = 0.0,resFlowX = 0.0,resFlowY = 0.0,magni = 0.0;
 	for(std::size_t i=0;i<flow.size();++i){
-		float ix,iy,fx,fy;
+		double ix,iy,fx,fy;
 		ix = keyPts[i].x;iy = keyPts[i].y;fx = flow[i].x;fy = flow[i].y;
 
 		// IF WE WANT THE MAXIMUM OPTICAL FLOW
 		if(maxOrAvg){
-			float newMagni = std::sqrt((fx-ix)*(fx-ix) + (fy-iy)*(fy-iy));
+			double newMagni = std::sqrt((fx-ix)*(fx-ix) + (fy-iy)*(fy-iy));
 			if(newMagni>magni){
 				magni = newMagni;flowX = ix;flowY = iy;resFlowX = fx;resFlowY = fy;
 			}
@@ -724,8 +725,8 @@ const cv::Point2f &center,bool maxOrAvg){
 //==============================================================================
 /** Checks to see if an annotation can be assigned to a detection.
  */
-bool peopleDetector::canBeAssigned(unsigned l,std::deque<float> &minDistances,\
-unsigned k,float distance,std::deque<int> &assignment){
+bool peopleDetector::canBeAssigned(unsigned l,std::deque<double> &minDistances,\
+unsigned k,double distance,std::deque<int> &assignment){
 	unsigned isThere = 1;
 	while(isThere){
 		isThere = 0;
@@ -733,7 +734,7 @@ unsigned k,float distance,std::deque<int> &assignment){
 			// IF THERE IS ANOTHER ASSIGNMENT FOR K WITH A LARGER DIST
 			if(assignment[i] == k && i!=l && minDistances[i]>distance){
 				assignment[i]   = -1;
-				minDistances[i] = (float)INFINITY;
+				minDistances[i] = (double)INFINITY;
 				isThere         = 1;
 				break;
 			// IF THERE IS ANOTHER ASSIGNMENT FOR K WITH A SMALLER DIST
@@ -748,12 +749,12 @@ unsigned k,float distance,std::deque<int> &assignment){
 /** Fixes the angle to be relative to the camera position with respect to the
  * detected position.
  */
-float peopleDetector::fixAngle(const cv::Point2f &headLocation,\
-const cv::Point2f &feetLocation,float angle){
-	float camAngle = -std::atan2((headLocation.y-feetLocation.y),\
+double peopleDetector::fixAngle(const cv::Point2f &headLocation,\
+const cv::Point2f &feetLocation,double angle){
+	double camAngle = -std::atan2((headLocation.y-feetLocation.y),\
 		(headLocation.x-feetLocation.x));
 	camAngle = M_PI/2.0-camAngle;
-	float newAngle = angle+camAngle;
+	double newAngle = angle+camAngle;
 	Auxiliary::angle0to360(newAngle);
 	return newAngle;
 }
@@ -761,7 +762,8 @@ const cv::Point2f &feetLocation,float angle){
 /** For each row added in the data matrix (each person detected for which we
  * have extracted some features) find the corresponding label.
  */
-void peopleDetector::fixLabels(const std::deque<unsigned> &existing){
+void peopleDetector::fixLabels(const std::deque<unsigned> &exi){
+	this->existing.clear();
 	// FIND	THE INDEX FOR THE CURRENT IMAGE
 	std::deque<annotationsHandle::FULL_ANNOTATIONS>::iterator index = \
 		std::find_if (this->targetAnno.begin(),this->targetAnno.end(),\
@@ -774,18 +776,18 @@ void peopleDetector::fixLabels(const std::deque<unsigned> &existing){
 
 	//GET THE VALID DETECTED LOCATIONS
 	std::vector<cv::Point2f> points;
-	for(std::size_t i=0;i<existing.size();++i){
-		cv::Point2f center = this->cvPoint(existing[i],this->current->img->width);
+	for(std::size_t i=0;i<exi.size();++i){
+		cv::Point2f center = this->cvPoint(exi[i],this->current->img->width);
 		points.push_back(center);
 	}
 
 	// LOOP OVER ALL ANNOTATIONS FOR THE CURRENT IMAGE AND FIND THE CLOSEST ONES
 	std::deque<int> assignments((*index).annos.size(),-1);
-	std::deque<float> minDistances((*index).annos.size(),(float)INFINITY);
+	std::deque<double> minDistances((*index).annos.size(),(double)INFINITY);
 
 	std::vector<cv::Point2f> allTrueHeads((*index).annos.size(),cv::Point2f());
 	std::deque<bool> allTrueInside((*index).annos.size(),true);
-	std::deque<float> allTrueWidth((*index).annos.size(),0.0f);
+	std::deque<double> allTrueWidth((*index).annos.size(),0.0f);
 	unsigned canAssign = 1;
 	while(canAssign){
 		canAssign = 0;
@@ -801,10 +803,10 @@ void peopleDetector::fixLabels(const std::deque<unsigned> &existing){
 			}
 
 			// EACH ANNOTATION NEEDS TO BE ASSIGNED TO THE CLOSEST DETECTION
-			float distance     = (float)INFINITY;
+			double distance     = (double)INFINITY;
 			unsigned annoIndex = -1;
 			for(std::size_t k=0;k<points.size();++k){
-				float dstnc = dist((*index).annos[l].location,points[k]);
+				double dstnc = dist((*index).annos[l].location,points[k]);
 				if(distance>dstnc && this->canBeAssigned(l,minDistances,k,dstnc,\
 				assignments) && dstnc<2*allTrueWidth[l]){
 					distance  = dstnc;
@@ -834,21 +836,21 @@ void peopleDetector::fixLabels(const std::deque<unsigned> &existing){
 			cv::Point2f head = allTrueHeads[position];
 
 			// SAVE THE TARGET LABEL
-			cv::Mat tmp = cv::Mat::zeros(1,4,CV_32FC1);
+			cv::Mat tmp = cv::Mat::zeros(1,4,cv::DataType<double>::type);
 			// READ THE TARGET ANGLE FOR LONGITUDINAL ANGLE
-			float angle = static_cast<float>((*index).annos[position].\
+			double angle = static_cast<double>((*index).annos[position].\
 							poses[annotationsHandle::LONGITUDE]);
 			angle = angle*M_PI/180.0;
 			angle = this->fixAngle(head,feet,angle);
-			tmp.at<float>(0,0) = std::sin(angle);
-			tmp.at<float>(0,1) = std::cos(angle);
+			tmp.at<double>(0,0) = std::sin(angle);
+			tmp.at<double>(0,1) = std::cos(angle);
 
 			// READ THE TARGET ANGLE FOR LATITUDINAL ANGLE
-			angle = static_cast<float>((*index).annos[position].\
+			angle = static_cast<double>((*index).annos[position].\
 					poses[annotationsHandle::LATITUDE]);
 			angle = angle*M_PI/180.0;
-			tmp.at<float>(0,2) = std::sin(angle);
-			tmp.at<float>(0,3) = std::cos(angle);
+			tmp.at<double>(0,2) = std::sin(angle);
+			tmp.at<double>(0,3) = std::cos(angle);
 
 			// STORE THE LABELS IN THE TARGETS ON THE RIGHT POSITION
 			peopleDetector::CLASSES groupNo=this->findImageClass(feet,head);
@@ -868,21 +870,21 @@ void peopleDetector::fixLabels(const std::deque<unsigned> &existing){
  * work with the feature extraction.
  */
 bool peopleDetector::doFindPerson(unsigned imgNum,IplImage *src,\
-const vnl_vector<FLOAT> &imgVec,vnl_vector<FLOAT> &bgVec,\
-const FLOAT logBGProb,const vnl_vector<FLOAT> &logSumPixelBGProb){
+const vnl_vector<double> &imgVec,vnl_vector<double> &bgVec,\
+const double logBGProb,const vnl_vector<double> &logSumPixelBGProb){
 	std::cout<<this->current->index<<") Image... "<<this->current->sourceName<<std::endl;
 
 	//1) START THE TIMER & INITIALIZE THE PROBABLITIES,THE VECTOR OF POSITIONS
-	stic();	std::deque<FLOAT> marginal;
-	FLOAT lNone = logBGProb + this->logNumPrior[0],lSum = -INFINITY;
-	std::deque<unsigned> existing;
-	std::deque< vnl_vector<FLOAT> > logPosProb;
+	stic();	std::deque<double> marginal;
+	double lNone = logBGProb + this->logNumPrior[0],lSum = -INFINITY;
+	std::deque<unsigned> exi;
+	std::deque< vnl_vector<double> > logPosProb;
 	std::deque<Helpers::scanline_t> mask;
 	marginal.push_back(lNone);
-	logPosProb.push_back(vnl_vector<FLOAT>());
+	logPosProb.push_back(vnl_vector<double>());
 
 	//2) SCAN FOR POSSIBLE LOCATION OF PEOPLE GIVEN THE EXISTING ONES
-	this->scanRest(existing,mask,Helpers::scanres,logSumPixelBGProb,logPosProb,\
+	this->scanRest(exi,mask,Helpers::scanres,logSumPixelBGProb,logPosProb,\
 		marginal,lNone);
 
 	//3) UPDATE THE PROBABILITIES
@@ -892,7 +894,7 @@ const FLOAT logBGProb,const vnl_vector<FLOAT> &logSumPixelBGProb){
 
 	//4) UPDATE THE MOST LIKELY NUMBER OF PEOPLE AND THE MARGINAL PROBABILITY
 	unsigned mlnp = 0;// most likely number of people
-	FLOAT mlprob  = -INFINITY;
+	double mlprob  = -INFINITY;
 	for(unsigned i=0;i!=marginal.size();++i) {
 		if (marginal[i] > mlprob) {
 			mlnp   = i;
@@ -907,7 +909,7 @@ const FLOAT logBGProb,const vnl_vector<FLOAT> &logSumPixelBGProb){
 	cvDilate(bg,bg,NULL,2);
 
 	//7) SHOW THE FOREGROUND POSSIBLE LOCATIONS AND PLOT THE TEMPLATES
-	cerr<<"no. of detected people: "<<existing.size()<<endl;
+	cerr<<"no. of detected people: "<<exi.size()<<endl;
 	if(this->plot){
 		IplImage *tmpBg,*tmpSrc;
 		tmpBg  = cvCloneImage(bg);
@@ -916,8 +918,8 @@ const FLOAT logBGProb,const vnl_vector<FLOAT> &logSumPixelBGProb){
 		this->plotHull(bg,this->priorHull);
 
 		// PLOT DETECTIONS
-		for(unsigned i=0;i!=existing.size();++i){
-			cv::Point2f pt = this->cvPoint(existing[i],this->current->img->width);
+		for(unsigned i=0;i!=exi.size();++i){
+			cv::Point2f pt = this->cvPoint(exi[i],this->current->img->width);
 			std::vector<cv::Point2f> points;
 			Helpers::plotTemplate2(tmpBg,pt,Helpers::persHeight,Helpers::camHeight,\
 				CV_RGB(255,255,255),points);
@@ -931,9 +933,9 @@ const FLOAT logBGProb,const vnl_vector<FLOAT> &logSumPixelBGProb){
 	}
 
 	//10) EXTRACT FEATURES FOR THE CURRENTLY DETECTED LOCATIONS
-	cout<<"Number of templates: "<<existing.size()<<endl;
-	this->extractDataRow(bg,existing);
-	cout<<"Number of templates afterwards: "<<existing.size()<<endl;
+	cout<<"Number of templates: "<<exi.size()<<endl;
+	this->extractDataRow(bg,exi);
+	cout<<"Number of templates afterwards: "<<exi.size()<<endl;
 
 	//11) WHILE NOT q WAS PRESSED PROCESS THE NEXT IMAGES
 	cvReleaseImage(&bg);
@@ -979,8 +981,8 @@ bool peopleDetector::imageProcessingMenu(){
 /** If only a part needs to be used to extract the features then the threshold
  * and the template need to be changed.
  */
-void peopleDetector::templatePart(cv::Mat &thresholded,int k,float offsetX,\
-float offsetY){
+void peopleDetector::templatePart(cv::Mat &thresholded,int k,double offsetX,\
+double offsetY){
 	// CHANGE THRESHOLD
 	int minX,maxX,minY,maxY;
 	if(!thresholded.empty()){
@@ -1006,9 +1008,9 @@ float offsetY){
 		maxY = this->templates[k].extremes[3]-offsetY;
 	}
 
-	float percent   = 0.50;
-	float middleTop = (minY+maxY)*percent;
-	float middleBot = (minY+maxY)*percent;
+	double percent   = 0.50;
+	double middleTop = (minY+maxY)*percent;
+	double middleBot = (minY+maxY)*percent;
 	if(!thresholded.empty()){
 		for(int x=0;x<thresholded.cols;++x){
 			for(int y=0;y<thresholded.rows;++y){
@@ -1050,10 +1052,10 @@ float offsetY){
 //==============================================================================
 /** Computes the motion vector for the current image given the tracks so far.
  */
-float peopleDetector::motionVector(const cv::Point2f &head,\
+double peopleDetector::motionVector(const cv::Point2f &head,\
 const cv::Point2f &center,bool &moved){
 	cv::Point2f prev = center;
-	float angle      = 0;
+	double angle      = 0;
 	moved            = false;
 	if(this->tracks.size()>1){
 		for(unsigned i=0;i<this->tracks.size();++i){
@@ -1146,13 +1148,14 @@ void peopleDetector::start(bool readFromFolder,bool useGT){
  * case in which we do not want to use the tracker or build a bgModel).
  */
 void peopleDetector::readLocations(){
+	this->existing.clear();
 	// FIND	THE INDEX FOR THE CURRENT IMAGE
 	if(this->targetAnno.empty()){
 		std::cerr<<"Annotations were not loaded."<<std::endl;
 		exit(1);
 	}
 	std::deque<annotationsHandle::FULL_ANNOTATIONS>::iterator index = \
-		std::find_if (this->targetAnno.begin(),this->targetAnno.end(),\
+		std::find_if(this->targetAnno.begin(),this->targetAnno.end(),\
 		compareImg(this->current->sourceName));
 
 	if(index == this->targetAnno.end()){
@@ -1174,21 +1177,21 @@ void peopleDetector::readLocations(){
 			(templ[12].y+templ[14].y)/2);
 
 		// STORE THE LABELS FOR ALL THE LOCATIONS
-		cv::Mat tmp = cv::Mat::zeros(cv::Size(4,1),CV_32FC1);
+		cv::Mat tmp = cv::Mat::zeros(cv::Size(4,1),cv::DataType<double>::type);
 		// READ THE TARGET ANGLE FOR LONGITUDINAL ANGLE
-		float angle = static_cast<float>((*index).annos[l].\
+		double angle = static_cast<double>((*index).annos[l].\
 						poses[annotationsHandle::LONGITUDE]);
 		angle = angle*M_PI/180.0;
 		angle = this->fixAngle(head,feet,angle);
-		tmp.at<float>(0,0) = std::sin(angle);
-		tmp.at<float>(0,1) = std::cos(angle);
+		tmp.at<double>(0,0) = std::sin(angle);
+		tmp.at<double>(0,1) = std::cos(angle);
 
 		// READ THE TARGET ANGLE FOR LATITUDINAL ANGLE
-		angle = static_cast<float>((*index).annos[l].\
+		angle = static_cast<double>((*index).annos[l].\
 					poses[annotationsHandle::LATITUDE]);
 		angle = angle*M_PI/180.0;
-		tmp.at<float>(0,2) = std::sin(angle);
-		tmp.at<float>(0,3) = std::cos(angle);
+		tmp.at<double>(0,2) = std::sin(angle);
+		tmp.at<double>(0,3) = std::cos(angle);
 
 		// STORE THE LABELS IN THE TARGETS ON THE RIGHT POSITION
 		peopleDetector::CLASSES groupNo = this->findImageClass(feet,head);
@@ -1203,7 +1206,7 @@ void peopleDetector::readLocations(){
 	}
 
 	// SEE THE ANNOTATED LOCATIONS IN THE IMAGE
-	if(this->plot){
+  	if(this->plot){
 		for(std::size_t i=0;i<this->existing.size();++i){
 			std::vector<cv::Point2f> templ;
 			Helpers::plotTemplate2(this->current->img,this->existing[i].location,\
@@ -1216,9 +1219,9 @@ void peopleDetector::readLocations(){
 //==============================================================================
 /** Return rotation angle given the head and feet position.
  */
-float peopleDetector::rotationAngle(const cv::Point2f &headLocation,\
+double peopleDetector::rotationAngle(const cv::Point2f &headLocation,\
 const cv::Point2f &feetLocation){
-	float rotAngle = -std::atan2((headLocation.y-feetLocation.y),\
+	double rotAngle = -std::atan2((headLocation.y-feetLocation.y),\
 						(headLocation.x-feetLocation.x));
 	rotAngle  = M_PI/2.0-rotAngle;
 	rotAngle *= (180.0/M_PI);
@@ -1234,10 +1237,10 @@ const cv::Point2f &head){
 		// GET THE CAMERA POSITION IN THE IMAGE PLANE
 		cv::Point2f cam = (*Helpers::proj)(cv::Point3f(Helpers::camPosX,\
 			Helpers::camPosY,0));
-		float ratio,step;
+		double ratio,step;
 		step  = (Helpers::maxPersHeightPixels-0.001)/3.0;
-		float previous = 0.0;
-		for(float in=step;in<=Helpers::maxPersHeightPixels;in+=step){
+		double previous = 0.0;
+		for(double in=step;in<=Helpers::maxPersHeightPixels;in+=step){
 			this->classesRange.push_back(cv::Point2f(previous,in));
 			std::cout<<"previousRange:"<<previous<<" currentRange"<<in<<std::endl;
 			previous = in;
@@ -1245,7 +1248,7 @@ const cv::Point2f &head){
 		sleep(6);
 	}
 
-	float distance = Helpers::dist(feet,head);
+	double distance = Helpers::dist(feet,head);
 	if(distance>this->classesRange[peopleDetector::CLOSE].x &&\
 	distance<=this->classesRange[peopleDetector::CLOSE].y){
 		return peopleDetector::CLOSE;
@@ -1259,7 +1262,7 @@ const cv::Point2f &head){
 //==============================================================================
 /** Get distance wrt the camera in the image.
  */
-float peopleDetector::distanceWRTcamera(const cv::Point2f &feet){
+double peopleDetector::distanceWRTcamera(const cv::Point2f &feet){
 	cv::Point2f cam = (*Helpers::proj)(cv::Point3f(Helpers::camPosX,\
 		Helpers::camPosY,0.0));
 	return Helpers::dist(cam,feet);

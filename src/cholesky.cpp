@@ -31,10 +31,11 @@ void cholesky::init(){
  */
 int cholesky::decomposeCov(const cv::Mat &a){
 	if(a.cols!=a.rows){
-		std::cerr<<"For Cholesky decomposeCov: the input matrix needs to be square"<<std::endl;
+		std::cerr<<"For Cholesky decomposeCov: the input matrix needs to "<<\
+			"be square"<<std::endl;
 		exit(1);
 	}
-	assert(a.type()==CV_32FC1);
+	assert(a.type()==cv::DataType<double>::type);
 	if(!this->covar.empty()){
 		this->covar.release();
 	}
@@ -42,18 +43,18 @@ int cholesky::decomposeCov(const cv::Mat &a){
 	a.copyTo(this->covar);
     for(int indy=0;indy<this->n;++indy){
     	for(int indx=0;indx<this->n;++indx){
-        	float sum = this->covar.at<float>(indy,indx);
+        	double sum = this->covar.at<double>(indy,indx);
             for(int k=indy-1;k>=0;--k){
-            	sum -= this->covar.at<float>(indy,k)*this->covar.at<float>(indx,k);
+            	sum -= this->covar.at<double>(indy,k)*this->covar.at<double>(indx,k);
             }
             if(indx==indy){
             	if(sum <= 0.0){
             		std::cerr<<"Decomposition failed,not positive defined";
             		std::abort();
             	}
-            	this->covar.at<float>(indy,indx) = std::sqrt(sum);
+            	this->covar.at<double>(indy,indx) = std::sqrt(sum);
             }else{
-            	this->covar.at<float>(indx,indy) = sum/this->covar.at<float>(indy,indy);
+            	this->covar.at<double>(indx,indy) = sum/this->covar.at<double>(indy,indy);
             }
         }
     }
@@ -61,114 +62,114 @@ int cholesky::decomposeCov(const cv::Mat &a){
     // GET THE THE UPPER TRIANGLE
 	for(int indy=0;indy<this->n;++indy){
 		for(int indx=0;indx!=indy;++indx){
-			this->covar.at<float>(indx,indy) = 0.0;
+			this->covar.at<double>(indx,indy) = 0.0;
 		}
 	}
-	this->covar.convertTo(this->covar,CV_32FC1);
+	this->covar.convertTo(this->covar,cv::DataType<double>::type);
     return 1;
 }
 //==============================================================================
 /** Solves the general linear system: Ax = b and returns x.
  */
 void cholesky::solve(const cv::Mat &b,cv::Mat &x){
-	assert(b.type()==CV_32FC1);
+	assert(b.type()==cv::DataType<double>::type);
 	if(b.rows != this->n){
 		std::cerr<<"In Cholesky solve: in Ax=b,b has the wrong size"<<std::endl;
 		exit(1);
 	}
-	x = cv::Mat::zeros(cv::Size(b.cols,this->n),CV_32FC1);
+	x = cv::Mat::zeros(cv::Size(b.cols,this->n),cv::DataType<double>::type);
 	for(int indx=0;indx<b.cols; ++indx){ // NOT REALLY NEEDED (JUST 1 COL)
 		for(int indy=0;indy<this->n;++indy){
-			float sum = b.at<float>(indy,indx);
+			double sum = b.at<double>(indy,indx);
 			for(int k=indy-1;k>=0;--k){
-				sum -= this->covar.at<float>(indy,k)*x.at<float>(k,indx);
+				sum -= this->covar.at<double>(indy,k)*x.at<double>(k,indx);
 			}
-			x.at<float>(indy,indx) = sum/this->covar.at<float>(indy,indy);
+			x.at<double>(indy,indx) = sum/this->covar.at<double>(indy,indy);
 		}
 	}
 
 	for(int indx=0;indx<x.cols;++indx){ // NOT NEEDED (JUST 1 COL)
 		for(int indy=this->n-1;indy>=0;--indy){
-			float sum = x.at<float>(indy,indx);
+			double sum = x.at<double>(indy,indx);
 			for(int k=indy+1;k<this->n;++k){
-				sum -= this->covar.at<float>(k,indy)*x.at<float>(k,indx);
+				sum -= this->covar.at<double>(k,indy)*x.at<double>(k,indx);
 			}
-			x.at<float>(indy,indx) = sum/this->covar.at<float>(indy,indy);
+			x.at<double>(indy,indx) = sum/this->covar.at<double>(indy,indy);
 		}
 	}
-	x.convertTo(x,CV_32FC1);
+	x.convertTo(x,cv::DataType<double>::type);
 }
 //==============================================================================
 /** Solve the simplified equation Ly = b,and return y (where A=LL*).
  */
 void cholesky::solveL(const cv::Mat &b,cv::Mat &y){
-	assert(b.type()==CV_32FC1);
+	assert(b.type()==cv::DataType<double>::type);
 	if(b.rows != this->n){
 		std::cerr<<"In Cholesky solveL: in Ly=b,b has the wrong size"<<std::endl;
 		exit(1);
 	}
-	y = cv::Mat::zeros(cv::Size(1,this->n),CV_32FC1);
+	y = cv::Mat::zeros(cv::Size(1,this->n),cv::DataType<double>::type);
 	for(int indy=0;indy<this->n;++indy){
-		float sum = b.at<float>(indy,0);
+		double sum = b.at<double>(indy,0);
 		for(int indx=0;indx<indy;++indx){
-			sum -= this->covar.at<float>(indy,indx) * y.at<float>(indx,0);
+			sum -= this->covar.at<double>(indy,indx) * y.at<double>(indx,0);
 		}
-		y.at<float>(indy,0) = sum/this->covar.at<float>(indy,indy);
+		y.at<double>(indy,0) = sum/this->covar.at<double>(indy,indy);
 	}
-	y.convertTo(y,CV_32FC1);
+	y.convertTo(y,cv::DataType<double>::type);
 }
 //==============================================================================
 /** Solve the simplified equation L'y = b,and return y (where A=LL*).
  */
 void cholesky::solveLTranspose(const cv::Mat &b,cv::Mat &y){
-	assert(b.type()==CV_32FC1);
+	assert(b.type()==cv::DataType<double>::type);
 	if(b.rows != this->n){
 		std::cerr<<"In Cholesky solveLTranspose: in L'y=b,b has the wrong size"<<std::endl;
 		exit(1);
 	}
-	y = cv::Mat::zeros(cv::Size(1,this->n),CV_32FC1);
+	y = cv::Mat::zeros(cv::Size(1,this->n),cv::DataType<double>::type);
 	for(int indy=this->n-1;indy>=0;--indy){
-		float sum = b.at<float>(indy,0);
+		double sum = b.at<double>(indy,0);
 		for(int indx=indy+1;indx<this->n;++indx){
-			sum -= this->covar.at<float>(indx,indy) * y.at<float>(indx,0);
+			sum -= this->covar.at<double>(indx,indy) * y.at<double>(indx,0);
 		}
-		y.at<float>(indy,0) = sum/this->covar.at<float>(indy,indy);
+		y.at<double>(indy,0) = sum/this->covar.at<double>(indy,indy);
 	}
-	y.convertTo(y,CV_32FC1);
+	y.convertTo(y,cv::DataType<double>::type);
 }
 //==============================================================================
 /** Returns the inverse of the covariance: A^{-1}.
  */
 void cholesky::inverse(cv::Mat &ainv){
-	ainv = cv::Mat::zeros(cv::Size(this->n,this->n),CV_32FC1);
+	ainv = cv::Mat::zeros(cv::Size(this->n,this->n),cv::DataType<double>::type);
 	for(int indy=0;indy<this->n;++indy){
 		for(int indx=0;indx<this->n;++indx){
-			float sum = (indx==indy?1.0:0.0);
+			double sum = (indx==indy?1.0:0.0);
 			for(int k=indy-1;k>=indx;--k){
-				sum -= this->covar.at<float>(indy,k) * ainv.at<float>(indx,k);
+				sum -= this->covar.at<double>(indy,k) * ainv.at<double>(indx,k);
 			}
-			ainv.at<float>(indx,indy) = sum/this->covar.at<float>(indy,indy);
+			ainv.at<double>(indx,indy) = sum/this->covar.at<double>(indy,indy);
 		}
 	}
 	for(int indy=this->n-1;indy>=0;--indy){
 		for(int indx=0;indx<=indy;++indx){
-			float sum = (indy<=indx ? 0.0 : ainv.at<float>(indx,indy));
+			double sum = (indy<=indx ? 0.0 : ainv.at<double>(indx,indy));
 			for(int k=indy+1;k<this->n;++k){
-				sum -= this->covar.at<float>(k,indy)*ainv.at<float>(indx,k);
+				sum -= this->covar.at<double>(k,indy)*ainv.at<double>(indx,k);
 			}
-			ainv.at<float>(indy,indx) = sum/this->covar.at<float>(indy,indy);
-			ainv.at<float>(indx,indy) = sum/this->covar.at<float>(indy,indy);
+			ainv.at<double>(indy,indx) = sum/this->covar.at<double>(indy,indy);
+			ainv.at<double>(indx,indy) = sum/this->covar.at<double>(indy,indy);
 		}
 	}
-	ainv.convertTo(ainv,CV_32FC1);
+	ainv.convertTo(ainv,cv::DataType<double>::type);
 }
 //==============================================================================
 /** Returns the log of the determiner of the (covariance) matrix,A.
  */
-float cholesky::logDet(){
-	float sum=0;
+double cholesky::logDet(){
+	double sum=0;
 	for(int indy=0;indy<this->n;++indy){
-		sum += std::log(this->covar.at<float>(indy,indy));
+		sum += std::log(this->covar.at<double>(indy,indy));
 	}
 	return 2.0*sum;
 }

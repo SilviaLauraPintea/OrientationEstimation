@@ -50,12 +50,12 @@ void annotationsHandle::mouseHandlerAnn(int event,int x,int y,int flags,void *pa
 			if(choice == 'c'){
 				down = true;
 				cout<<"Left button down at >>> ("<<x<<","<<y<<")"<<endl;
-				Annotate::plotAreaTmp(image,(float)x,(float)y);
+				Annotate::plotAreaTmp(image,(double)x,(double)y);
 			}
 			break;
 		case CV_EVENT_MOUSEMOVE:
 			if(down){
-				Annotate::plotAreaTmp(image,(float)x,(float)y);
+				Annotate::plotAreaTmp(image,(double)x,(double)y);
 			}
 			break;
 		case CV_EVENT_LBUTTONUP:
@@ -73,8 +73,8 @@ void annotationsHandle::mouseHandlerAnn(int event,int x,int y,int flags,void *pa
 				cv::Point2f aCenter(x,y);
 				annotationsHandle::showMenu(aCenter);
 				for(unsigned i=0;i!=annotations.size();++i){
-					Annotate::plotArea(image,(float)annotations[i].location.x,\
-						(float)annotations[i].location.y);
+					Annotate::plotArea(image,(double)annotations[i].location.x,\
+						(double)annotations[i].location.y);
 				}
 			}
 			break;
@@ -86,7 +86,7 @@ void annotationsHandle::mouseHandlerAnn(int event,int x,int y,int flags,void *pa
 cv::Mat annotationsHandle::rotateWrtCamera(const cv::Point2f &headLocation,\
 const cv::Point2f &feetLocation,const cv::Mat &toRotate,cv::Point2f &borders){
 	// GET THE ANGLE TO ROTATE WITH
-	float cameraAngle = std::atan2((headLocation.y-feetLocation.y),\
+	double cameraAngle = std::atan2((headLocation.y-feetLocation.y),\
 						(headLocation.x-feetLocation.x));
 	cameraAngle = (cameraAngle+M_PI/2.0);
 	Auxiliary::angle0to360(cameraAngle);
@@ -95,7 +95,7 @@ const cv::Point2f &feetLocation,const cv::Mat &toRotate,cv::Point2f &borders){
 	cameraAngle *= (180.0/M_PI);
 
 	// ADD A BLACK BORDER TO THE ORIGINAL IMAGE
-	float diag       = std::sqrt(toRotate.cols*toRotate.cols+toRotate.rows*\
+	double diag       = std::sqrt(toRotate.cols*toRotate.cols+toRotate.rows*\
 						toRotate.rows);
 	borders.x         = std::ceil((diag-toRotate.cols)/2.0);
 	borders.y         = std::ceil((diag-toRotate.rows)/2.0);
@@ -122,7 +122,7 @@ const cv::Point2f &feetLocation,const cv::Mat &toRotate,cv::Point2f &borders){
 void annotationsHandle::drawLatitude(const cv::Point2f &head,const cv::Point2f &feet,\
 unsigned int orient,annotationsHandle::POSE pose){
 	unsigned int length = 80;
-	float angle = (M_PI * orient)/180;
+	double angle = (M_PI * orient)/180;
 
 	// GET THE TEMPLATE AND DETERMINE ITS SIZE
 	std::vector<cv::Point2f> points;
@@ -187,7 +187,7 @@ unsigned int orient,annotationsHandle::POSE pose){
 void annotationsHandle::drawOrientation(const cv::Point2f &center,\
 unsigned int orient,annotationsHandle::POSE pose){
 	unsigned int length = 60;
-	float angle = (M_PI * orient)/180;
+	double angle = (M_PI * orient)/180;
 	cv::Point point1,point2;
 	point1.x = center.x - length * cos(angle);
 	point1.y = center.y + length * sin(angle);
@@ -740,7 +740,7 @@ const std::string &fileName){
  * new distance.
  */
 bool annotationsHandle::canBeAssigned(std::deque<annotationsHandle::ASSIGNED>\
-&idAssignedTo,short int id,float newDist,short int to){
+&idAssignedTo,short int id,double newDist,short int to){
 	bool isHere = false;
 	for(unsigned int i=0;i<idAssignedTo.size();++i){
 		if(idAssignedTo[i].id == id){
@@ -787,11 +787,11 @@ bool annotationsHandle::canBeAssigned(std::deque<annotationsHandle::ASSIGNED>\
 void annotationsHandle::correltateLocs(std::deque<annotationsHandle::ANNOTATION>\
 &annoOld,std::deque<annotationsHandle::ANNOTATION> &annoNew,\
 std::deque<annotationsHandle::ASSIGNED> &idAssignedTo){
-	std::deque< std::deque<float> > distMatrix;
+	std::deque< std::deque<double> > distMatrix;
 
 	//1. compute the distances between all annotations
 	for(unsigned k=0;k<annoNew.size();++k){
-		distMatrix.push_back(std::deque<float>());
+		distMatrix.push_back(std::deque<double>());
 		for(unsigned l=0;l<annoOld.size();++l){
 			distMatrix[k].push_back(0.0);
 			distMatrix[k][l] = Helpers::dist(annoNew[k].location,annoOld[l].location);
@@ -803,7 +803,7 @@ std::deque<annotationsHandle::ASSIGNED> &idAssignedTo){
 	while(canAssign){
 		canAssign = false;
 		for(unsigned k=0;k<distMatrix.size();++k){ //for each row in new
-			float minDist = (float)INFINITY;
+			double minDist = (double)INFINITY;
 			for(unsigned l=0;l<distMatrix[k].size();++l){ // loop over all old
 				if(distMatrix[k][l]<minDist && annotationsHandle::canBeAssigned\
 				(idAssignedTo,annoOld[l].id,distMatrix[k][l],annoNew[k].id)){
@@ -837,8 +837,8 @@ std::deque<annotationsHandle::ASSIGNED> &idAssignedTo){
  * pose estimation.
  */
 void annotationsHandle::annoDifferences(std::deque<annotationsHandle::FULL_ANNOTATIONS>\
-&train,std::deque<annotationsHandle::FULL_ANNOTATIONS> &test,float &avgDist,\
-float &Ndiff,float ssdLongDiff,float ssdLatDiff,float poseDiff){
+&train,std::deque<annotationsHandle::FULL_ANNOTATIONS> &test,double &avgDist,\
+double &Ndiff,double ssdLongDiff,double ssdLatDiff,double poseDiff){
 	if(train.size() != test.size()) {
 		std::cerr<<"Training annotations and test annotations have different sizes";
 		exit(1);
@@ -866,8 +866,8 @@ float &Ndiff,float ssdLongDiff,float ssdLatDiff,float poseDiff){
 
 		//2. update the difference in number of people detected
 		if(train[i].annos.size()!=test[i].annos.size()){
-			Ndiff += abs((float)train[i].annos.size() - \
-						(float)test[i].annos.size());
+			Ndiff += abs((double)train[i].annos.size() - \
+						(double)test[i].annos.size());
 		}
 
 		//3. update the poses estimation differences
@@ -878,19 +878,19 @@ float &Ndiff,float ssdLongDiff,float ssdLatDiff,float poseDiff){
 					// FOR POSES COMPUTE THE DIFFERENCES
 					if(withPoses){
 						for(unsigned int m=0;m<train[i].annos[l].poses.size()-1;++m){
-							poseDiff += abs((float)train[i].annos[l].poses[m] - \
-								(float)test[i].annos[k].poses[m])/2.0;
+							poseDiff += abs((double)train[i].annos[l].poses[m] - \
+								(double)test[i].annos[k].poses[m])/2.0;
 						}
 					}
 
 					// SSD between the predicted values and the correct ones
 					int longPos = (int)LONGITUDE,latPos = (int)LATITUDE;
-					float angleTrain = ((float)train[i].annos[l].poses[longPos]*M_PI/180.0);
-					float angleTest  = ((float)test[i].annos[k].poses[longPos]*M_PI/180.0);
+					double angleTrain = ((double)train[i].annos[l].poses[longPos]*M_PI/180.0);
+					double angleTest  = ((double)test[i].annos[k].poses[longPos]*M_PI/180.0);
 					ssdLongDiff += pow(cos(angleTrain)-cos(angleTest),2) +\
 									pow(sin(angleTrain)-sin(angleTest),2);
-					angleTrain = ((float)train[i].annos[l].poses[latPos]*M_PI/180.0);
-					angleTest  = ((float)test[i].annos[k].poses[latPos]*M_PI/180.0);
+					angleTrain = ((double)train[i].annos[l].poses[latPos]*M_PI/180.0);
+					angleTest  = ((double)test[i].annos[k].poses[latPos]*M_PI/180.0);
 					ssdLatDiff += pow(cos(angleTrain)-cos(angleTest),2) +\
 									pow(sin(angleTrain)-sin(angleTest),2);
 				}
@@ -951,7 +951,7 @@ int annotationsHandle::runEvaluation(int argc,char **argv){
 
 	annotationsHandle::displayFullAnns(allAnnoTrain);
 
-	float avgDist = 0,Ndiff = 0,ssdLatDiff = 0,ssdLongDiff = 0,poseDiff = 0;
+	double avgDist = 0,Ndiff = 0,ssdLatDiff = 0,ssdLongDiff = 0,poseDiff = 0;
 	annotationsHandle::annoDifferences(allAnnoTrain,allAnnoTest,avgDist,Ndiff,\
 		ssdLongDiff,ssdLatDiff,poseDiff);
 }
@@ -974,7 +974,7 @@ void annotationsHandle::checkCalibration(int argc,char **argv){
 	cv::Point2f cam = (*Helpers::proj)(cv::Point3f(Helpers::camPosX,Helpers::camPosY,0));
 	std::cout<<"Camera position: "<<cam<<std::endl;
 
-	float ratio,step;
+	double ratio,step;
 	if(cam.x>0 && cam.x<Helpers::width && cam.y>0 && cam.y<Helpers::height){
 		ratio = 0.30;
 		step  = (ratio-0.01)/3.0;
@@ -982,16 +982,16 @@ void annotationsHandle::checkCalibration(int argc,char **argv){
 		ratio = 0.40;
 		step  = (ratio-0.01)/3.0;
 	}
-	float dimension = std::sqrt(Helpers::width*Helpers::width+Helpers::height*\
+	double dimension = std::sqrt(Helpers::width*Helpers::width+Helpers::height*\
 		Helpers::height)/2;
-	for(float in=0.0;in<ratio;in+=step){
+	for(double in=0.0;in<ratio;in+=step){
 		image = cvLoadImage(argv[1]);
 		cv::Point2f pt(cam.x,in*dimension+cam.y);
 		std::vector<cv::Point2f> points;
 		Helpers::genTemplate2(pt,Helpers::persHeight,Helpers::camHeight,points);
 		for(int i =0;i<points.size();++i){
-			points[i].x += float(Helpers::width/2.0-pt.x);
-			points[i].y += float(Helpers::height/2.0-pt.y);
+			points[i].x += double(Helpers::width/2.0-pt.x);
+			points[i].y += double(Helpers::height/2.0-pt.y);
 		}
 		Helpers::plotTemplate2(image,pt,Helpers::persHeight,Helpers::camHeight,\
 			cv::Scalar(255,0,0),points);
