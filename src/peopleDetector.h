@@ -141,6 +141,10 @@ class peopleDetector:public Tracker{
 		/** Get distance wrt the camera in the image.
 		 */
 		double distanceWRTcamera(const cv::Point2f &feet);
+		/** Applies PCA on top of a data-row to reduce its dimensionality.
+		 */
+		cv::Mat reduceDimensionality(const cv::Mat &data,int nEigens=0,\
+			int reshapeRows=0);
 		//======================================================================
 	public:
 		/** @var print

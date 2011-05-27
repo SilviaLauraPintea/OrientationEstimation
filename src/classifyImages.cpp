@@ -28,6 +28,8 @@ classifyImages::classifyImages(int argc,char **argv,classifyImages::USES use){
 	this->modelName        = "";
 	this->what             = use;
 	this->useGroundTruth   = false;
+	this->dimRed           = false;
+	this->plot             = true;
 
 	// INITIALIZE THE DATA MATRIX AND TARGETS MATRIX AND THE GAUSSIAN PROCESSES
 	for(unsigned i=0;i<3;++i){
@@ -147,6 +149,7 @@ classifyImages::~classifyImages(){
 
 	this->gpSin.clear();
 	this->gpCos.clear();
+	this->pca.reset();
 }
 //==============================================================================
 /** Initialize the options for the Gaussian Process regression.
@@ -198,14 +201,7 @@ bool toUseGT){
 /** Concatenate the loaded data from the files to the currently computed data.
  */
 void classifyImages::loadData(const cv::Mat &tmpData1,const cv::Mat &tmpTargets1,\
-unsigned i){
-	if(!this->trainData[i].empty()){
-		this->trainData[i].release();
-	}
-	if(!this->trainTargets[i].empty()){
-		this->trainTargets[i].release();
-	}
-
+unsigned i,cv::Mat &outData,cv::Mat &outTargets){
 	// LOAD THE DATA AND TARGET MATRIX FROM THE FILE IF IT'S THERE
 	std::deque<std::string> names;
 	names.push_back("CLOSE");names.push_back("MEDIUM");	names.push_back("FAR");
@@ -237,33 +233,32 @@ unsigned i){
 	cv::Mat dumData1,dumData2,dumTargets1,dumTargets2;
 	unsigned colsData     = std::max(tmpData2.cols,tmpData1.cols);
 	unsigned colsTargets  = std::max(tmpTargets2.cols,tmpTargets1.cols);
-	this->trainData[i]    = cv::Mat::zeros(cv::Size(colsData,tmpData1.rows+\
+	outData               = cv::Mat::zeros(cv::Size(colsData,tmpData1.rows+\
 		tmpData2.rows),cv::DataType<double>::type);
-	this->trainTargets[i] = cv::Mat::zeros(cv::Size(colsTargets,tmpTargets1.rows+\
+	outTargets            = cv::Mat::zeros(cv::Size(colsTargets,tmpTargets1.rows+\
 		tmpTargets2.rows),cv::DataType<double>::type);
 
 	// COPY DATA1 AND TARGETS1 TO THE DATA MATRIX
 	if(!tmpData1.empty() && !tmpTargets1.empty()){
-		dumData1 = this->trainData[i].rowRange(0,tmpData1.rows);
+		dumData1 = outData.rowRange(0,tmpData1.rows);
 		tmpData1.copyTo(dumData1);
-		dumTargets1 = this->trainTargets[i].rowRange(0,tmpTargets1.rows);
+		dumTargets1 = outTargets.rowRange(0,tmpTargets1.rows);
 		tmpTargets1.copyTo(dumTargets1);
 	}
 
 	// COPY DATA2 AND TARGETS2 TO THE DATA MATRIX
 	if(!tmpData2.empty() && !tmpTargets2.empty()){
-		dumData2 = this->trainData[i].rowRange(tmpData1.rows,tmpData1.rows+\
-			tmpData2.rows);
+		dumData2 = outData.rowRange(tmpData1.rows,tmpData1.rows+tmpData2.rows);
 		tmpData2.copyTo(dumData2);
-		dumTargets2 = this->trainTargets[i].rowRange(tmpTargets1.rows,\
-			tmpTargets1.rows+tmpTargets2.rows);
+		dumTargets2 = outTargets.rowRange(tmpTargets1.rows,tmpTargets1.rows+\
+			tmpTargets2.rows);
 		tmpTargets2.copyTo(dumTargets2);
 	}
-	this->trainData[i].convertTo(this->trainData[i],cv::DataType<double>::type);
-	this->trainTargets[i].convertTo(this->trainTargets[i],cv::DataType<double>::type);
-	std::cout<<names[i]<<" data: "<<this->trainData[i].size()<<"=("<<\
-		tmpData1.size()<<"+"<<tmpData2.size()<<")"<<std::endl;
-	std::cout<<names[i]<<" targets: "<<this->trainTargets[i].size()<<"=("<<\
+	outData.convertTo(outData,cv::DataType<double>::type);
+	outTargets.convertTo(outTargets,cv::DataType<double>::type);
+	std::cout<<names[i]<<" data: "<<outData.size()<<"=("<<tmpData1.size()<<\
+		"+"<<tmpData2.size()<<")"<<std::endl;
+	std::cout<<names[i]<<" targets: "<<outTargets.size()<<"=("<<\
 		tmpTargets1.size()<<"+"<<tmpTargets2.size()<<")"<<std::endl;
 
 	// RELEASE THE BILLION OF ALLOCATED MATRIXES
@@ -287,6 +282,12 @@ void classifyImages::trainGP(annotationsHandle::POSE what,bool fromFolder){
 	std::deque<std::string> names;
 	names.push_back("CLOSE");names.push_back("MEDIUM");	names.push_back("FAR");
 	for(peopleDetector::CLASSES i=peopleDetector::CLOSE;i<=peopleDetector::FAR;++i){
+		if(!this->trainData[i].empty()){
+			this->trainData[i].release();
+		}
+		if(!this->trainTargets[i].empty()){
+			this->trainTargets[i].release();
+		}
 		this->gpSin[i].init(this->kFunction);
 		this->gpCos[i].init(this->kFunction);
 
@@ -295,14 +296,25 @@ void classifyImages::trainGP(annotationsHandle::POSE what,bool fromFolder){
 		std::string modelNameLabels = this->modelName+"Labels.bin";
 
 		cv::Mat tmpData,tmpTargets;
-		this->features->data[i].copyTo(tmpData);
+		if(this->dimRed && !this->features->data[i].empty()){
+			tmpData = this->reduceDimensionality(this->features->data[i],true);
+		}else{
+			this->features->data[i].copyTo(tmpData);
+		}
 		this->features->targets[i].copyTo(tmpTargets);
 		tmpData.convertTo(tmpData,cv::DataType<double>::type);
 		tmpTargets.convertTo(tmpTargets,cv::DataType<double>::type);
-		this->loadData(tmpData,tmpTargets,i);
+		cv::Mat outData,outTargets;
+		this->loadData(tmpData,tmpTargets,i,outData,outTargets);
+		outTargets.copyTo(this->trainTargets[i]);
+		outData.copyTo(this->trainData[i]);
+		outData.release();
+		outTargets.release();
+		tmpData.release();
+		tmpTargets.release();
+		if(this->trainData[i].empty()) continue;
 
 		// CHECK TO SEE IF THERE IS ANY DATA IN THE CURRENT CLASS
-		if(this->features->data[i].empty()) continue;
 		assert(this->trainData[i].rows==this->trainTargets[i].rows);
 
 		// TRAIN THE SIN AND COS SEPARETELY FOR LONGITUDE || LATITUDe
@@ -318,8 +330,6 @@ void classifyImages::trainGP(annotationsHandle::POSE what,bool fromFolder){
 			this->gpCos[i].train(this->trainData[i],this->trainTargets[i].col(3),\
 				this->kFunction,this->noise,this->length);
 		}
-		tmpData.release();
-		tmpTargets.release();
 	}
 }
 //==============================================================================
@@ -422,14 +432,6 @@ std::deque<std::deque<double> > classifyImages::predictGP\
 (std::deque<gaussianProcess::prediction> &predictionsSin,\
 std::deque<gaussianProcess::prediction> &predictionsCos,\
 annotationsHandle::POSE what,bool fromFolder){
-	for(std::size_t i=0;i<this->testData.size();++i){
-		if(!this->testData[i].empty()){
-			this->testData[i].release();
-		}
-		if(!this->testTargets[i].empty()){
-			this->testTargets[i].release();
-		}
-	}
 	this->features->init(this->testFolder,this->annotationsTest,\
 		this->feature,fromFolder);
 	this->features->start(fromFolder,this->useGroundTruth);
@@ -439,13 +441,23 @@ annotationsHandle::POSE what,bool fromFolder){
 	names.push_back("CLOSE");names.push_back("MEDIUM");	names.push_back("FAR");
 	std::deque<std::deque<double> > predictions;
 	for(peopleDetector::CLASSES i=peopleDetector::CLOSE;i<=peopleDetector::FAR;++i){
+		if(!this->testData[i].empty()){
+			this->testData[i].release();
+		}
+		if(!this->testTargets[i].empty()){
+			this->testTargets[i].release();
+		}
 		// CHECK TO SEE IF THERE IS ANY DATA IN THE CURRENT CLASS
 		std::deque<double> oneClassPredictions;
 		if(this->features->data[i].empty() || !this->gpSin[i].N || !this->gpCos[i].N){
 			predictions.push_back(oneClassPredictions);
 			continue;
 		}
-		this->features->data[i].copyTo(this->testData[i]);
+		if(this->dimRed){
+			this->testData[i] = this->reduceDimensionality(this->features->data[i],false);
+		}else{
+			this->features->data[i].copyTo(this->testData[i]);
+		}
 
 		// GET ONLY THE ANGLES YOU NEED
 		if(what == annotationsHandle::LONGITUDE){
@@ -991,6 +1003,39 @@ gaussianProcess::kernelFunction kernel){
 	test.close();
 }
 //==============================================================================
+/** Applies PCA on top of a data-row to reduce its dimensionality.
+ */
+cv::Mat classifyImages::reduceDimensionality(const cv::Mat &data,bool train,\
+int nEigens,int reshapeRows){
+	cv::Mat preData;
+	data.copyTo(preData);
+	preData.convertTo(preData,CV_32FC1);
+	if(train){
+		if(!nEigens){nEigens = data.rows/4;}
+		this->pca = std::tr1::shared_ptr<cv::PCA>(new cv::PCA(preData,cv::Mat(),\
+			CV_PCA_DATA_AS_ROW,nEigens));
+	}
+	cv::Mat finalMat = this->pca->project(preData);
+	if(this->plot && reshapeRows){
+		for(int i=0;i<finalMat.rows;++i){
+			cv::Mat test1 = this->pca->backProject(finalMat.row(i));
+			cv::Mat dummy = preData.row(i), test2;
+			dummy.copyTo(test2);
+			test2 = test2.reshape(0,reshapeRows);
+			test1 = test1.reshape(0,reshapeRows);
+			cv::imshow("back_proj",test1);
+			cv::imshow("original",test2);
+			cv::waitKey(0);
+			test1.release();
+			test2.release();
+			dummy.release();
+		}
+	}
+	preData.release();
+	finalMat.convertTo(finalMat,cv::DataType<double>::type);
+	return finalMat;
+}
+//==============================================================================
 int main(int argc,char **argv){
 /*
 	// test
@@ -1010,7 +1055,7 @@ int main(int argc,char **argv){
 
 	// evaluate
  	classifyImages classi(argc,argv,classifyImages::EVALUATE);
-	classi.init(0.01,10.0,featureExtractor::RAW_PIXELS,&gaussianProcess::sqexp,true);
+	classi.init(0.01,10.0,featureExtractor::EDGES,&gaussianProcess::matchShapes,true);
 	classi.runCrossValidation(4,annotationsHandle::LONGITUDE,-1,false,\
 		peopleDetector::TOP);
 

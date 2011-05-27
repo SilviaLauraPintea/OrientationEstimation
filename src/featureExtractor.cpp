@@ -246,7 +246,7 @@ const featureExtractor::templ &aTempl,const cv::Rect &roi,const cv::Mat &thresh)
 
 	// MATCH SOME HEADS ON TOP AND GET THE RESULTS
 	int radius     = Helpers::dist(aTempl.points[12],aTempl.points[13]);
-	cv::Mat result = cv::Mat::zeros(cv::Size(12*20*30+3,1),cv::DataType<double>::type);
+	cv::Mat result = cv::Mat::zeros(cv::Size(12*20*30+2,1),cv::DataType<double>::type);
 	cv::blur(gray,gray,cv::Size(3,3));
 	for(int i=0;i<12;++i){
 		std::string imgName = "templates/templ"+Auxiliary::int2string(i)+".jpg";
@@ -318,8 +318,9 @@ const featureExtractor::templ &aTempl,const cv::Rect &roi,const cv::Mat &thresh)
 		cv::imshow("gray",gray);
 		cv::waitKey(0);
 	}
-	cv::Mat result = cv::Mat::zeros(cv::Size(gray.cols*gray.rows+3,1),cv::DataType<double>::type);
-	result         = gray.reshape(0,1);
+	cv::Mat result = cv::Mat::zeros(cv::Size(gray.cols*gray.rows+2,1),\
+		cv::DataType<double>::type);
+	result = gray.reshape(0,1);
 	result.convertTo(result,cv::DataType<double>::type);
 
 	if(this->print){
@@ -390,15 +391,26 @@ const cv::Rect &roi,const featureExtractor::templ &aTempl,double rotAngle){
 		cv::imshow("Edges",tmpEdge);
 		cv::waitKey(0);
 	}
+	cv::dilate(tmpEdge,tmpEdge,cv::Mat(),cv::Point(-1,-1),1);
+	std::vector<std::vector<cv::Point> > contours;
+	cv::findContours(tmpEdge,contours,CV_RETR_EXTERNAL,CV_CHAIN_APPROX_SIMPLE);
+	std::vector<std::vector<cv::Point> >::iterator iter = std::max_element\
+		(contours.begin(),contours.end(),Auxiliary::isLongerContours);
+	cv::Mat contourMat = cv::Mat(contours[iter-contours.begin()]);
+	contourMat.convertTo(contourMat,cv::DataType<double>::type);
+	contourMat = contourMat.reshape(1,1);
+	cv::Mat preResult;
+	cv::resize(contourMat,preResult,cv::Size(100,1),0,0,cv::INTER_CUBIC);
 
 	// WRITE IT ON ONE ROW
-	cv::Mat result = cv::Mat::zeros(cv::Size(tmpEdge.cols*tmpEdge.rows+3,1),cv::DataType<double>::type);
-	cv::Mat dumm   = result.colRange(0,tmpEdge.cols*tmpEdge.rows);
-	tmpEdge        = tmpEdge.reshape(0,1);
-	tmpEdge.convertTo(tmpEdge,cv::DataType<double>::type);
-	tmpEdge.copyTo(dumm);
+	cv::Mat result = cv::Mat::zeros(cv::Size(preResult.rows*preResult.cols+2,1),\
+		cv::DataType<double>::type);
+	cv::Mat dumm = result.colRange(0,(preResult.cols*preResult.rows));
+	preResult.copyTo(dumm);
+	result.convertTo(result,cv::DataType<double>::type);
 	dumm.release();
 	tmpEdge.release();
+	preResult.release();
 	if(this->print){
 		std::cout<<"Size(EDGES): "<<result.size()<<std::endl;
 		for(int i=0;i<std::min(10,result.cols);++i){
@@ -406,7 +418,6 @@ const cv::Rect &roi,const featureExtractor::templ &aTempl,double rotAngle){
 		}
 		std::cout<<"..."<<std::endl;
 	}
-	result.convertTo(result,cv::DataType<double>::type);
 	return result;
 }
 //==============================================================================
@@ -448,7 +459,7 @@ cv::Mat featureExtractor::getSURF(cv::Mat &feature,const std::vector<cv::Point2f
 	}
 
 	// COPY THE DESCRIPTORS IN THE FINAL MATRIX
-	cv::Mat result = cv::Mat::zeros(cv::Size(tmp.rows*tmp.cols+3,1),cv::DataType<double>::type);
+	cv::Mat result = cv::Mat::zeros(cv::Size(tmp.rows*tmp.cols+2,1),cv::DataType<double>::type);
 	tmp            = tmp.reshape(0,1);
 	tmp.convertTo(tmp,cv::DataType<double>::type);
 	cv::Mat dummy = result.colRange(0,tmp.rows*tmp.cols);
@@ -475,7 +486,7 @@ cv::Mat featureExtractor::getPointsGrid(const cv::Mat &feature,const cv::Rect &r
 const featureExtractor::templ &aTempl,const cv::Mat &test){
 	// GET THE GRID SIZE FROM THE TEMPLATE SIZE
 	unsigned no    = 30;
-	cv::Mat result = cv::Mat::zeros(cv::Size(no*no+3,1),cv::DataType<double>::type);
+	cv::Mat result = cv::Mat::zeros(cv::Size(no*no+2,1),cv::DataType<double>::type);
 	double rateX    = (aTempl.extremes[1]-aTempl.extremes[0])/static_cast<double>(no);
 	double rateY    = (aTempl.extremes[3]-aTempl.extremes[2])/static_cast<double>(no);
 
@@ -579,7 +590,8 @@ const featureExtractor::templ &aTempl,const double rotAngle,int aheight){
 	unsigned gaborNo    = std::ceil(feature.rows/aheight);
 	int gaborRows       = std::ceil(feature.rows/gaborNo);
 	unsigned resultCols = foregrSize.width*foregrSize.height;
-	cv::Mat result      = cv::Mat::zeros(cv::Size(gaborNo*resultCols+3,1),cv::DataType<double>::type);
+	cv::Mat result      = cv::Mat::zeros(cv::Size(gaborNo*resultCols+2,1),\
+		cv::DataType<double>::type);
 	cv::Point2f rotCenter(foregrSize.width/2+roi.x,foregrSize.height/2+roi.y);
 	std::vector<cv::Point2f> dummy;
 
@@ -710,7 +722,7 @@ std::vector<cv::Point2f> &indices){
 	}
 
 	// CREATE A HISTOGRAM(COUNT TO WHICH DICT FEATURE WAS ASSIGNED EACH NEW ONE)
-	cv::Mat result = cv::Mat::zeros(cv::Size(this->dictionarySIFT.rows+3,1),cv::DataType<double>::type);
+	cv::Mat result = cv::Mat::zeros(cv::Size(this->dictionarySIFT.rows+2,1),cv::DataType<double>::type);
 	for(int i=0;i<minLabel.cols;++i){
 		int which = minLabel.at<double>(0,i);
 		result.at<double>(0,which) += 1.0;
@@ -1196,7 +1208,8 @@ const featureExtractor::templ &aTempl,const cv::Rect &roi,const cv::Mat &thresh)
 	hogD.compute(gray,descriptors,cv::Size(stepX,stepY),cv::Size(0,0),\
 		std::vector<cv::Point>());
 	cv::Mat dummy1(descriptors);
-	cv::Mat result = cv::Mat::zeros(cv::Size(dummy1.cols,dummy1.rows+3),cv::DataType<double>::type);
+	cv::Mat result = cv::Mat::zeros(cv::Size(dummy1.cols,dummy1.rows+2),\
+		cv::DataType<double>::type);
 	cv::Mat dummy2 = result.colRange(0,dummy1.cols);
 	dummy1.copyTo(dummy2);
 	dummy1.release();
@@ -1239,8 +1252,11 @@ unsigned featureExtractor::setImageClass(unsigned aClass){
 	this->imageClass = names[aClass];
 
 	// WE NEED A SIFT DICTIONARY FOR EACH CLASS
-	std::string dictName = this->imageClass+"_SIFT"+".bin";
-	this->initSIFT(dictName);
+	if(this->featureType == featureExtractor::SIFT || this->featureType == \
+	featureExtractor::SIFT_DICT){
+		std::string dictName = this->imageClass+"_SIFT"+".bin";
+		this->initSIFT(dictName);
+	}
 }
 //==============================================================================
 /** Cut the image around the template or bg bordered depending on which is used
@@ -1250,31 +1266,24 @@ cv::Mat featureExtractor::cutAndResizeImage(const cv::Rect &roiCut,\
 const cv::Mat &img){
 	cv::Mat tmp(img.clone(),roiCut),large;
 	cv::Size aSize;
-	double ratio = 1;
-	if(this->featureType==featureExtractor::EDGES || this->featureType==\
-	featureExtractor::GABOR || this->featureType==featureExtractor::TEMPL_MATCHES ||\
-	this->featureType==featureExtractor::RAW_PIXELS){
-		ratio = 10;
-	}
+	unsigned sHeight = 50;
 	if(this->imageClass=="CLOSE"){
-		aSize.height = 50/ratio;
+		aSize.height = sHeight;
 		aSize.width  = aSize.height*6/5;
 	}else if(this->imageClass=="FAR"){
-		int pHeight = 150/ratio;
 		if(this->bodyPart){
-			aSize.height = pHeight/2;
+			aSize.height = 3/2*sHeight;
 		}else{
-			aSize.height = pHeight;
+			aSize.height = 3*sHeight;
 		}
-		aSize.width  = pHeight*1/2;
+		aSize.width  = 3/2*sHeight;
 	}else if(this->imageClass=="MEDIUM"){
-		int pHeight = 100/ratio;
 		if(this->bodyPart){
-			aSize.height = pHeight/2;
+			aSize.height = sHeight;
 		}else{
-			aSize.height = pHeight;
+			aSize.height = 2*sHeight;
 		}
-		aSize.width  = pHeight*3/4;
+		aSize.width  = sHeight*3/2;
 	}
 	cv::blur(tmp,tmp,cv::Size(3,3));
 	cv::resize(tmp,large,aSize,0,0,cv::INTER_NEAREST);

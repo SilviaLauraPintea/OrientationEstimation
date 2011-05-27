@@ -5,6 +5,7 @@
  */
 #ifndef CLASSIFYIMAGES_H_
 #define CLASSIFYIMAGES_H_
+#include <tr1/memory>
 #include "eigenbackground/src/Helpers.hh"
 #include "annotationsHandle.h"
 #include "gaussianProcess.h"
@@ -82,7 +83,8 @@ class classifyImages {
 			peopleDetector::WHOLE);
 		/** Concatenate the loaded data from the files to the currently computed data.
 		 */
-		void loadData(const cv::Mat &tmpData1,const cv::Mat &tmpTargets1,unsigned i);
+		void loadData(const cv::Mat &tmpData1,const cv::Mat &tmpTargets1,\
+			unsigned i,cv::Mat &outData,cv::Mat &outTargets);
 		/** Run over multiple settings of the parameters to find the best ones.
 		 */
 		friend void parameterSetting(const std::string &errorsOnTrain,\
@@ -99,6 +101,11 @@ class classifyImages {
 		 */
 		void getAngleLimits(unsigned classNo,unsigned predNo,double &angleMin,\
 			double &angleMax);
+
+		/** Applies PCA on top of a data-row to reduce its dimensionality.
+		 */
+		cv::Mat reduceDimensionality(const cv::Mat &data,bool train,\
+			int nEigens=0,int reshapeRows=0);
 		//======================================================================
 	protected:
 		/** @var features
@@ -226,6 +233,18 @@ class classifyImages {
 		 * Use the annotations' positions or use the tracker.
 		 */
 		bool useGroundTruth;
+		/** @var dimRed
+		 * True if dimensionality reduction should be used.
+		 */
+		bool dimRed;
+		/** @var pca
+		 * An instance of the class cv::PCA
+		 */
+		std::tr1::shared_ptr<cv::PCA> pca;
+		/** @ plot
+		 * To display images or not.
+		 */
+		bool plot;
 		//======================================================================
 	private:
 		DISALLOW_COPY_AND_ASSIGN(classifyImages);

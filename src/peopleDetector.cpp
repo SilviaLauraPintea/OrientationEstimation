@@ -611,7 +611,7 @@ const std::deque<unsigned> &exi,double threshVal){
 		cv::Mat dataRow = this->extractor->getDataRow(this->borderedIpl->width,\
 			this->templates[i],roi,allPeople[i],thresholded,imgName,absRotCenter,\
 			rotBorders,rotAngle,keys);
-		dataRow.at<double>(0,dataRow.cols-3) = this->distanceWRTcamera\
+		dataRow.at<double>(0,dataRow.cols-2) = this->distanceWRTcamera\
 			(this->templates[i].center);
 
 		// CHECK THE DIRECTION OF THE MOVEMENT
@@ -622,17 +622,16 @@ const std::deque<unsigned> &exi,double threshVal){
 		this->dataMotionVectors[this->existing[i].groupNo].push_back(direction);
 
 		if(this->tracking && !this->entireNext.empty()){
-			dataRow.at<double>(0,dataRow.cols-1) = direction;
 			cv::Mat nextImg(this->entireNext,roi);
 			this->extractor->rotate2Zero(rotAngle,featureExtractor::MATRIX,roi,\
 				absRotCenter,rotBorders,keys,nextImg);
-			dataRow.at<double>(0,dataRow.cols-2) = \
+			dataRow.at<double>(0,dataRow.cols-1) = \
 				this->opticalFlow(allPeople[i].pixels,nextImg,keys,\
 				this->templates[i].head,this->templates[i].center,false);
 			nextImg.release();
 		}
 		dataRow.convertTo(dataRow,cv::DataType<double>::type);
-		Auxiliary::mean0Variance1(dataRow);
+		//Auxiliary::mean0Variance1(dataRow);
 
 		// STORE THE EXTRACTED ROW INTO THE DATA MATRIX
 		if(this->data[this->existing[i].groupNo].empty()){
@@ -640,8 +639,8 @@ const std::deque<unsigned> &exi,double threshVal){
 		}else{
 			this->data[this->existing[i].groupNo].push_back(dataRow);
 		}
-		if(!thresholded.empty()){thresholded.release();}
 		dataRow.release();
+		if(!thresholded.empty()){thresholded.release();}
 		double label = std::atan2(this->targets[this->existing[i].groupNo].\
 			at<double>(this->data[this->existing[i].groupNo].rows-1,0),\
 			this->targets[this->existing[i].groupNo].\

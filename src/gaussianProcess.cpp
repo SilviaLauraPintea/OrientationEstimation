@@ -362,27 +362,38 @@ double gaussianProcess::matern25(const cv::Mat &x1,const cv::Mat &x2,double l){
 double gaussianProcess::matchShapes(const cv::Mat &x1,const cv::Mat &x2,double l){
 	assert(x1.type()==cv::DataType<double>::type);
 	assert(x2.type()==cv::DataType<double>::type);
-	cv::Mat obj1 = (x1.colRange(0,x1.cols-3)).reshape(0,l);
-	cv::Mat obj2 = (x2.colRange(0,x2.cols-3)).reshape(0,l);
+	cv::Mat tmpX1,tmpX2;
 
-	std::vector<std::vector<cv::Point> > contours1;
-	obj1.convertTo(obj1,CV_8UC1);
-	cv::dilate(obj1,obj1,cv::Mat(),cv::Point(-1,-1),1);
-	cv::findContours(obj1,contours1,CV_RETR_EXTERNAL,CV_CHAIN_APPROX_SIMPLE);
-	std::vector<std::vector<cv::Point> > contours2;
-	obj2.convertTo(obj2,CV_8UC1);
-	cv::dilate(obj2,obj2,cv::Mat(),cv::Point(-1,-1),1);
-	cv::findContours(obj2,contours2,CV_RETR_EXTERNAL,CV_CHAIN_APPROX_SIMPLE);
+	// IT NEEDS TO HAVE 2 CHANNELS => NEEDS TO HAVE COLS%2=0
+	if(x1.cols%2==1){
+		tmpX1 = cv::Mat::zeros(cv::Size(x1.cols+1,x1.rows),x1.type());
+		cv::Mat dumm = tmpX1.colRange(0,x1.cols);
+		x1.copyTo(dumm);
+		dumm.release();
 
-	std::vector<std::vector<cv::Point> >::iterator iter1 = std::max_element\
-		(contours1.begin(),contours1.end(),Auxiliary::isLongerContours);
-	std::vector<std::vector<cv::Point> >::iterator iter2 = std::max_element\
-		(contours2.begin(),contours2.end(),Auxiliary::isLongerContours);
-	double result = cv::matchShapes(cv::Mat(contours1[iter1-contours1.begin()]),\
-		cv::Mat(contours2[iter2-contours2.begin()]),3,0.0);
-	obj1.release();
-	obj2.release();
-	return static_cast<double>(result);
+		// ALSO FOR X2 IT SHOULD BE TRUE
+		tmpX2 = cv::Mat::zeros(cv::Size(x2.cols+1,x2.rows),x2.type());
+		dumm = tmpX2.colRange(0,x2.cols);
+		x2.copyTo(dumm);
+		dumm.release();
+	}else{
+		x1.copyTo(tmpX1);
+		x2.copyTo(tmpX2);
+	}
+	tmpX1.convertTo(tmpX1,CV_32FC1);
+	tmpX2.convertTo(tmpX2,CV_32FC1);
+	tmpX1 = tmpX1.reshape(2,0);
+	tmpX2 = tmpX2.reshape(2,0);
+	double result = cv::matchShapes(tmpX1,tmpX2,1,0.0);
+	tmpX1.release();
+	tmpX2.release();
+	if(!result){
+		result = 0.000000001;
+	}
+
+std::cout<<result<<"==>"<<std::exp(-2.0*l/result)<<std::endl;
+
+	return std::exp(-2.0*l/result);
 }
 //==============================================================================
 /*
