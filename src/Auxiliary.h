@@ -16,7 +16,7 @@ class Auxiliary{
 		 */
 		static void mat2ipl(const cv::Mat &image,IplImage* ipl_image);
 
-		/** Convert the values from a cv::Mat of doubles to be between 0 and 1.
+		/** Convert the values from a cv::Mat of floats to be between 0 and 1.
 		 */
 		static void normalizeMat(cv::Mat &matrix);
 
@@ -44,18 +44,18 @@ class Auxiliary{
 		static std::string int2string(int i);
 		/** Changes a given angle in RADIANS to be positive and between [0,2*M_PI).
 		 */
-		static void angle0to360(double &angle);
+		static void angle0to360(float &angle);
 		/** Changes a given angle in RADIANS to be positive and between [-M_PI,M_PI).
 		 */
-		static void angle180to180(double &angle);
+		static void angle180to180(float &angle);
 		/** Get perpendicular to a line given by 2 points A,B in point C.
 		 */
 		static void perpendicularLine(const cv::Point2f &A,const cv::Point2f &B,\
-			const cv::Point2f &C,double &m,double &b);
+			const cv::Point2f &C,float &m,float &b);
 		/** Checks to see if a point is on the same side of a line like another given point.
 		 */
 		static bool sameSubplane(const cv::Point2f &test,const cv::Point2f &point,\
-			double m,double b);
+			float m,float b);
 		/** Just displaying an image a bit larger to visualize it better.
 		 */
 		static void showZoomedImage(const cv::Mat &image,const std::string &title);
