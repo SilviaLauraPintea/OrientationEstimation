@@ -74,7 +74,8 @@ class PeopleDetector:public Tracker{
 		/** Initializes the parameters of the tracker.
 		 */
 		void init(const std::string &dataFolder,const std::string &theAnnotationsFile,\
-			const FeatureExtractor::FEATURE feat,const bool readFromFolder = true);
+			const std::deque<FeatureExtractor::FEATURE> &feat,\
+			const bool readFromFolder = true);
 		/** Checks to see if an annotation can be assigned to a detection.
 		 */
 		bool canBeAssigned(unsigned l,std::deque<float> &minDistances,\

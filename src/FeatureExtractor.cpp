@@ -6,29 +6,36 @@
 #include "Auxiliary.h"
 #include "FeatureExtractor.h"
 //==============================================================================
+/** Define a post-fix increment operator for the enum \c FEATURE.
+ */
+void operator++(FeatureExtractor::FEATURE &feature){
+	feature = FeatureExtractor::FEATURE(feature+1);
+}
+//==============================================================================
 /** Checks to see if a pixel's x coordinate is on a scanline.
  */
 struct onScanline{
 	public:
-		unsigned pixelY;
-		onScanline(const unsigned pixelY){this->pixelY=pixelY;}
+		unsigned pixelY_;
+		onScanline(const unsigned pixelY){this->pixelY_=pixelY;}
 		virtual ~onScanline(){};
 		bool operator()(const Helpers::scanline_t line)const{
-			return (line.line_ == this->pixelY);
+			return (line.line_ == this->pixelY_);
 		}
 		onScanline(const onScanline &on){
-			this->pixelY = on.pixelY;
+			this->pixelY_ = on.pixelY_;
 		}
 		onScanline& operator=(const onScanline &on){
 			if(this == &on) return *this;
-			this->pixelY = on.pixelY;
+			this->pixelY_ = on.pixelY_;
 			return *this;
 		}
 };
 //==============================================================================
 FeatureExtractor::FeatureExtractor(){
 	this->isInit_       = false;
-	this->featureType_  = FeatureExtractor::EDGES;
+	this->featureType_  = std::deque<FeatureExtractor::FEATURE>\
+		(1,FeatureExtractor::EDGES);
 	this->dictFilename_ = "none";
 	this->noMeans_      = 500;
 	this->meanSize_     = 128;
@@ -48,7 +55,7 @@ FeatureExtractor::~FeatureExtractor(){
 //==============================================================================
 /** Initializes the class elements.
  */
-void FeatureExtractor::init(FeatureExtractor::FEATURE fType,\
+void FeatureExtractor::init(const std::deque<FeatureExtractor::FEATURE> &fType,\
 const std::string &featFile,int colorSp,int invColorSp,\
 FeatureExtractor::FEATUREPART part){
 	if(this->isInit_){this->reset();}
@@ -58,6 +65,15 @@ FeatureExtractor::FEATUREPART part){
 	this->colorspaceCode_    = colorSp;
 	this->invColorspaceCode_ = invColorSp;
 	this->bodyPart_          = part;
+}
+//==============================================================================
+/** Find if a feature type is in the vector of features.
+ */
+bool FeatureExtractor::isFeatureIn(std::deque<FeatureExtractor::FEATURE> feats,\
+FeatureExtractor::FEATURE feat){
+	std::deque<FeatureExtractor::FEATURE>::iterator it = find\
+		(feats.begin(),feats.end(),feat);
+	return !(it == feats.end());
 }
 //==============================================================================
 /** Initializes the settings for the SIFT dictionary.
@@ -72,10 +88,8 @@ unsigned size){
 	this->meanSize_     = size;
 
 	// ASSUME THAT THERE IS ALREADY A SIFT DICTIONARY AVAILABLE
-	if(this->featureType_ == FeatureExtractor::SIFT_DICT){
-		std::cout<<"Build dictionary .."<<std::endl;
-	}
-	if(this->dictionarySIFT_.empty() && this->featureType_!=FeatureExtractor::SIFT_DICT){
+	if(this->dictionarySIFT_.empty() && FeatureExtractor::isFeatureIn\
+	(this->featureType_,FeatureExtractor::SIFT)){
 		Auxiliary::binFile2mat(this->dictionarySIFT_,const_cast<char*>\
 			(this->dictFilename_.c_str()));
 	}
@@ -768,6 +782,11 @@ std::vector<cv::Point2f> &indices){
 /** Creates a data matrix for each image and stores it locally.
  */
 void FeatureExtractor::extractFeatures(cv::Mat &image,const std::string &sourceName){
+	if(this->featureType_.size()>1){
+		std::cerr<<"There can not be more than 1 features extracted in the same time"<<\
+			std::endl;
+		std::abort();
+	}
 	if(this->colorspaceCode_ != -1){
 		cv::cvtColor(image,image,this->colorspaceCode_);
 	}
@@ -782,32 +801,40 @@ void FeatureExtractor::extractFeatures(cv::Mat &image,const std::string &sourceN
 	std::string toWrite = this->featureFile_;
 	std::vector<cv::Point2f> dummyT;
 	cv::Rect dummyR;
-	switch(this->featureType_){
-		case (FeatureExtractor::IPOINTS):
-			toWrite += "IPOINTS/";
-			Helpers::file_exists(toWrite.c_str(),true);
-			feature = this->extractPointsGrid(image);
-			break;
-		case FeatureExtractor::EDGES:
-			toWrite += "EDGES/";
-			Helpers::file_exists(toWrite.c_str(),true);
-			feature = this->extractEdges(image);
-			break;
-		case FeatureExtractor::SURF:
-			toWrite += "SURF/";
-			Helpers::file_exists(toWrite.c_str(),true);
-			feature = this->extractSURF(image);
-			break;
-		case FeatureExtractor::GABOR:
-			toWrite += "GABOR/";
-			Helpers::file_exists(toWrite.c_str(),true);
-			feature = this->extractGabor(image);
-			break;
-		case FeatureExtractor::SIFT:
-			toWrite += "SIFT/";
-			Helpers::file_exists(toWrite.c_str(),true);
-			feature = this->extractSIFT(image,dummyT,dummyR);
-			break;
+	for(FeatureExtractor::FEATURE f=FeatureExtractor::EDGES;\
+	f<FeatureExtractor::TEMPL_MATCHES;++f){
+		if(!FeatureExtractor::isFeatureIn(this->featureType_,f)){continue;}
+		cv::Mat dummy;
+		switch(f){
+			case (FeatureExtractor::IPOINTS):
+				toWrite += "IPOINTS/";
+				Helpers::file_exists(toWrite.c_str(),true);
+				dummy = this->extractPointsGrid(image);
+				break;
+			case FeatureExtractor::EDGES:
+				toWrite += "EDGES/";
+				Helpers::file_exists(toWrite.c_str(),true);
+				dummy = this->extractEdges(image);
+				break;
+			case FeatureExtractor::SURF:
+				toWrite += "SURF/";
+				Helpers::file_exists(toWrite.c_str(),true);
+				dummy = this->extractSURF(image);
+				break;
+			case FeatureExtractor::GABOR:
+				toWrite += "GABOR/";
+				Helpers::file_exists(toWrite.c_str(),true);
+				dummy = this->extractGabor(image);
+				break;
+			case FeatureExtractor::SIFT:
+				toWrite += "SIFT/";
+				Helpers::file_exists(toWrite.c_str(),true);
+				dummy = this->extractSIFT(image,dummyT,dummyR);
+				break;
+		}
+		dummy.copyTo(feature);
+		dummy.release();
+		break;
 	}
 	feature.convertTo(feature,CV_32FC1);
 
@@ -1052,7 +1079,7 @@ const std::vector<cv::Point2f> &templ,const cv::Rect &roi){
 	aSIFT(gray,cv::Mat(),keypoints);
 
 	// WE USE THE SAME FUNCTION TO BUILD THE DICTIONARY ALSO
-	if(this->featureType_==FeatureExtractor::SIFT_DICT){
+	if(FeatureExtractor::isFeatureIn(this->featureType_,FeatureExtractor::SIFT_DICT)){
 		result = cv::Mat::zeros(keypoints.size(),aSIFT.descriptorSize(),CV_32FC1);
 		std::vector<cv::KeyPoint> goodKP;
 		for(std::size_t i=0;i<keypoints.size();++i){
@@ -1070,7 +1097,7 @@ const std::vector<cv::Point2f> &templ,const cv::Rect &roi){
 			cv::waitKey(0);
 		}
 	// IF WE ONLY WANT TO STORE THE SIFT FEATURE WE NEED TO ADD THE x-S AND y-S
-	}else if(this->featureType_ == FeatureExtractor::SIFT){
+	}else if(FeatureExtractor::isFeatureIn(this->featureType_,FeatureExtractor::SIFT)){
 		result = cv::Mat::zeros(keypoints.size(),aSIFT.descriptorSize()+2,CV_32FC1);
 		cv::Mat dummy1 = result.colRange(0,aSIFT.descriptorSize());
 		cv::Mat dummy2;
@@ -1097,7 +1124,7 @@ const std::vector<cv::Point2f> &templ,const cv::Rect &roi){
 		rowsI.release();
 
 		// IF WE WANT TO STORE THE SIFT FEATURES THEN, WE NEED TO STORE x AND y
-		if(this->featureType_==FeatureExtractor::SIFT){
+		if(!FeatureExtractor::isFeatureIn(this->featureType_,FeatureExtractor::SIFT)){
 			result.at<float>(i,aSIFT.descriptorSize())   = keypoints[i].pt.x;
 			result.at<float>(i,aSIFT.descriptorSize()+1) = keypoints[i].pt.y;
 		}
@@ -1116,55 +1143,68 @@ std::vector<cv::Point2f> &keys){
 	cv::Mat feature,result,dictImg;
 	std::string toRead;
 	std::cout<<"Image class (CLOSE/MEDIUM/FAR): "<<this->imageClass_<<std::endl;
-	switch(this->featureType_){
-		case (FeatureExtractor::IPOINTS):
-			toRead = (this->featureFile_+"IPOINTS/"+imgName+".bin");
-			Auxiliary::binFile2mat(feature,const_cast<char*>(toRead.c_str()));
-			this->rotate2Zero(rotAngle,FeatureExtractor::KEYS,roi,absRotCenter,\
-				rotBorders,keys,feature);
-			result = this->getPointsGrid(feature,roi,aTempl,person.pixels_);
-			break;
-		case FeatureExtractor::EDGES:
-			toRead = (this->featureFile_+"EDGES/"+imgName+".bin");
-			Auxiliary::binFile2mat(feature,const_cast<char*>(toRead.c_str()));
-			result = this->getEdges(feature,person.thresh_,roi,aTempl,rotAngle);
-			break;
-		case FeatureExtractor::SURF:
-			toRead = (this->featureFile_+"SURF/"+imgName+".bin");
-			Auxiliary::binFile2mat(feature,const_cast<char*>(toRead.c_str()));
-			this->rotate2Zero(rotAngle,FeatureExtractor::KEYS,roi,absRotCenter,\
-				rotBorders,keys,feature);
-			result = this->getSURF(feature,aTempl.points_,roi,person.pixels_,keys);
-			break;
-		case FeatureExtractor::GABOR:
-			toRead = (this->featureFile_+"GABOR/"+imgName+".bin");
-			Auxiliary::binFile2mat(feature,const_cast<char*>(toRead.c_str()));
-			result = this->getGabor(feature,person.thresh_,roi,person.pixels_.size(),\
-				aTempl,rotAngle,imageRows);
-			break;
-		case FeatureExtractor::SIFT_DICT:
-			person.pixels_.copyTo(dictImg);
-			result = this->extractSIFT(dictImg,aTempl.points_,roi);
-			break;
-		case FeatureExtractor::SIFT:
-			toRead = (this->featureFile_+"SIFT/"+imgName+".bin");
-			Auxiliary::binFile2mat(feature,const_cast<char*>(toRead.c_str()));
-			this->rotate2Zero(rotAngle,FeatureExtractor::KEYS,roi,absRotCenter,\
-				rotBorders,keys,feature);
-			result = this->getSIFT(feature,aTempl.points_,roi,person.pixels_,keys);
-			break;
-		case FeatureExtractor::TEMPL_MATCHES:
-			// NO NEED TO STORE ANY FEATURE,ONLY THE PIXEL VALUES ARE NEEDED
-			result = this->getTemplMatches(person,aTempl,roi);
-			break;
-		case FeatureExtractor::HOG:
-			// CAN ONLY EXTRACT THEM OVER AN IMAGE SO NO FEATURES CAN BE STORED
-			result = this->getHOG(person,aTempl,roi);
-			break;
-		case FeatureExtractor::RAW_PIXELS:
-			// NO NEED TO STORE ANY FEATURE,ONLY THE PIXEL VALUES ARE NEEDED
-			result = this->getRawPixels(person,aTempl,roi);
-			break;
+	for(FeatureExtractor::FEATURE f=FeatureExtractor::EDGES;\
+	f<FeatureExtractor::TEMPL_MATCHES;++f){
+		if(!FeatureExtractor::isFeatureIn(this->featureType_,f)){continue;}
+		cv::Mat dummy;
+		switch(f){
+			case (FeatureExtractor::IPOINTS):
+				toRead = (this->featureFile_+"IPOINTS/"+imgName+".bin");
+				Auxiliary::binFile2mat(feature,const_cast<char*>(toRead.c_str()));
+				this->rotate2Zero(rotAngle,FeatureExtractor::KEYS,roi,absRotCenter,\
+					rotBorders,keys,feature);
+				dummy = this->getPointsGrid(feature,roi,aTempl,person.pixels_);
+				break;
+			case FeatureExtractor::EDGES:
+				toRead = (this->featureFile_+"EDGES/"+imgName+".bin");
+				Auxiliary::binFile2mat(feature,const_cast<char*>(toRead.c_str()));
+				dummy = this->getEdges(feature,person.thresh_,roi,aTempl,rotAngle);
+				break;
+			case FeatureExtractor::SURF:
+				toRead = (this->featureFile_+"SURF/"+imgName+".bin");
+				Auxiliary::binFile2mat(feature,const_cast<char*>(toRead.c_str()));
+				this->rotate2Zero(rotAngle,FeatureExtractor::KEYS,roi,absRotCenter,\
+					rotBorders,keys,feature);
+				dummy = this->getSURF(feature,aTempl.points_,roi,person.pixels_,keys);
+				break;
+			case FeatureExtractor::GABOR:
+				toRead = (this->featureFile_+"GABOR/"+imgName+".bin");
+				Auxiliary::binFile2mat(feature,const_cast<char*>(toRead.c_str()));
+				dummy = this->getGabor(feature,person.thresh_,roi,person.pixels_.size(),\
+					aTempl,rotAngle,imageRows);
+				break;
+			case FeatureExtractor::SIFT_DICT:
+				person.pixels_.copyTo(dictImg);
+				dummy = this->extractSIFT(dictImg,aTempl.points_,roi);
+				break;
+			case FeatureExtractor::SIFT:
+				toRead = (this->featureFile_+"SIFT/"+imgName+".bin");
+				Auxiliary::binFile2mat(feature,const_cast<char*>(toRead.c_str()));
+				this->rotate2Zero(rotAngle,FeatureExtractor::KEYS,roi,absRotCenter,\
+					rotBorders,keys,feature);
+				dummy = this->getSIFT(feature,aTempl.points_,roi,person.pixels_,keys);
+				break;
+			case FeatureExtractor::TEMPL_MATCHES:
+				// NO NEED TO STORE ANY FEATURE,ONLY THE PIXEL VALUES ARE NEEDED
+				dummy = this->getTemplMatches(person,aTempl,roi);
+				break;
+			case FeatureExtractor::HOG:
+				// CAN ONLY EXTRACT THEM OVER AN IMAGE SO NO FEATURES CAN BE STORED
+				dummy = this->getHOG(person,aTempl,roi);
+				break;
+			case FeatureExtractor::RAW_PIXELS:
+				// NO NEED TO STORE ANY FEATURE,ONLY THE PIXEL VALUES ARE NEEDED
+				dummy = this->getRawPixels(person,aTempl,roi);
+				break;
+		}
+		cv::Mat tmp = cv::Mat::zeros(cv::Size(result.cols+dummy.cols,1),CV_32FC1);
+		cv::Mat dum = tmp.colRange(result.cols,result.cols+dummy.cols);
+		dummy.copyTo(dum);
+		result.release();
+		tmp.copyTo(result);
+		tmp.release();
+		dum.release();
+		dummy.release();
 	}
 	dictImg.release();
 	if(!feature.empty()){
@@ -1255,8 +1295,8 @@ unsigned FeatureExtractor::setImageClass(unsigned aClass){
 	this->imageClass_ = names[aClass];
 
 	// WE NEED A SIFT DICTIONARY FOR EACH CLASS
-	if(this->featureType_ == FeatureExtractor::SIFT || this->featureType_ == \
-	FeatureExtractor::SIFT_DICT){
+	if(FeatureExtractor::isFeatureIn(this->featureType_,FeatureExtractor::SIFT) || \
+	FeatureExtractor::isFeatureIn(this->featureType_,FeatureExtractor::SIFT_DICT)){
 		std::string dictName = this->imageClass_+"_SIFT"+".bin";
 		this->initSIFT(dictName);
 	}

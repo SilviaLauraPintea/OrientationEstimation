@@ -126,15 +126,16 @@ class FeatureExtractor {
 		enum FEATUREPART {TOP,BOTTOM,WHOLE,HEAD};
 		/** All available feature types.
 		 */
-		enum FEATURE {IPOINTS,EDGES,SIFT_DICT,SURF,SIFT,GABOR,TEMPL_MATCHES,\
-			HOG,RAW_PIXELS};
+		enum FEATURE {EDGES,GABOR,HOG,IPOINTS,RAW_PIXELS,SIFT,SIFT_DICT,SURF,\
+			TEMPL_MATCHES};
 		/** What needs to be rotated.
 		 */
 		enum ROTATE {MATRIX,TEMPLATE,KEYS};
 		/** Initializes the class elements.
 		 */
-		void init(FeatureExtractor::FEATURE fType,const std::string &featFile,\
-			int colorSp,int invColorSp,FeatureExtractor::FEATUREPART part);
+		void init(const std::deque<FeatureExtractor::FEATURE> &fType,\
+			const std::string &featFile,int colorSp,int invColorSp,\
+			FeatureExtractor::FEATUREPART part);
 		/** Resets the variables to the default values.
 		 */
 		void reset();
@@ -236,6 +237,10 @@ class FeatureExtractor {
 		 * is used and resize to a common size.
 		 */
 		cv::Mat cutAndResizeImage(const cv::Rect &roiCut,const cv::Mat &img);
+		/** Find if a feature type is in the vector of features.
+		 */
+		static bool isFeatureIn(std::deque<FeatureExtractor::FEATURE> feats,\
+			FeatureExtractor::FEATURE feat);
 	//==========================================================================
 	private:
 		/** @var isInit_
@@ -249,7 +254,7 @@ class FeatureExtractor {
 		/** @var featureType_
 		 * Indicates the type of the feature to be used.
 		 */
-		FeatureExtractor::FEATURE featureType_;
+		std::deque<FeatureExtractor::FEATURE> featureType_;
 		/** @var dictFilename_
 		 * The SIFT dictionary used for vector quantization.
 		 */
@@ -298,5 +303,10 @@ class FeatureExtractor {
 	private:
 		DISALLOW_COPY_AND_ASSIGN(FeatureExtractor);
 };
-
+//==============================================================================
+//==============================================================================
+/** Define a post-fix increment operator for the enum \c FEATURE.
+ */
+void operator++(FeatureExtractor::FEATURE &feature);
+//==============================================================================
 #endif /* FEATUREEXTRACTOR_H_ */

@@ -35,16 +35,16 @@ bool buildBg,int colorSp,FeatureExtractor::FEATUREPART part):Tracker\
 		if(dataPath[dataPath.size()-1]!='/'){
 			dataPath += "/";
 		}
-		this->plot_              = false;
-		this->print_             = true;
-		this->useGroundTruth_    = true;
-		this->colorspaceCode_    = colorSp;
-		this->featurePart_       = part;
-		this->tracking_ 	     = 0;
-		this->onlyExtract_       = extract;
-		this->datasetPath_       = dataPath;
-		this->imageString_       = imgString;
-		this->extractor_         = std::tr1::shared_ptr<FeatureExtractor>\
+		this->plot_           = false;
+		this->print_          = true;
+		this->useGroundTruth_ = true;
+		this->colorspaceCode_ = colorSp;
+		this->featurePart_    = part;
+		this->tracking_ 	  = 0;
+		this->onlyExtract_    = extract;
+		this->datasetPath_    = dataPath;
+		this->imageString_    = imgString;
+		this->extractor_      = std::tr1::shared_ptr<FeatureExtractor>\
 			(new FeatureExtractor());
 		this->initInvColoprSp();
 	}else{
@@ -143,8 +143,8 @@ struct compareImg{
 /** Initializes the parameters of the tracker.
  */
 void PeopleDetector::init(const std::string &dataFolder,\
-const std::string &theAnnotationsFile,const FeatureExtractor::FEATURE feat,\
-const bool readFromFolder){
+const std::string &theAnnotationsFile,\
+const std::deque<FeatureExtractor::FEATURE> &feat,const bool readFromFolder){
 	this->dataMotionVectors_.clear();
 	this->existing_.clear();
 	this->classesRange_.clear();
@@ -173,12 +173,13 @@ const bool readFromFolder){
 	}
 
 	if(this->onlyExtract_){
-		assert(feat!=FeatureExtractor::HOG && feat!=FeatureExtractor::TEMPL_MATCHES &&\
-			feat!=FeatureExtractor::RAW_PIXELS);
+		assert(!FeatureExtractor::isFeatureIn(feat,FeatureExtractor::HOG) &&\
+			!FeatureExtractor::isFeatureIn(feat,FeatureExtractor::TEMPL_MATCHES) &&\
+			!FeatureExtractor::isFeatureIn(feat,FeatureExtractor::RAW_PIXELS));
 	}
 	this->extractor_->init(feat,this->datasetPath_+"features/",this->colorspaceCode_,\
 		this->invColorspaceCode_,this->featurePart_);
-	if(feat==FeatureExtractor::SIFT_DICT){
+	if(FeatureExtractor::isFeatureIn(feat,FeatureExtractor::SIFT_DICT)){
 		this->tracking_ = false;
 	}
 	this->templates_.clear();
@@ -1271,8 +1272,8 @@ void PeopleDetector::extractHeadArea(int i,FeatureExtractor::people &person){
 		this->extractor_->getThresholdBorderes(minX,maxX,minY,maxY,person.thresh_);
 		float headSize = Helpers::dist(this->templates_[i].points_[12],\
 			this->templates_[i].points_[14]);
-		headPosition = cv::Point2f((minX+maxX)/2,headSize/2+minY);
 		radius       = headSize/2;
+		headPosition = cv::Point2f((minX+maxX)/2,headSize/2+minY);
 		cv::circle(headMask,headPosition,radius,cv::Scalar(255,255,255),-1);
 		cv::Mat tmpThresh;
 		person.thresh_.copyTo(tmpThresh,headMask);
@@ -1283,9 +1284,9 @@ void PeopleDetector::extractHeadArea(int i,FeatureExtractor::people &person){
 	//ELSE FIX ONLY THE TEMPLATE
 		float headSize = Helpers::dist(this->templates_[i].points_[12],\
 			this->templates_[i].points_[14]);
+		radius       = headSize/2;
 		headPosition = cv::Point2f(this->templates_[i].head_.x-person.borders_[0],\
 			this->templates_[i].head_.y-person.borders_[2]);
-		radius       = headSize/2;
 		cv::circle(headMask,headPosition,radius,cv::Scalar(255,255,255),-1);
 	}
 	//UPDATE THE TEMPLATE POINTS
