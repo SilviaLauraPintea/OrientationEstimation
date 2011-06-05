@@ -17,35 +17,48 @@ class ClassifyImages {
 		//======================================================================
 		/** All available uses of this class.
 		 */
+		enum CLASSIFIER {GAUSSIAN_PROCESS,NEURAL_NETWORK};
+		/** All available uses of this class.
+		 */
 		enum USES {EVALUATE,BUILD_DICTIONARY,TEST,BUILD_DATA};
 		/** Constructor & destructor of the class.
 		 */
-		ClassifyImages(int argc,char **argv,ClassifyImages::USES use = \
-			ClassifyImages::EVALUATE);
+		ClassifyImages(int argc,char **argv,ClassifyImages::USES use=\
+			ClassifyImages::EVALUATE,ClassifyImages::CLASSIFIER classi=\
+			ClassifyImages::GAUSSIAN_PROCESS);
 		virtual ~ClassifyImages();
 
 		/** Build dictionary for vector quantization.
 		 */
 		void buildDictionary(int colorSp=-1,bool toUseGT=true);
-
+		/** Trains on the training data using the indicated classifier.
+		 */
+		void train(AnnotationsHandle::POSE what,bool fromFolder);
 		/** Creates the training data (according to the options),the labels and
 		 * trains the a \c GaussianProcess on the data.
 		 */
-		void trainGP(AnnotationsHandle::POSE what,bool fromFolder);
-
+		void trainGP(AnnotationsHandle::POSE what,int i);
+		/** Creates the training data (according to the options),the labels and
+		 * trains the a \c Neural Network on the data.
+		 */
+		void trainNN(AnnotationsHandle::POSE what,int i);
 		/** Creates the test data and applies \c GaussianProcess prediction on the test
 		 * data.
 		 */
-		std::deque<std::deque<float> > predictGP(std::deque<GaussianProcess::prediction>\
-			&predictionsSin,std::deque<GaussianProcess::prediction> &predictionsCos,\
-			AnnotationsHandle::POSE what,bool fromFolder);
-
+		std::deque<float> predictGP(int i);
+		/** Creates the test data and applies \c Neural Network prediction on the test
+		 * data.
+		 */
+		std::deque<float> predictNN(int i);
 		/** Initialize the options for the Gaussian Process regression.
 		 */
-		void init(float theNoise,float theLength,FeatureExtractor::FEATURE \
-			theFeature,GaussianProcess::kernelFunction theKFunction=\
-			&GaussianProcess::sqexp,bool toUseGT=false);
-
+		void init(float theNoise,float theLength,\
+			const std::deque<FeatureExtractor::FEATURE> &theFeature,\
+			GaussianProcess::kernelFunction theKFunction=&GaussianProcess::sqexp,\
+			bool toUseGT=false);
+		/** Check if the classifier was initialized.
+		 */
+		bool isClassiInit(int i);
 		/** Evaluate one prediction versus its target.
 		 */
 		void evaluate(const std::deque<std::deque<float> > &prediAngles,\
@@ -64,7 +77,8 @@ class ClassifyImages {
 		/** Runs the final evaluation (test).
 		 */
 		std::deque<std::deque<float> > runTest(int colorSp,\
-			AnnotationsHandle::POSE what,float &normError);
+			AnnotationsHandle::POSE what,float &normError,\
+			FeatureExtractor::FEATUREPART part);
 		/** Try to optimize the prediction of the angle considering the variance
 		 * of sin and cos.
 		 */
@@ -89,14 +103,16 @@ class ClassifyImages {
 		 */
 		friend void parameterSetting(const std::string &errorsOnTrain,\
 			const std::string &errorsOnTest,ClassifyImages &classi,int argc,\
-			char** argv,FeatureExtractor::FEATURE feat,int colorSp,bool useGt,\
-			AnnotationsHandle::POSE what,GaussianProcess::kernelFunction kernel);
+			char** argv,const std::deque<FeatureExtractor::FEATURE> &feat,\
+			int colorSp,bool useGt,AnnotationsHandle::POSE what,\
+			GaussianProcess::kernelFunction kernel);
 		/** Combine the output of multiple classifiers (only on testing,no multiple
 		 * predictions).
 		 */
 		friend void multipleClassifier(int colorSp,AnnotationsHandle::POSE what,\
 			ClassifyImages &classi,float noise,float length,\
-			GaussianProcess::kernelFunction kernel,bool useGT);
+			GaussianProcess::kernelFunction kernel,bool useGT,\
+			FeatureExtractor::FEATUREPART part);
 		/** Get the minimum and maximum angle given the motion vector.
 		 */
 		void getAngleLimits(unsigned classNo,unsigned predNo,float &angleMin,\
@@ -106,8 +122,24 @@ class ClassifyImages {
 		 */
 		cv::Mat reduceDimensionality(const cv::Mat &data,bool train,\
 			int nEigens=0,int reshapeRows=0);
+		/** Read and load the training/testing data.
+		 */
+		void getData(std::string trainFld,std::string annoFld,bool fromFolder);
+		/** Predicts on the test data.
+		 */
+		std::deque<std::deque<float> > predict(AnnotationsHandle::POSE what,\
+			bool fromFolder);
+
 		//======================================================================
 	private:
+		/** @var nnCos_
+		 * An instance of the class cv_ANN_MLP.
+		 */
+		std::deque<CvANN_MLP> nnCos_;
+		/** @var nnSin_
+		 * An instance of the class cv_ANN_MLP.
+		 */
+		std::deque<CvANN_MLP> nnSin_;
 		/** @var features_
 		 * An instance of \c PeopleDetector class.
 		 */
@@ -167,7 +199,7 @@ class ClassifyImages {
 		/** @var feature_
 		 * Feature to be extracted.
 		 */
-		FeatureExtractor::FEATURE feature_;
+		std::deque<FeatureExtractor::FEATURE> feature_;
 		/** @var readFromFolder_
 		 * If the images are read from folder or from a file with image names.
 		 */
@@ -224,6 +256,11 @@ class ClassifyImages {
 		 * To display images or not.
 		 */
 		bool plot_;
+		/** @var clasifier_
+		 * The classifier to be used indicates the train function that needs to
+		 * be called.
+		 */
+		ClassifyImages::CLASSIFIER clasifier_;
 		//======================================================================
 	private:
 		DISALLOW_COPY_AND_ASSIGN(ClassifyImages);

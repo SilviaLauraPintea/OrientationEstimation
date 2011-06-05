@@ -174,7 +174,8 @@ class FeatureExtractor {
 		/** Gets the edges in an image.
 		 */
 		cv::Mat getEdges(cv::Mat &feature,const cv::Mat &thresholded,\
-			const cv::Rect &roi,const FeatureExtractor::templ &aTempl,float rotAngle);
+			const cv::Rect &roi,const FeatureExtractor::templ &aTempl,float rotAngle,\
+			bool contours = false);
 		/** SURF descriptors (Speeded Up Robust Features).
 		 */
 		cv::Mat getSURF(cv::Mat &feature,const std::vector<cv::Point2f> &templ,\

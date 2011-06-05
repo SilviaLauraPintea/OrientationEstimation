@@ -328,8 +328,13 @@ const FeatureExtractor::templ &aTempl,const cv::Rect &roi){
 		cv::cvtColor(large,large,this->invColorspaceCode_);
 	}
 	cv::Mat gray;
-	cv::cvtColor(large,gray,CV_BGR2GRAY);
-	cv::equalizeHist(gray,gray);
+//	cv::cvtColor(large,gray,CV_BGR2GRAY);
+//	cv::equalizeHist(gray,gray);
+
+	cv::cvtColor(large,large,CV_BGR2HSV);
+	std::vector<cv::Mat> threeChannels;
+	cv::split(large,threeChannels);
+	threeChannels[2].copyTo(gray);
 	if(this->plot_){
 		cv::imshow("gray",gray);
 		cv::waitKey(0);
@@ -372,7 +377,7 @@ int &maxY,const cv::Mat &thresh){
 /** Gets the edges in an image.
  */
 cv::Mat FeatureExtractor::getEdges(cv::Mat &feature,const cv::Mat &thresholded,\
-const cv::Rect &roi,const FeatureExtractor::templ &aTempl,float rotAngle){
+const cv::Rect &roi,const FeatureExtractor::templ &aTempl,float rotAngle,bool contours){
 	// EXTRACT THE EDGES AND ROTATE THE EDGES TO THE RIGHT POSSITION
 	cv::Point2f rotBorders;
 	feature.convertTo(feature,CV_8UC1);
@@ -403,30 +408,39 @@ const cv::Rect &roi,const FeatureExtractor::templ &aTempl,float rotAngle){
 	toResize.release();
 
 	// IF WE WANT TO SEE HOW THE EXTRACTED EDGES LOOK LIKE
-	if(this->plot_){
+ 	if(this->plot_){
 		cv::imshow("Edges",tmpEdge);
 		cv::waitKey(0);
 	}
-	cv::dilate(tmpEdge,tmpEdge,cv::Mat(),cv::Point(-1,-1),1);
-	std::vector<std::vector<cv::Point> > contours;
-	cv::findContours(tmpEdge,contours,CV_RETR_EXTERNAL,CV_CHAIN_APPROX_SIMPLE);
-	std::vector<std::vector<cv::Point> >::iterator iter = std::max_element\
-		(contours.begin(),contours.end(),Auxiliary::isLongerContours);
-	cv::Mat contourMat = cv::Mat(contours[iter-contours.begin()]);
-	contourMat.convertTo(contourMat,CV_32FC1);
-	contourMat = contourMat.reshape(1,1);
-	cv::Mat preResult;
-	cv::resize(contourMat,preResult,cv::Size(100,1),0,0,cv::INTER_CUBIC);
+ 	cv::Mat result;
+	if(contours){
+		cv::dilate(tmpEdge,tmpEdge,cv::Mat(),cv::Point(-1,-1),1);
+		std::vector<std::vector<cv::Point> > contours;
+		cv::findContours(tmpEdge,contours,CV_RETR_EXTERNAL,CV_CHAIN_APPROX_SIMPLE);
+		std::vector<std::vector<cv::Point> >::iterator iter = std::max_element\
+			(contours.begin(),contours.end(),Auxiliary::isLongerContours);
+		cv::Mat contourMat = cv::Mat(contours[iter-contours.begin()]);
+		contourMat.convertTo(contourMat,CV_32FC1);
+		contourMat = contourMat.reshape(1,1);
+		cv::Mat preResult;
+		cv::resize(contourMat,preResult,cv::Size(100,1),0,0,cv::INTER_CUBIC);
 
-	// WRITE IT ON ONE ROW
-	cv::Mat result = cv::Mat::zeros(cv::Size(preResult.rows*preResult.cols+2,1),\
-		CV_32FC1);
-	cv::Mat dumm = result.colRange(0,(preResult.cols*preResult.rows));
-	preResult.copyTo(dumm);
+		// WRITE IT ON ONE ROW
+		result = cv::Mat::zeros(cv::Size(preResult.rows*preResult.cols+2,1),CV_32FC1);
+		cv::Mat dumm = result.colRange(0,(preResult.cols*preResult.rows));
+		preResult.copyTo(dumm);
+		dumm.release();
+		preResult.release();
+	}else{
+		cv::blur(tmpEdge,tmpEdge,cv::Size(10,10));
+		result = cv::Mat::zeros(cv::Size(tmpEdge.rows*tmpEdge.cols+2,1),CV_32FC1);
+		cv::Mat dumm = result.colRange(0,(tmpEdge.cols*tmpEdge.rows));
+		tmpEdge = tmpEdge.reshape(0,1);
+		tmpEdge.copyTo(dumm);
+		dumm.release();
+	}
 	result.convertTo(result,CV_32FC1);
-	dumm.release();
 	tmpEdge.release();
-	preResult.release();
 	if(this->print_){
 		std::cout<<"Size(EDGES): "<<result.size()<<std::endl;
 		for(int i=0;i<std::min(10,result.cols);++i){
@@ -603,11 +617,9 @@ void FeatureExtractor::createGabor(cv::Mat &gabor, float *params){
 cv::Mat FeatureExtractor::getGabor(cv::Mat &feature,const cv::Mat &thresholded,\
 const cv::Rect &roi,const cv::Size &foregrSize,\
 const FeatureExtractor::templ &aTempl,const float rotAngle,int aheight){
-	unsigned gaborNo    = std::ceil(feature.rows/aheight);
-	int gaborRows       = std::ceil(feature.rows/gaborNo);
-	unsigned resultCols = foregrSize.width*foregrSize.height;
-	cv::Mat result      = cv::Mat::zeros(cv::Size(gaborNo*resultCols+2,1),\
-		CV_32FC1);
+	unsigned gaborNo    = feature.rows/aheight;
+	int gaborRows       = feature.rows/gaborNo;
+	cv::Mat result;
 	cv::Point2f rotCenter(foregrSize.width/2+roi.x,foregrSize.height/2+roi.y);
 	std::vector<cv::Point2f> dummy;
 
@@ -626,7 +638,9 @@ const FeatureExtractor::templ &aTempl,const float rotAngle,int aheight){
 	}
 	for(unsigned i=0;i<gaborNo;++i){
 		// GET THE ROI OUT OF THE iTH GABOR
-		cv::Mat tmp1 = feature.rowRange(i*gaborRows,(i+1)*gaborRows);
+		cv::Mat tmp = feature.rowRange(i*gaborRows,(i+1)*gaborRows);
+		cv::Mat tmp1;
+		tmp.copyTo(tmp1);
 		tmp1.convertTo(tmp1,CV_8UC1);
 		cv::Mat tmp2(tmp1.clone(),roi);
 
@@ -648,6 +662,7 @@ const FeatureExtractor::templ &aTempl,const float rotAngle,int aheight){
 		tmp3 = this->cutAndResizeImage(cutROI,toResize);
 		toResize.release();
 		if(this->plot_){
+			cv::imshow("WholeGaborResponse",tmp1);
 			cv::imshow("GaborResponse",tmp3);
 			cv::waitKey(0);
 		}
@@ -655,10 +670,14 @@ const FeatureExtractor::templ &aTempl,const float rotAngle,int aheight){
 		// RESHAPE AND STORE IN THE RIGHT PLACE
 		tmp3 = tmp3.reshape(0,1);
 		tmp3.convertTo(tmp3,CV_32FC1);
-		cv::Mat dummy = result.colRange(i*resultCols,(i+1)*resultCols);
+		if(result.empty()){
+			result = cv::Mat::zeros(cv::Size(gaborNo*tmp3.cols+2,1),CV_32FC1);
+		}
+		cv::Mat dummy  = result.colRange(i*tmp3.cols,(i+1)*tmp3.cols);
 		tmp3.copyTo(dummy);
 
 		// RELEASE ALL THE TEMPS AND DUMMIES
+		tmp.release();
 		tmp1.release();
 		tmp2.release();
 		tmp3.release();
@@ -1010,15 +1029,21 @@ cv::Mat FeatureExtractor::extractGabor(cv::Mat &image){
 	// params[5] -- psi: (0,180) // number of lines
 	std::deque<float*> allParams;
 	float *params1 = new float[6];
-	params1[0] = 10.0;params1[1] = 0.9;params1[2] = 2.0;
-	params1[3] = M_PI/4.0;params1[4] = 50.0;params1[5] = 15.0;
+	params1[0] = 4.0;params1[1] = 0.9;params1[2] = 2.0;
+	params1[3] = M_PI/6.0;params1[4] = 200.0;params1[5] = 50.0;
 	allParams.push_back(params1);
-
-	// THE PARAMETERS FOR THE SECOND GABOR
 	float *params2 = new float[6];
-	params2[0] = 10.0;params2[1] = 0.9;params2[2] = 2.0;
-	params2[3] = 3.0*M_PI/4.0;params2[4] = 50.0;params2[5] = 15.0;
+	params2[0] = 4.0;params2[1] = 0.9;params2[2] = 2.0;
+	params2[3] = M_PI/3.0;params2[4] = 200.0;params2[5] = 50.0;
 	allParams.push_back(params2);
+	float *params3 = new float[6];
+	params3[0] = 4.0;params3[1] = 0.9;params3[2] = 2.0;
+	params3[3] = 2.0*M_PI/3.0;params3[4] = 200.0;params3[5] = 50.0;
+	allParams.push_back(params3);
+	float *params4 = new float[6];
+	params4[0] = 4.0;params4[1] = 0.9;params4[2] = 2.0;
+	params4[3] = 5.0*M_PI/6.0;params4[4] = 200.0;params4[5] = 50.0;
+	allParams.push_back(params4);
 
 	// CONVERT THE IMAGE TO GRAYSCALE TO APPLY THE FILTER
 	cv::Mat gray,result;
@@ -1033,25 +1058,27 @@ cv::Mat FeatureExtractor::extractGabor(cv::Mat &image){
 		CV_32FC1);
 	for(unsigned i=0;i<allParams.size();++i){
 		cv::Mat response,agabor;
+
 		this->createGabor(agabor,allParams[i]);
 		cv::filter2D(gray,response,-1,agabor,cv::Point2f(-1,-1),0,\
 			cv::BORDER_REPLICATE);
+		// IF WE WANT TO SEE THE GABOR AND THE RESPONSE
+		if(this->plot_){
+			cv::imshow("Gray",gray);
+			cv::imshow("GaborFilter",agabor);
+			cv::imshow("GaborResponse",response);
+			cv::waitKey(0);
+		}
 		cv::Mat temp = result.rowRange(i*response.rows,(i+1)*response.rows);
 		response.convertTo(response,CV_32FC1);
 		response.copyTo(temp);
-
-		// IF WE WANT TO SEE THE GABOR AND THE RESPONSE
-		if(this->plot_){
-			cv::imshow("GaborFilter",agabor);
-			cv::imshow("GaborResponse",temp);
-			cv::waitKey(0);
-		}
 		response.release();
 		agabor.release();
 		temp.release();
 	}
-	delete [] allParams[0];
-	delete [] allParams[1];
+	for(unsigned i=0;i<allParams.size();++i){
+		delete [] allParams[i];
+	}
 	allParams.clear();
 	gray.release();
 	result.convertTo(result,CV_32FC1);
@@ -1237,6 +1264,7 @@ const FeatureExtractor::templ &aTempl,const cv::Rect &roi){
 	}
 	cv::Mat gray;
 	cv::cvtColor(large,gray,CV_BGR2GRAY);
+	cv::equalizeHist(gray,gray);
 	large.release();
 	cv::blur(gray,gray,cv::Size(3,3));
 	unsigned stepX = (gray.cols%10==0?10:(10+gray.cols%10));
@@ -1321,17 +1349,17 @@ const cv::Mat &img){
 			aSize.height = sHeight;
 			aSize.width  = aSize.height*6/5;
 		}else if(this->imageClass_=="FAR"){
-			if(this->bodyPart_){
-				aSize.height = 3/2*sHeight;
-			}else{
+			if(this->bodyPart_ == FeatureExtractor::WHOLE){
 				aSize.height = 3*sHeight;
+			}else{
+				aSize.height = 3/2*sHeight;
 			}
 			aSize.width  = 3/2*sHeight;
 		}else if(this->imageClass_=="MEDIUM"){
-			if(this->bodyPart_){
-				aSize.height = sHeight;
-			}else{
+			if(this->bodyPart_ == FeatureExtractor::WHOLE){
 				aSize.height = 2*sHeight;
+			}else{
+				aSize.height = sHeight;
 			}
 			aSize.width  = sHeight*3/2;
 		}

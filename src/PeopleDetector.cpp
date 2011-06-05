@@ -606,7 +606,7 @@ const std::deque<unsigned> &exi,float threshVal){
 
 		// ANF FINALLY EXTRACT THE DATA ROW
 		this->extractor_->setImageClass(this->existing_[i].groupNo_);
-		cv::Mat dataRow = this->extractor_->getDataRow(this->borderedIpl_->width,\
+		cv::Mat dataRow = this->extractor_->getDataRow(this->borderedIpl_->height,\
 			this->templates_[i],roi,allPeople[i],imgName,absRotCenter,rotBorders,\
 			rotAngle,keys);
 		dataRow.at<float>(0,dataRow.cols-2) = this->distanceWRTcamera\
@@ -629,7 +629,7 @@ const std::deque<unsigned> &exi,float threshVal){
 			nextImg.release();
 		}
 		dataRow.convertTo(dataRow,CV_32FC1);
-		Auxiliary::mean0Variance1(dataRow);
+		Auxiliary::mean0Variance1(dataRow,true);
 
 		// STORE THE EXTRACTED ROW INTO THE DATA MATRIX
 		if(this->data_[this->existing_[i].groupNo_].empty()){
@@ -1272,7 +1272,7 @@ void PeopleDetector::extractHeadArea(int i,FeatureExtractor::people &person){
 		this->extractor_->getThresholdBorderes(minX,maxX,minY,maxY,person.thresh_);
 		float headSize = Helpers::dist(this->templates_[i].points_[12],\
 			this->templates_[i].points_[14]);
-		radius       = headSize/2;
+		radius       = headSize/3;
 		headPosition = cv::Point2f((minX+maxX)/2,headSize/2+minY);
 		cv::circle(headMask,headPosition,radius,cv::Scalar(255,255,255),-1);
 		cv::Mat tmpThresh;
@@ -1284,7 +1284,7 @@ void PeopleDetector::extractHeadArea(int i,FeatureExtractor::people &person){
 	//ELSE FIX ONLY THE TEMPLATE
 		float headSize = Helpers::dist(this->templates_[i].points_[12],\
 			this->templates_[i].points_[14]);
-		radius       = headSize/2;
+		radius       = headSize/3;
 		headPosition = cv::Point2f(this->templates_[i].head_.x-person.borders_[0],\
 			this->templates_[i].head_.y-person.borders_[2]);
 		cv::circle(headMask,headPosition,radius,cv::Scalar(255,255,255),-1);
@@ -1333,8 +1333,9 @@ std::tr1::shared_ptr<FeatureExtractor> PeopleDetector::extractor(){
 /*
 int main(int argc,char **argv){
 	PeopleDetector feature(argc,argv,true,false,-1);
+	std::deque<FeatureExtractor::FEATURE> feat(1,FeatureExtractor::GABOR);
 	feature.init(std::string(argv[1])+"annotated_train",\
-		std::string(argv[1])+"annotated_train.txt",FeatureExtractor::EDGES,true);
-	feature.start(true,false);
+		std::string(argv[1])+"annotated_train.txt",feat,true);
+	feature.start(true,true);
 }
 */
