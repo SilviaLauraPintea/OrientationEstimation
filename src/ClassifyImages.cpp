@@ -30,7 +30,8 @@ ClassifyImages::CLASSIFIER classi){
 	this->modelName_        = "";
 	this->what_             = use;
 	this->useGroundTruth_   = false;
-	this->dimRed_           = false;
+	this->dimRed_           = true;
+	this->dimPCA_           = 100;
 	this->plot_             = false;
 
 	// INITIALIZE THE DATA MATRIX AND TARGETS MATRIX AND THE GAUSSIAN PROCESSES
@@ -345,11 +346,9 @@ void ClassifyImages::trainGP(AnnotationsHandle::POSE what,int i){
  * trains the a \c Neural Network on the data.
  */
 void ClassifyImages::trainNN(AnnotationsHandle::POSE what,int i){
-// ???????????????????????? NEEDS HELP !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-
 	// DEFINE THE NETWORK ARCHITECTURE
 	std::cout<<"Training the Neural Network..."<<std::endl;
-	int layerInts[] = {this->trainData_[i].cols,100,100,360};
+	int layerInts[] = {this->trainData_[i].cols,100,100,4};
 	cv::Mat layerSizes(1,static_cast<int>(sizeof(layerInts)/sizeof(layerInts[0])),\
 		CV_32S,layerInts);
 	this->nnSin_[i].create(layerSizes,1);
@@ -357,31 +356,17 @@ void ClassifyImages::trainNN(AnnotationsHandle::POSE what,int i){
 
 	// TRAIN THE SIN AND COS SEPARETELY FOR LONGITUDE || LATITUDE
 	if(what == AnnotationsHandle::LONGITUDE){
-
-		cv::Mat labels = cv::Mat::zeros(cv::Size(360,this->trainTargets_[i].rows),\
-			CV_32FC1);
-
-		for(int l=0;l<this->trainTargets_[i].rows;l++){
-			float y          = this->trainTargets_[i].at<float>(l,0);
-			float x          = this->trainTargets_[i].at<float>(l,1);
-			float prediction = std::atan2(y,x);
-			Auxiliary::angle0to360(prediction);
-			int index = prediction*180.0/M_PI;
-
-			std::cout<<index<<std::endl;
-			labels.at<float>(l,index) = 1.0;//prediction;
-		}
-		this->nnSin_[i].train(this->trainData_[i],labels,cv::Mat(),cv::Mat(),\
-			CvANN_MLP_TrainParams(cvTermCriteria(CV_TERMCRIT_ITER,1000,0.01),\
-			CvANN_MLP_TrainParams::BACKPROP,0.01));
-
-		//this->nnSin_[i].train(this->trainData_[i],this->trainTargets_[i].col(0),\
+		this->nnSin_[i].train(this->trainData_[i],this->trainTargets_[i].colRange(0,4),\
 			cv::Mat(),cv::Mat(),CvANN_MLP_TrainParams(cvTermCriteria\
 			(CV_TERMCRIT_ITER,1000,0.01),CvANN_MLP_TrainParams::BACKPROP,0.01));
-		//this->nnCos_[i].train(this->trainData_[i],this->trainTargets_[i].col(1),\
+/*
+		this->nnSin_[i].train(this->trainData_[i],this->trainTargets_[i].col(0),\
+			cv::Mat(),cv::Mat(),CvANN_MLP_TrainParams(cvTermCriteria\
+			(CV_TERMCRIT_ITER,1000,0.01),CvANN_MLP_TrainParams::BACKPROP,0.01));
+		this->nnCos_[i].train(this->trainData_[i],this->trainTargets_[i].col(1),\
 			cv::Mat(),cv::Mat(),CvANN_MLP_TrainParams(cvTermCriteria\
 			(CV_TERMCRIT_ITER,1000,0.01),CvANN_MLP_TrainParams::BACKPROP,0.01),0);
-
+*/
 	// TRAIN THE SIN AND COS SEPARETELY FOR LATITUDE
 	}else if(what == AnnotationsHandle::LATITUDE){
 		this->nnSin_[i].train(this->trainData_[i],this->trainTargets_[i].col(2),\
@@ -411,7 +396,8 @@ void ClassifyImages::train(AnnotationsHandle::POSE what,bool fromFolder){
 		std::string modelNameLabels = this->modelName_+"Labels.bin";
 		cv::Mat tmpData,tmpTargets;
 		if(this->dimRed_ && !this->features_->data()[i].empty()){
-			tmpData = this->reduceDimensionality(this->features_->data()[i],true,100);
+			tmpData = this->reduceDimensionality(this->features_->data()[i],\
+				true,this->dimPCA_);
 		}else{
 			this->features_->data()[i].copyTo(tmpData);
 		}
@@ -562,40 +548,30 @@ std::deque<float> ClassifyImages::predictGP(int i){
  */
 std::deque<float> ClassifyImages::predictNN(int i){
 	std::cout<<"Predicting on the Neural Network..."<<std::endl;
-	cv::Mat sinPreds,cosPreds;
-
-//	this->nnCos_[i].predict(this->testData_[i],cosPreds);
-	std::cout<<"#Predictions_Sin="<<sinPreds.size()<<" #Predictions_Cos="<<\
-		cosPreds.size()<<std::endl;
-	std::cout<<"#Data="<<this->testData_[i].size()<<std::endl;
-
-	sinPreds.convertTo(sinPreds,CV_32FC1);
-	cosPreds.convertTo(cosPreds,CV_32FC1);
-
 	std::deque<float> oneClassPredictions;
+
 	// FOR EACH ROW IN THE TEST MATRIX PREDICT
 	for(int j=0;j<this->testData_[i].rows;++j){
-		sinPreds = cv::Mat::zeros(cv::Size(360,1),CV_32FC1);
+	 	cv::Mat sinPreds,cosPreds;
 		this->nnSin_[i].predict(this->testData_[i].row(j),sinPreds);
-
 		sinPreds.convertTo(sinPreds,CV_32FC1);
-		std::cout<<"ALL PREDICTIONS>>>"<<(sinPreds*180/M_PI)<<std::endl;
+/*
+		this->nnCos_[i].predict(this->testData_[i].row(j),cosPreds);
+		cosPreds.convertTo(cosPreds,CV_32FC1);
+*/
+		std::cout<<"#Predictions_Sin="<<sinPreds.size()<<" #Predictions_Cos="<<\
+			cosPreds.size()<<std::endl;
+		std::cout<<"#Data="<<this->testData_[i].size()<<std::endl;
+		float y          = sinPreds.at<float>(0,0);
+		float x          = sinPreds.at<float>(0,1);
 
-		cv::Point max_loc(0,0);
-		cv::minMaxLoc(sinPreds,NULL,NULL,NULL,&max_loc);
-		float prediction = max_loc.x;
-		std::cout<<"Prediction_Size:"<<sinPreds.size()<<std::endl;
-		std::cout<<"Prediction???????? "<<prediction<<std::endl;
+//		float x          = cosPreds.at<float>(0,0);
 
-		/*
-		float y          = sinPreds.at<float>(j,0);
-		float x          = cosPreds.at<float>(j,0);
 		float prediction = std::atan2(y,x);
-		*/
-
-		//float prediction = sinPreds.at<float>(j,0);
 		Auxiliary::angle0to360(prediction);
 		oneClassPredictions.push_back(prediction);
+		sinPreds.release();
+		cosPreds.release();
 	}
 	return oneClassPredictions;
 }
@@ -639,7 +615,7 @@ std::deque<std::deque<float> > ClassifyImages::predict\
 		}
 		if(this->dimRed_){
 			this->testData_[i] = this->reduceDimensionality(this->features_->data()[i],\
-				false,100);
+				false,this->dimPCA_);
 		}else{
 			this->features_->data()[i].copyTo(this->testData_[i]);
 		}
@@ -732,33 +708,33 @@ float ClassifyImages::optimizePrediction(const GaussianProcess::prediction \
 	float prediction = std::atan2(y,x);
 	Auxiliary::angle0to360(prediction);
 	return prediction;
-/*
-	float betaS = 1.0/(predictionsSin.variance[0]);
-	float betaC = 1.0/(predictionsCos.variance[0]);
-	float y     = predictionsSin.mean[0];
-	float x     = predictionsCos.mean[0];
-
+}
+//==============================================================================
+/** Try to optimize the prediction of the angle considering the variance of
+ * sin^2 and cos^2.
+ */
+float ClassifyImages::optimizeSin2Cos2Prediction(const GaussianProcess::prediction \
+&predictionsSin,const GaussianProcess::prediction &predictionsCos){
+	float betaS = 1.0/(predictionsSin.variance_[0]);
+	float betaC = 1.0/(predictionsCos.variance_[0]);
+	float y     = predictionsSin.mean_[0];
+	float x     = predictionsCos.mean_[0];
 	if(betaS == betaC){
 		return std::atan2(betaS*y,betaC*x);
 	}else{
 		return std::atan2(y,x);
 	}
-*/
-	/*
 	float closeTo;
-	closeTo = std::atan2(predictionsSin.mean[0],predictionsCos.mean[0]);
+	closeTo = std::atan2(predictionsSin.mean_[0],predictionsCos.mean_[0]);
 	std::deque<float> alphas;
 	if(betaS != betaC){
 		std::cout<<"betaS="<<betaS<<" betaC="<<betaC<<" x="<<x<<" y="<<y<<std::endl;
-
 		float b = -1.0*(betaS*x + betaC*y + betaS - betaC);
 		float a = betaS - betaC;
 		float c = betaS*x;
-
 		std::cout<<"b="<<b<<" a="<<a<<" c="<<c<<std::endl;
 		std::cout<<"alpha1: "<<((-b + std::sqrt(b*b - 4.0*a*c))/2.0*a)<<std::endl;
 		std::cout<<"alpha2: "<<((-b - std::sqrt(b*b - 4.0*a*c))/2.0*a)<<std::endl;
-
 		alphas.push_back((-b + std::sqrt(b*b - 4.0*a*c))/2.0*a);
 		alphas.push_back((-b - std::sqrt(b*b - 4.0*a*c))/2.0*a);
 	}else{
@@ -781,7 +757,6 @@ float ClassifyImages::optimizePrediction(const GaussianProcess::prediction \
 		}
 	}
 	return minAngle;
-	*/
 }
 //==============================================================================
 /** Build dictionary for vector quantization.
@@ -1060,7 +1035,6 @@ kernel,bool useGT,FeatureExtractor::FEATUREPART part){
 				tmpPrediction = classi.runTest(colorSp,what,dummy,part);
 				predictions.push_back(tmpPrediction);
 				tmpPrediction.clear();
-	/*
 			case(FeatureExtractor::EDGES):
 				classi.feature_ = std::deque<FeatureExtractor::FEATURE>\
 					(FeatureExtractor::EDGES);
@@ -1085,9 +1059,9 @@ kernel,bool useGT,FeatureExtractor::FEATUREPART part){
 				tmpPrediction  = classi.runTest(colorSp,what,dummy,part);
 				predictions.push_back(tmpPrediction);
 				tmpPrediction.clear();
-			case(FeatureExtractor::PIXELS):
+			case(FeatureExtractor::RAW_PIXELS):
 				classi.feature_ = std::deque<FeatureExtractor::FEATURE>\
-					(FeatureExtractor::PIXELS);
+					(FeatureExtractor::RAW_PIXELS);
 				tmpPrediction  = classi.runTest(colorSp,what,dummy,part);
 				predictions.push_back(tmpPrediction);
 				tmpPrediction.clear();
@@ -1097,7 +1071,6 @@ kernel,bool useGT,FeatureExtractor::FEATUREPART part){
 				tmpPrediction  = classi.runTest(colorSp,what,dummy,part);
 				predictions.push_back(tmpPrediction);
 				tmpPrediction.clear();
-	*/
 		}
 	}
 	// HOW TO COMBINE THEM?BIN VOTES EVERY 20DEGREES AND AVERAGE THE WINNING BIN
@@ -1140,7 +1113,6 @@ kernel,bool useGT,FeatureExtractor::FEATUREPART part){
 		}
 		finalPreds.push_back(preFinalPreds);
 	}
-
 	// FINALLY EVALUATE THE FINAL PREDICTIONS
 	std::cout<<"FINAL EVALUATION________________________________________________"<<\
 		"________________________"<<std::endl;
@@ -1222,22 +1194,22 @@ int main(int argc,char **argv){
 	classi.buildDataMatrix(-1,FeatureExtractor::TOP);
 */
 	//--------------------------------------------------------------------------
-
+/*
 	// test
 	float normError = 0.0f;
 	ClassifyImages classi(argc,argv,ClassifyImages::TEST,ClassifyImages::NEURAL_NETWORK);
 	classi.init(0.1,50.0,feat,&GaussianProcess::sqexp,true);
 	classi.runTest(-1,AnnotationsHandle::LONGITUDE,normError,FeatureExtractor::HEAD);
-
+*/
 	//--------------------------------------------------------------------------
-/*
+
 	// evaluate
  	ClassifyImages classi(argc,argv,ClassifyImages::EVALUATE,\
-		ClassifyImages::GAUSSIAN_PROCESS);
+ 		ClassifyImages::NEURAL_NETWORK);
 	classi.init(0.1,50.0,feat,&GaussianProcess::sqexp,true);
-	classi.runCrossValidation(6,AnnotationsHandle::LONGITUDE,-1,false,\
+	classi.runCrossValidation(5,AnnotationsHandle::LONGITUDE,-1,false,\
 		FeatureExtractor::HEAD);
-*/
+
 	//--------------------------------------------------------------------------
 /*
 	// BUILD THE SIFT DICTIONARY

@@ -198,7 +198,8 @@ class FeatureExtractor {
 		/** Gets the raw pixels corresponding to body of the person +/- background pixels.
 		 */
 		cv::Mat getRawPixels(const FeatureExtractor::people &person,\
-			const FeatureExtractor::templ &aTempl,const cv::Rect &roi);
+			const FeatureExtractor::templ &aTempl,const cv::Rect &roi,\
+			bool vChannel=true);
 		/** Creates a gabor with the parameters given by the parameter vector.
 		 */
 		void createGabor(cv::Mat &gabor,float *params = NULL);

@@ -310,7 +310,7 @@ const FeatureExtractor::templ &aTempl,const cv::Rect &roi){
 /** Gets the raw pixels corresponding to body of the person +/- background pixels.
  */
 cv::Mat FeatureExtractor::getRawPixels(const FeatureExtractor::people &person,\
-const FeatureExtractor::templ &aTempl,const cv::Rect &roi){
+const FeatureExtractor::templ &aTempl,const cv::Rect &roi,bool vChannel){
 	cv::Rect cutROI;
 	if(!person.thresh_.empty()){
 		this->getThresholdBorderes(cutROI.x,cutROI.width,cutROI.y,cutROI.height,\
@@ -328,13 +328,15 @@ const FeatureExtractor::templ &aTempl,const cv::Rect &roi){
 		cv::cvtColor(large,large,this->invColorspaceCode_);
 	}
 	cv::Mat gray;
-//	cv::cvtColor(large,gray,CV_BGR2GRAY);
-//	cv::equalizeHist(gray,gray);
-
-	cv::cvtColor(large,large,CV_BGR2HSV);
-	std::vector<cv::Mat> threeChannels;
-	cv::split(large,threeChannels);
-	threeChannels[2].copyTo(gray);
+	if(!vChannel){
+		cv::cvtColor(large,gray,CV_BGR2GRAY);
+		cv::equalizeHist(gray,gray);
+	}else{
+		cv::cvtColor(large,large,CV_BGR2HSV);
+		std::vector<cv::Mat> threeChannels;
+		cv::split(large,threeChannels);
+		threeChannels[2].copyTo(gray);
+	}
 	if(this->plot_){
 		cv::imshow("gray",gray);
 		cv::waitKey(0);
@@ -1029,21 +1031,39 @@ cv::Mat FeatureExtractor::extractGabor(cv::Mat &image){
 	// params[5] -- psi: (0,180) // number of lines
 	std::deque<float*> allParams;
 	float *params1 = new float[6];
-	params1[0] = 4.0;params1[1] = 0.9;params1[2] = 2.0;
+	params1[0] = 1.0;params1[1] = 0.9;params1[2] = 2.0;
 	params1[3] = M_PI/6.0;params1[4] = 200.0;params1[5] = 50.0;
 	allParams.push_back(params1);
 	float *params2 = new float[6];
-	params2[0] = 4.0;params2[1] = 0.9;params2[2] = 2.0;
+	params2[0] = 1.0;params2[1] = 0.9;params2[2] = 2.0;
 	params2[3] = M_PI/3.0;params2[4] = 200.0;params2[5] = 50.0;
 	allParams.push_back(params2);
 	float *params3 = new float[6];
-	params3[0] = 4.0;params3[1] = 0.9;params3[2] = 2.0;
+	params3[0] = 1.0;params3[1] = 0.9;params3[2] = 2.0;
 	params3[3] = 2.0*M_PI/3.0;params3[4] = 200.0;params3[5] = 50.0;
 	allParams.push_back(params3);
 	float *params4 = new float[6];
-	params4[0] = 4.0;params4[1] = 0.9;params4[2] = 2.0;
+	params4[0] = 1.0;params4[1] = 0.9;params4[2] = 2.0;
 	params4[3] = 5.0*M_PI/6.0;params4[4] = 200.0;params4[5] = 50.0;
 	allParams.push_back(params4);
+
+	// AND SOME BIGGER ONES
+	float *params5 = new float[6];
+	params5[0] = 3.0;params5[1] = 0.9;params5[2] = 2.0;
+	params5[3] = M_PI/6.0;params5[4] = 200.0;params5[5] = 50.0;
+	allParams.push_back(params5);
+	float *params6 = new float[6];
+	params6[0] = 3.0;params6[1] = 0.9;params6[2] = 2.0;
+	params6[3] = M_PI/3.0;params6[4] = 200.0;params6[5] = 50.0;
+	allParams.push_back(params6);
+	float *params7 = new float[6];
+	params7[0] = 3.0;params7[1] = 0.9;params7[2] = 2.0;
+	params7[3] = 2.0*M_PI/3.0;params7[4] = 200.0;params7[5] = 50.0;
+	allParams.push_back(params7);
+	float *params8 = new float[6];
+	params8[0] = 3.0;params8[1] = 0.9;params8[2] = 2.0;
+	params8[3] = 5.0*M_PI/6.0;params8[4] = 200.0;params8[5] = 50.0;
+	allParams.push_back(params8);
 
 	// CONVERT THE IMAGE TO GRAYSCALE TO APPLY THE FILTER
 	cv::Mat gray,result;

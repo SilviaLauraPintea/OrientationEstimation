@@ -129,7 +129,11 @@ class ClassifyImages {
 		 */
 		std::deque<std::deque<float> > predict(AnnotationsHandle::POSE what,\
 			bool fromFolder);
-
+		/** Try to optimize the prediction of the angle considering the variance of
+		 * sin^2 and cos^2.
+		 */
+		float optimizeSin2Cos2Prediction(const GaussianProcess::prediction \
+			&predictionsSin,const GaussianProcess::prediction &predictionsCos);
 		//======================================================================
 	private:
 		/** @var nnCos_
@@ -261,6 +265,10 @@ class ClassifyImages {
 		 * be called.
 		 */
 		ClassifyImages::CLASSIFIER clasifier_;
+		/** @var dimPCA_
+		 * The number of components ot be kepr when using PCA.
+		 */
+		unsigned dimPCA_;
 		//======================================================================
 	private:
 		DISALLOW_COPY_AND_ASSIGN(ClassifyImages);
