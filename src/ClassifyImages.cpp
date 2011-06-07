@@ -423,10 +423,12 @@ void ClassifyImages::trainDist2PCA(AnnotationsHandle::POSE what,int i){
 	// PROJECT THE TRAINING DATA ON THE EIGEN SUBSPACE
 	this->pcaDict_[i].release();
 	this->classiPca_[i].clear();
-	this->classiPca_[i] = std::deque<std::tr1::shared_ptr<cv::PCA> >();
+	this->classiPca_[i] = std::deque<std::tr1::shared_ptr<cv::PCA> >\
+		(trainingData.size(),std::tr1::shared_ptr<cv::PCA>\
+		(static_cast<cv::PCA*>(0)));
 	for(int l=0;l<trainingData.size();++l){
 		if(trainingData[l].empty()){
-			std::cout<<"NO >>>>>>>>>"<<l<<std::endl;
+			std::cout<<"Missing class >>>"<<l<<std::endl;
 			cv::Mat empty = cv::Mat::zeros(cv::Size(20,1),CV_32FC1);
 			if(this->pcaDict_[i].empty()){
 				empty.copyTo(this->pcaDict_[i]);
@@ -436,14 +438,19 @@ void ClassifyImages::trainDist2PCA(AnnotationsHandle::POSE what,int i){
 			empty.release();
 			continue;
 		}
-		trainingData[l] = trainingData[l].reshape(0,1);
-		this->classiPca_[i].push_back(std::tr1::shared_ptr<cv::PCA>(new cv::PCA\
-			(trainingData[l],cv::Mat(),CV_PCA_DATA_AS_ROW,20)));
+		this->classiPca_[i][l] = std::tr1::shared_ptr<cv::PCA>(new cv::PCA\
+			(trainingData[l],cv::Mat(),CV_PCA_DATA_AS_ROW,5));
 		cv::Mat full = this->classiPca_[i][l]->project(trainingData[l]);
+		cv::Mat mean = cv::Mat::zeros(cv::Size(full.cols,1),CV_32FC1);
+		full.convertTo(full,CV_32FC1);
+		for(int e=0;e<full.rows;++e){
+			mean += full.row(e);
+		}
+		mean /= full.rows;
 		if(this->pcaDict_[i].empty()){
-			full.copyTo(this->pcaDict_[i]);
+			mean.copyTo(this->pcaDict_[i]);
 		}else{
-			this->pcaDict_[i].push_back(full);
+			this->pcaDict_[i].push_back(mean);
 		}
 		full.release();
 	}
@@ -707,6 +714,7 @@ std::deque<float> ClassifyImages::predictDist2PCA(AnnotationsHandle::POSE what,i
 					(this->testData_[i].row(j)));
 			}
 		}
+
 		// FIND THE PROJECTION CLOSEST TO ONE OF THE DICTIONARY ORIENTATIONS
 		cv::Mat minDists,minLabs;
 		FeatureExtractor::dist2(testingData,this->pcaDict_[i],minDists,minLabs);
@@ -848,7 +856,7 @@ float &error,float &normError,float &meanDiff){
 	std::cout<<"RMS-accuracy normalized: "<<(1-normError)<<std::endl;
 	std::cout<<"RMS-error: "<<error<<std::endl;
 	std::cout<<"Avg-Radians-Difference: "<<meanDiff<<std::endl;
-	std::cout<<"bins=["<<bins<<"]"<<std::endl;
+	std::cout<<"bins >>> "<<bins<<""<<std::endl;
 	bins.release();
 }
 //==============================================================================
@@ -1314,6 +1322,7 @@ bool train,int nEigens,int reshapeRows){
 			(preData,cv::Mat(),CV_PCA_DATA_AS_ROW,nEigens));
 	}
 	finalMat = this->pca_->project(preData);
+	finalMat.convertTo(finalMat,CV_32FC1);
 	if(this->plot_ && reshapeRows){
 		for(int i=0;i<finalMat.rows;++i){
 			cv::Mat test1 = this->pca_->backProject(finalMat.row(i));
@@ -1330,7 +1339,6 @@ bool train,int nEigens,int reshapeRows){
 		}
 	}
 	preData.release();
-	finalMat.convertTo(finalMat,CV_32FC1);
 	return finalMat;
 }
 //==============================================================================

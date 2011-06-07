@@ -713,7 +713,7 @@ cv::Mat &minDists,cv::Mat &minLabs){
 	for(int j=0;j<mat1.rows;++j){
 		for(int i=0;i<mat2.rows;++i){
 			cv::Mat diff;
-			cv::absdiff(mat2.row(i),mat1,diff);
+			cv::absdiff(mat2.row(i),mat1.row(j),diff);
 			distances.at<float>(i,j) = std::sqrt(diff.dot(diff));
 			diff.release();
 			if(minDists.at<float>(0,j)==-1 || minDists.at<float>(0,j)>\
