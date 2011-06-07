@@ -243,6 +243,11 @@ class FeatureExtractor {
 		 */
 		static bool isFeatureIn(std::deque<FeatureExtractor::FEATURE> feats,\
 			FeatureExtractor::FEATURE feat);
+		/** Computes the distance from the first matrix to the second and the position on
+		 * which the minimum is found and the value of the minimum for each row.
+		 */
+		static cv::Mat dist2(const cv::Mat &mat1,const cv::Mat &mat2,\
+			cv::Mat &minDists,cv::Mat &minLabs);
 	//==========================================================================
 	private:
 		/** @var isInit_

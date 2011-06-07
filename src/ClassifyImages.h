@@ -17,7 +17,8 @@ class ClassifyImages {
 		//======================================================================
 		/** All available uses of this class.
 		 */
-		enum CLASSIFIER {GAUSSIAN_PROCESS,NEURAL_NETWORK};
+		enum CLASSIFIER {GAUSSIAN_PROCESS,NEURAL_NETWORK,K_NEAREST_NEIGHBORS,\
+			DIST2PCA};
 		/** All available uses of this class.
 		 */
 		enum USES {EVALUATE,BUILD_DICTIONARY,TEST,BUILD_DATA};
@@ -41,7 +42,7 @@ class ClassifyImages {
 		/** Creates the training data (according to the options),the labels and
 		 * trains the a \c Neural Network on the data.
 		 */
-		void trainNN(AnnotationsHandle::POSE what,int i);
+		void trainNN(int i);
 		/** Creates the test data and applies \c GaussianProcess prediction on the test
 		 * data.
 		 */
@@ -49,7 +50,7 @@ class ClassifyImages {
 		/** Creates the test data and applies \c Neural Network prediction on the test
 		 * data.
 		 */
-		std::deque<float> predictNN(int i);
+		std::deque<float> predictNN(AnnotationsHandle::POSE what,int i);
 		/** Initialize the options for the Gaussian Process regression.
 		 */
 		void init(float theNoise,float theLength,\
@@ -120,8 +121,8 @@ class ClassifyImages {
 
 		/** Applies PCA on top of a data-row to reduce its dimensionality.
 		 */
-		cv::Mat reduceDimensionality(const cv::Mat &data,bool train,\
-			int nEigens=0,int reshapeRows=0);
+		cv::Mat reduceDimensionality(const cv::Mat &data,bool train,int nEigens=0,\
+			int reshapeRows=0);
 		/** Read and load the training/testing data.
 		 */
 		void getData(std::string trainFld,std::string annoFld,bool fromFolder);
@@ -134,16 +135,35 @@ class ClassifyImages {
 		 */
 		float optimizeSin2Cos2Prediction(const GaussianProcess::prediction \
 			&predictionsSin,const GaussianProcess::prediction &predictionsCos);
+		/** Creates the training data (according to the options),the labels and
+		 * trains the a kNN on the data.
+		 */
+		void trainKNN(AnnotationsHandle::POSE what,int i);
+		/** Creates the test data and applies \c kNN prediction on the test data.
+		 */
+		std::deque<float> predictKNN(int i);
+		/** Creates the training data (according to the options),the labels and
+		 * builds the eigen-orientations.
+		 */
+		void trainDist2PCA(AnnotationsHandle::POSE what,int i);
+		/** Creates the test data and applies computes the distances to the stored
+		 * eigen-orientations.
+		 */
+		std::deque<float> predictDist2PCA(AnnotationsHandle::POSE what,int i);
 		//======================================================================
 	private:
-		/** @var nnCos_
+		/** @var nn_
 		 * An instance of the class cv_ANN_MLP.
 		 */
-		std::deque<CvANN_MLP> nnCos_;
-		/** @var nnSin_
-		 * An instance of the class cv_ANN_MLP.
+		std::deque<CvANN_MLP> nn_;
+		/** @var sinKNN_
+		 * An instance of the class CvKNearest.
 		 */
-		std::deque<CvANN_MLP> nnSin_;
+		std::deque<CvKNearest> sinKNN_;
+		/** @var cosKNN_
+		 * An instance of the class CvKNearest.
+		 */
+		std::deque<CvKNearest> cosKNN_;
 		/** @var features_
 		 * An instance of \c PeopleDetector class.
 		 */
@@ -256,6 +276,10 @@ class ClassifyImages {
 		 * An instance of the class cv::PCA
 		 */
 		std::tr1::shared_ptr<cv::PCA> pca_;
+		/** @var classiPca_
+		 * An instance of the class cv::PCA
+		 */
+		std::deque<std::deque<std::tr1::shared_ptr<cv::PCA> > > classiPca_;
 		/** @ plot_
 		 * To display images or not.
 		 */
@@ -269,6 +293,10 @@ class ClassifyImages {
 		 * The number of components ot be kepr when using PCA.
 		 */
 		unsigned dimPCA_;
+		/** @var pcaDict_
+		 * A dictionary of eigen-orientations.
+		 */
+		std::vector<cv::Mat> pcaDict_;
 		//======================================================================
 	private:
 		DISALLOW_COPY_AND_ASSIGN(ClassifyImages);

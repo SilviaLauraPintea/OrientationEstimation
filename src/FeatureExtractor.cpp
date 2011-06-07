@@ -701,6 +701,31 @@ const FeatureExtractor::templ &aTempl,const float rotAngle,int aheight){
 	return result;
 }
 //==============================================================================
+/** Computes the distance from the first matrix to the second and the position on
+ * which the minimum is found and the value of the minimum for each row.
+ */
+cv::Mat FeatureExtractor::dist2(const cv::Mat &mat1,const cv::Mat &mat2,\
+cv::Mat &minDists,cv::Mat &minLabs){
+	cv::Mat distances = cv::Mat::zeros(cv::Size(mat1.rows,mat2.rows),CV_32FC1);
+	minDists          = cv::Mat::zeros(cv::Size(mat1.rows,1),CV_32FC1);
+	minDists         -= 1;
+	minLabs           = cv::Mat::zeros(cv::Size(mat1.rows,1),CV_32FC1);
+	for(int j=0;j<mat1.rows;++j){
+		for(int i=0;i<mat2.rows;++i){
+			cv::Mat diff;
+			cv::absdiff(mat2.row(i),mat1,diff);
+			distances.at<float>(i,j) = std::sqrt(diff.dot(diff));
+			diff.release();
+			if(minDists.at<float>(0,j)==-1 || minDists.at<float>(0,j)>\
+			distances.at<float>(i,j)){
+				minDists.at<float>(0,j) = distances.at<float>(i,j);
+				minLabs.at<float>(0,j)  = i;
+			}
+		}
+	}
+	return distances;
+}
+//==============================================================================
 /** Compute the features from the SIFT descriptors by doing vector quantization.
  */
 cv::Mat FeatureExtractor::getSIFT(const cv::Mat &feature,\
@@ -740,24 +765,9 @@ std::vector<cv::Point2f> &indices){
 	}
 
 	// COMPUTE THE DISTANCES FROM EACH NEW FEATURE TO THE DICTIONARY ONES
-	cv::Mat distances = cv::Mat::zeros(cv::Size(preFeature.rows,\
-		this->dictionarySIFT_.rows),CV_32FC1);
-	cv::Mat minDists  = cv::Mat::zeros(cv::Size(preFeature.rows,1),CV_32FC1);
-	cv::Mat minLabel  = cv::Mat::zeros(cv::Size(preFeature.rows,1),CV_32FC1);
-	minDists -= 1;
-	for(int j=0;j<preFeature.rows;++j){
-		for(int i=0;i<this->dictionarySIFT_.rows;++i){
-			cv::Mat diff;
-			cv::absdiff(this->dictionarySIFT_.row(i),preFeature.row(j),diff);
-			distances.at<float>(i,j) = diff.dot(diff);
-			diff.release();
-			if(minDists.at<float>(0,j)==-1 ||\
-			minDists.at<float>(0,j)>distances.at<float>(i,j)){
-				minDists.at<float>(0,j) = distances.at<float>(i,j);
-				minLabel.at<float>(0,j) = i;
-			}
-		}
-	}
+	cv::Mat minDists,minLabel;
+	cv::Mat distances = FeatureExtractor::dist2(preFeature,this->dictionarySIFT_,\
+		minDists,minLabel);
 
 	// CREATE A HISTOGRAM(COUNT TO WHICH DICT FEATURE WAS ASSIGNED EACH NEW ONE)
 	cv::Mat result = cv::Mat::zeros(cv::Size(this->dictionarySIFT_.rows+2,1),CV_32FC1);

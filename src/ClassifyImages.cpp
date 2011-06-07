@@ -26,12 +26,12 @@ ClassifyImages::CLASSIFIER classi){
 	this->kFunction_        = &GaussianProcess::sqexp;
 	this->feature_          = std::deque<FeatureExtractor::FEATURE>\
 		(FeatureExtractor::EDGES);
-	this->foldSize_		   = 5;
+	this->foldSize_		    = 5;
 	this->modelName_        = "";
 	this->what_             = use;
 	this->useGroundTruth_   = false;
-	this->dimRed_           = true;
-	this->dimPCA_           = 100;
+	this->dimRed_           = false;
+	this->dimPCA_           = 50;
 	this->plot_             = false;
 
 	// INITIALIZE THE DATA MATRIX AND TARGETS MATRIX AND THE GAUSSIAN PROCESSES
@@ -40,16 +40,22 @@ ClassifyImages::CLASSIFIER classi){
 		this->trainTargets_.push_back(cv::Mat());
 		this->testData_.push_back(cv::Mat());
 		this->testTargets_.push_back(cv::Mat());
-
 		switch(this->clasifier_){
 			case(ClassifyImages::GAUSSIAN_PROCESS):
 				this->gpSin_.push_back(GaussianProcess());
 				this->gpCos_.push_back(GaussianProcess());
 				break;
 			case(ClassifyImages::NEURAL_NETWORK):
-				this->nnCos_.push_back(CvANN_MLP());
-				this->nnSin_.push_back(CvANN_MLP());
+				this->nn_.push_back(CvANN_MLP());
 				break;
+			case(ClassifyImages::K_NEAREST_NEIGHBORS):
+				this->sinKNN_.push_back(CvKNearest());
+				this->cosKNN_.push_back(CvKNearest());
+				break;
+			case(ClassifyImages::DIST2PCA):
+				this->pcaDict_.push_back(cv::Mat());
+				this->classiPca_.push_back\
+					(std::deque<std::tr1::shared_ptr<cv::PCA> >());
 		}
 	}
 
@@ -155,6 +161,9 @@ ClassifyImages::~ClassifyImages(){
 		if(!this->testTargets_[i].empty()){
 			this->testTargets_[i].release();
 		}
+		if(!this->pcaDict_[i].empty()){
+			this->pcaDict_[i].release();
+		}
 	}
 	this->trainData_.clear();
 	this->trainTargets_.clear();
@@ -167,13 +176,17 @@ ClassifyImages::~ClassifyImages(){
 			this->gpCos_.clear();
 			break;
 		case(ClassifyImages::NEURAL_NETWORK):
-			this->nnSin_.clear();
-			this->nnCos_.clear();
+			this->nn_.clear();
+			break;
+		case(ClassifyImages::K_NEAREST_NEIGHBORS):
+			this->sinKNN_.clear();
+			this->cosKNN_.clear();
 			break;
 	}
 	if(this->pca_){
 		this->pca_.reset();
 	}
+	this->classiPca_.clear();
 }
 //==============================================================================
 /** Initialize the options for the Gaussian Process regression.
@@ -191,39 +204,33 @@ GaussianProcess::kernelFunction theKFunction,bool toUseGT){
 		if(!FeatureExtractor::isFeatureIn(this->feature_,f)){continue;}
 		switch(f){
 			case(FeatureExtractor::IPOINTS):
-				this->modelName_ += "IPOINTS/";
-				Helpers::file_exists(this->modelName_.c_str(),true);
+				this->modelName_ += "IPOINTS_";
 				break;
 			case(FeatureExtractor::EDGES):
-				this->modelName_     += "EDGES/";
-				Helpers::file_exists(this->modelName_.c_str(),true);
+				this->modelName_ += "EDGES_";
 				break;
 			case(FeatureExtractor::SURF):
-				this->modelName_ += "SURF/";
-				Helpers::file_exists(this->modelName_.c_str(),true);
+				this->modelName_ += "SURF_";
 				break;
 			case(FeatureExtractor::GABOR):
-				this->modelName_ += "GABOR/";
-				Helpers::file_exists(this->modelName_.c_str(),true);
+				this->modelName_ += "GABOR_";
 				break;
 			case(FeatureExtractor::SIFT):
-				this->modelName_ += "SIFT/";
-				Helpers::file_exists(this->modelName_.c_str(),true);
+				this->modelName_ += "SIFT_";
 				break;
 			case(FeatureExtractor::TEMPL_MATCHES):
-				this->modelName_ += "TEMPL_MATCHES/";
-				Helpers::file_exists(this->modelName_.c_str(),true);
+				this->modelName_ += "TEMPL_MATCHES_";
 				break;
 			case(FeatureExtractor::RAW_PIXELS):
-				this->modelName_ += "RAW_PIXELS/";
-				Helpers::file_exists(this->modelName_.c_str(),true);
+				this->modelName_ += "RAW_PIXELS_";
 				break;
 			case(FeatureExtractor::HOG):
-				this->modelName_ += "HOG/";
-				Helpers::file_exists(this->modelName_.c_str(),true);
+				this->modelName_ += "HOG_";
 				break;
 		}
 	}
+	this->modelName_ += "/";
+	Helpers::file_exists(this->modelName_.c_str(),true);
 }
 //==============================================================================
 /** Concatenate the loaded data from the files to the currently computed data.
@@ -345,37 +352,102 @@ void ClassifyImages::trainGP(AnnotationsHandle::POSE what,int i){
 /** Creates the training data (according to the options),the labels and
  * trains the a \c Neural Network on the data.
  */
-void ClassifyImages::trainNN(AnnotationsHandle::POSE what,int i){
+void ClassifyImages::trainNN(int i){
 	// DEFINE THE NETWORK ARCHITECTURE
 	std::cout<<"Training the Neural Network..."<<std::endl;
 	int layerInts[] = {this->trainData_[i].cols,100,100,4};
 	cv::Mat layerSizes(1,static_cast<int>(sizeof(layerInts)/sizeof(layerInts[0])),\
 		CV_32S,layerInts);
-	this->nnSin_[i].create(layerSizes,1);
-	this->nnCos_[i].create(layerSizes,1);
+	this->nn_[i].create(layerSizes,1);
 
 	// TRAIN THE SIN AND COS SEPARETELY FOR LONGITUDE || LATITUDE
+	this->nn_[i].train(this->trainData_[i],this->trainTargets_[i].colRange(0,4),\
+		cv::Mat(),cv::Mat(),CvANN_MLP_TrainParams(cvTermCriteria\
+		(CV_TERMCRIT_ITER,1000,0.01),CvANN_MLP_TrainParams::BACKPROP,0.01));
+}
+//==============================================================================
+/** Creates the training data (according to the options),the labels and
+ * trains the a kNN on the data.
+ */
+void ClassifyImages::trainKNN(AnnotationsHandle::POSE what,int i){
+	std::cout<<"Training the kNN..."<<std::endl;
+	// TRAIN THE SIN AND COS SEPARETELY FOR LONGITUDE || LATITUDE
 	if(what == AnnotationsHandle::LONGITUDE){
-		this->nnSin_[i].train(this->trainData_[i],this->trainTargets_[i].colRange(0,4),\
-			cv::Mat(),cv::Mat(),CvANN_MLP_TrainParams(cvTermCriteria\
-			(CV_TERMCRIT_ITER,1000,0.01),CvANN_MLP_TrainParams::BACKPROP,0.01));
-/*
-		this->nnSin_[i].train(this->trainData_[i],this->trainTargets_[i].col(0),\
-			cv::Mat(),cv::Mat(),CvANN_MLP_TrainParams(cvTermCriteria\
-			(CV_TERMCRIT_ITER,1000,0.01),CvANN_MLP_TrainParams::BACKPROP,0.01));
-		this->nnCos_[i].train(this->trainData_[i],this->trainTargets_[i].col(1),\
-			cv::Mat(),cv::Mat(),CvANN_MLP_TrainParams(cvTermCriteria\
-			(CV_TERMCRIT_ITER,1000,0.01),CvANN_MLP_TrainParams::BACKPROP,0.01),0);
-*/
+		this->sinKNN_[i].train(this->trainData_[i],this->trainTargets_[i].col(0),\
+			cv::Mat(),true,3,false);
+		this->cosKNN_[i].train(this->trainData_[i],this->trainTargets_[i].col(1),\
+			cv::Mat(),true,3,false);
+
 	// TRAIN THE SIN AND COS SEPARETELY FOR LATITUDE
 	}else if(what == AnnotationsHandle::LATITUDE){
-		this->nnSin_[i].train(this->trainData_[i],this->trainTargets_[i].col(2),\
-			cv::Mat(),cv::Mat(),CvANN_MLP_TrainParams(cvTermCriteria\
-			(CV_TERMCRIT_ITER,1000,0.01),CvANN_MLP_TrainParams::BACKPROP,0.01));
-		this->nnCos_[i].train(this->trainData_[i],this->trainTargets_[i].col(3),\
-			cv::Mat(),cv::Mat(),CvANN_MLP_TrainParams(cvTermCriteria\
-			(CV_TERMCRIT_ITER,1000,0.01),CvANN_MLP_TrainParams::BACKPROP,0.01));
+		this->sinKNN_[i].train(this->trainData_[i],this->trainTargets_[i].col(2),\
+			cv::Mat(),true,3,false);
+		this->cosKNN_[i].train(this->trainData_[i],this->trainTargets_[i].col(3),\
+			cv::Mat(),true,3,false);
 	}
+}
+//==============================================================================
+/** Creates the training data (according to the options),the labels and
+ * builds the eigen-orientations.
+ */
+void ClassifyImages::trainDist2PCA(AnnotationsHandle::POSE what,int i){
+	std::cout<<"Training the egein-orientations..."<<std::endl;
+	unsigned bins;
+	if(what == AnnotationsHandle::LONGITUDE){
+		bins = 36;
+	}else{
+		bins = 18;
+	}
+	std::vector<cv::Mat> trainingData(bins,cv::Mat());
+	for(int l=0;l<this->trainData_[i].rows;++l){
+		float y,x;
+		if(what == AnnotationsHandle::LONGITUDE){
+			y = this->trainTargets_[i].at<float>(l,0);
+			x = this->trainTargets_[i].at<float>(l,1);
+		}else{
+			y = this->trainTargets_[i].at<float>(l,2);
+			x = this->trainTargets_[i].at<float>(l,3);
+		}
+		float prediction = std::atan2(y,x);
+		Auxiliary::angle0to360(prediction);
+		unsigned index = (prediction*180.0/M_PI)/10;
+		cv::Mat dummy1 = this->trainData_[i].row(l);
+		if(trainingData[index].empty()){
+			dummy1.copyTo(trainingData[index]);
+		}else{
+			trainingData[index].push_back(dummy1);
+		}
+		dummy1.release();
+	}
+
+	// PROJECT THE TRAINING DATA ON THE EIGEN SUBSPACE
+	this->pcaDict_[i].release();
+	this->classiPca_[i].clear();
+	this->classiPca_[i] = std::deque<std::tr1::shared_ptr<cv::PCA> >();
+	for(int l=0;l<trainingData.size();++l){
+		if(trainingData[l].empty()){
+			std::cout<<"NO >>>>>>>>>"<<l<<std::endl;
+			cv::Mat empty = cv::Mat::zeros(cv::Size(20,1),CV_32FC1);
+			if(this->pcaDict_[i].empty()){
+				empty.copyTo(this->pcaDict_[i]);
+			}else{
+				this->pcaDict_[i].push_back(empty);
+			}
+			empty.release();
+			continue;
+		}
+		trainingData[l] = trainingData[l].reshape(0,1);
+		this->classiPca_[i].push_back(std::tr1::shared_ptr<cv::PCA>(new cv::PCA\
+			(trainingData[l],cv::Mat(),CV_PCA_DATA_AS_ROW,20)));
+		cv::Mat full = this->classiPca_[i][l]->project(trainingData[l]);
+		if(this->pcaDict_[i].empty()){
+			full.copyTo(this->pcaDict_[i]);
+		}else{
+			this->pcaDict_[i].push_back(full);
+		}
+		full.release();
+	}
+	trainingData.clear();
 }
 //==============================================================================
 /** Trains on the training data using the indicated classifier.
@@ -391,23 +463,23 @@ void ClassifyImages::train(AnnotationsHandle::POSE what,bool fromFolder){
 		if(!this->trainTargets_[i].empty()){
 			this->trainTargets_[i].release();
 		}
-		// IF WE CANNOT LOAD DATA,THEN WE BUILD IT
-		std::string modelNameData   = this->modelName_+"Data.bin";
-		std::string modelNameLabels = this->modelName_+"Labels.bin";
+		// LOAD THE DATA AND THEN DO PCA IF WNATED
 		cv::Mat tmpData,tmpTargets;
-		if(this->dimRed_ && !this->features_->data()[i].empty()){
-			tmpData = this->reduceDimensionality(this->features_->data()[i],\
-				true,this->dimPCA_);
-		}else{
-			this->features_->data()[i].copyTo(tmpData);
-		}
+		this->features_->data()[i].copyTo(tmpData);
 		this->features_->targets()[i].copyTo(tmpTargets);
 		tmpData.convertTo(tmpData,CV_32FC1);
 		tmpTargets.convertTo(tmpTargets,CV_32FC1);
 		cv::Mat outData,outTargets;
 		this->loadData(tmpData,tmpTargets,i,outData,outTargets);
+
+		// IF WE CANNOT LOAD DATA,THEN WE BUILD IT
+		if(this->dimRed_ && !outData.empty()){
+			this->trainData_[i] = this->reduceDimensionality(outData,true,\
+				this->dimPCA_);
+		}else{
+			outData.copyTo(this->trainData_[i]);
+		}
 		outTargets.copyTo(this->trainTargets_[i]);
-		outData.copyTo(this->trainData_[i]);
 		outData.release();
 		outTargets.release();
 		tmpData.release();
@@ -423,7 +495,13 @@ void ClassifyImages::train(AnnotationsHandle::POSE what,bool fromFolder){
 				this->trainGP(what,i);
 				break;
 			case(ClassifyImages::NEURAL_NETWORK):
-				this->trainNN(what,i);
+				this->trainNN(i);
+				break;
+			case(ClassifyImages::K_NEAREST_NEIGHBORS):
+				this->trainKNN(what,i);
+				break;
+			case(ClassifyImages::DIST2PCA):
+				this->trainDist2PCA(what,i);
 				break;
 		}
 	}
@@ -539,6 +617,7 @@ std::deque<float> ClassifyImages::predictGP(int i){
 		prediSin.variance_.clear();
 		prediCos.mean_.clear();
 		prediCos.variance_.clear();
+		testRow.release();
 	}
 	return oneClassPredictions;
 }
@@ -546,32 +625,97 @@ std::deque<float> ClassifyImages::predictGP(int i){
 /** Creates the test data and applies \c Neural Network prediction on the test
  * data.
  */
-std::deque<float> ClassifyImages::predictNN(int i){
+std::deque<float> ClassifyImages::predictNN(AnnotationsHandle::POSE what,int i){
 	std::cout<<"Predicting on the Neural Network..."<<std::endl;
 	std::deque<float> oneClassPredictions;
 
 	// FOR EACH ROW IN THE TEST MATRIX PREDICT
 	for(int j=0;j<this->testData_[i].rows;++j){
-	 	cv::Mat sinPreds,cosPreds;
-		this->nnSin_[i].predict(this->testData_[i].row(j),sinPreds);
-		sinPreds.convertTo(sinPreds,CV_32FC1);
-/*
-		this->nnCos_[i].predict(this->testData_[i].row(j),cosPreds);
-		cosPreds.convertTo(cosPreds,CV_32FC1);
-*/
-		std::cout<<"#Predictions_Sin="<<sinPreds.size()<<" #Predictions_Cos="<<\
-			cosPreds.size()<<std::endl;
-		std::cout<<"#Data="<<this->testData_[i].size()<<std::endl;
-		float y          = sinPreds.at<float>(0,0);
-		float x          = sinPreds.at<float>(0,1);
-
-//		float x          = cosPreds.at<float>(0,0);
-
+	 	cv::Mat preds;
+		this->nn_[i].predict(this->testData_[i].row(j),preds);
+		preds.convertTo(preds,CV_32FC1);
+		std::cout<<"#Predictions="<<preds.size()<<" #Data="<<\
+			this->testData_[i].size()<<std::endl;
+		float x,y;
+		if(what == AnnotationsHandle::LONGITUDE){
+			y = preds.at<float>(0,0);
+			x = preds.at<float>(0,1);
+		}else if(what == AnnotationsHandle::LATITUDE){
+			y = preds.at<float>(0,2);
+			x = preds.at<float>(0,3);
+		}
 		float prediction = std::atan2(y,x);
 		Auxiliary::angle0to360(prediction);
 		oneClassPredictions.push_back(prediction);
-		sinPreds.release();
-		cosPreds.release();
+		preds.release();
+	}
+	return oneClassPredictions;
+}
+//==============================================================================
+/** Creates the test data and applies \c kNN prediction on the test data.
+ */
+std::deque<float> ClassifyImages::predictKNN(int i){
+	std::cout<<"Predicting on the kNN..."<<std::endl;
+	std::deque<float> oneClassPredictions;
+
+ 	cv::Mat* sinPreds = new cv::Mat(cv::Size(1,this->testData_[i].rows),CV_32FC1);
+ 	cv::Mat* cosPreds = new cv::Mat(cv::Size(1,this->testData_[i].rows),CV_32FC1);
+ 	this->sinKNN_[i].find_nearest(this->testData_[i],3,sinPreds,NULL,NULL,NULL);
+ 	this->cosKNN_[i].find_nearest(this->testData_[i],3,cosPreds,NULL,NULL,NULL);
+ 	std::cout<<"#Predictions_sin="<<sinPreds->size()<<" #Predictions_cos="<<\
+ 		cosPreds->size()<<" #Data="<<this->testData_[i].size()<<std::endl;
+ 	sinPreds->convertTo((*sinPreds),CV_32FC1);
+ 	cosPreds->convertTo((*cosPreds),CV_32FC1);
+
+	// FOR EACH ROW IN THE TEST MATRIX COMPUTE THE PREDICTION
+	for(int j=0;j<this->testData_[i].rows;++j){
+		float y = sinPreds->at<float>(j,0);
+		float x = cosPreds->at<float>(j,0);
+		float prediction = std::atan2(y,x);
+		Auxiliary::angle0to360(prediction);
+		oneClassPredictions.push_back(prediction);
+	}
+	sinPreds->release();
+	cosPreds->release();
+	delete sinPreds;
+	delete cosPreds;
+	return oneClassPredictions;
+}
+//==============================================================================
+/** Creates the test data and applies computes the distances to the stored
+ * eigen-orientations.
+ */
+std::deque<float> ClassifyImages::predictDist2PCA(AnnotationsHandle::POSE what,int i){
+	std::cout<<"Predicting on the eigen-orientations..."<<std::endl;
+	std::deque<float> oneClassPredictions;
+	unsigned bins;
+	if(what == AnnotationsHandle::LONGITUDE){
+		bins = 36;
+	}else{
+		bins = 18;
+	}
+	// FOR EACH ROW IN THE TEST MATRIX COMPUTE THE PREDICTION
+	for(int j=0;j<this->testData_[i].rows;++j){
+		// PROJECT IT ON ALL THE POSSIBLE PCAs
+		cv::Mat testingData;
+		for(int l=0;l<this->classiPca_[i].size();++l){
+			if(testingData.empty() && this->classiPca_[i][l].get()){
+				(this->classiPca_[i][l]->project(this->testData_[i].row(j))).\
+					copyTo(testingData);
+			}else{
+				testingData.push_back(this->classiPca_[i][l]->project\
+					(this->testData_[i].row(j)));
+			}
+		}
+		// FIND THE PROJECTION CLOSEST TO ONE OF THE DICTIONARY ORIENTATIONS
+		cv::Mat minDists,minLabs;
+		FeatureExtractor::dist2(testingData,this->pcaDict_[i],minDists,minLabs);
+		cv::Point minLoc(0,0);
+		cv::minMaxLoc(minDists,NULL,NULL,&minLoc,NULL,cv::Mat());
+		float prediction = minLoc.x*10.0*(M_PI/180.0);
+		oneClassPredictions.push_back(prediction);
+		minDists.release();
+		minLabs.release();
 	}
 	return oneClassPredictions;
 }
@@ -584,9 +728,13 @@ bool ClassifyImages::isClassiInit(int i){
 			return (!this->gpSin_[i].empty() || !this->gpCos_[i].empty());
 			break;
 		case(ClassifyImages::NEURAL_NETWORK):
-			return (this->nnCos_[i].get_layer_count()!=0 &&\
-				this->nnSin_[i].get_layer_count()!=0);
-			return true;
+			return (this->nn_[i].get_layer_count()!=0);
+			break;
+		case(ClassifyImages::K_NEAREST_NEIGHBORS):
+			return (this->sinKNN_[i].get_max_k()!=0 && this->cosKNN_[i].get_max_k()!=0);
+			break;
+		case(ClassifyImages::DIST2PCA):
+			return (!this->pcaDict_[i].empty());
 			break;
 	}
 }
@@ -614,8 +762,8 @@ std::deque<std::deque<float> > ClassifyImages::predict\
 			continue;
 		}
 		if(this->dimRed_){
-			this->testData_[i] = this->reduceDimensionality(this->features_->data()[i],\
-				false,this->dimPCA_);
+			this->testData_[i] = this->reduceDimensionality\
+				(this->features_->data()[i],false,this->dimPCA_);
 		}else{
 			this->features_->data()[i].copyTo(this->testData_[i]);
 		}
@@ -639,7 +787,13 @@ std::deque<std::deque<float> > ClassifyImages::predict\
 				oneClassPredictions = this->predictGP(i);
 				break;
 			case(ClassifyImages::NEURAL_NETWORK):
-				oneClassPredictions = this->predictNN(i);
+				oneClassPredictions = this->predictNN(what,i);
+				break;
+			case(ClassifyImages::K_NEAREST_NEIGHBORS):
+				oneClassPredictions = this->predictKNN(i);
+				break;
+			case(ClassifyImages::DIST2PCA):
+				oneClassPredictions = this->predictDist2PCA(what,i);
 				break;
 		}
 		predictions.push_back(oneClassPredictions);
@@ -1148,17 +1302,18 @@ AnnotationsHandle::POSE what,GaussianProcess::kernelFunction kernel){
 //==============================================================================
 /** Applies PCA on top of a data-row to reduce its dimensionality.
  */
-cv::Mat ClassifyImages::reduceDimensionality(const cv::Mat &data,bool train,\
-int nEigens,int reshapeRows){
+cv::Mat ClassifyImages::reduceDimensionality(const cv::Mat &data,\
+bool train,int nEigens,int reshapeRows){
 	cv::Mat preData;
 	data.copyTo(preData);
 	preData.convertTo(preData,CV_32FC1);
+	if(!nEigens){nEigens = data.rows/4;}
+	cv::Mat finalMat;
 	if(train){
-		if(!nEigens){nEigens = data.rows/4;}
-		this->pca_ = std::tr1::shared_ptr<cv::PCA>(new cv::PCA(preData,cv::Mat(),\
-			CV_PCA_DATA_AS_ROW,nEigens));
+		this->pca_ = std::tr1::shared_ptr<cv::PCA>(new cv::PCA\
+			(preData,cv::Mat(),CV_PCA_DATA_AS_ROW,nEigens));
 	}
-	cv::Mat finalMat = this->pca_->project(preData);
+	finalMat = this->pca_->project(preData);
 	if(this->plot_ && reshapeRows){
 		for(int i=0;i<finalMat.rows;++i){
 			cv::Mat test1 = this->pca_->backProject(finalMat.row(i));
@@ -1181,23 +1336,25 @@ int nEigens,int reshapeRows){
 //==============================================================================
 int main(int argc,char **argv){
 	std::deque<FeatureExtractor::FEATURE> feat;
-//	feat.push_back(FeatureExtractor::RAW_PIXELS);
+//	feat.push_back(FeatureExtractor::HOG);
 //	feat.push_back(FeatureExtractor::EDGES);
 //	feat.push_back(FeatureExtractor::HOG);
-	feat.push_back(FeatureExtractor::GABOR);
-
+//	feat.push_back(FeatureExtractor::GABOR);
+	feat.push_back(FeatureExtractor::RAW_PIXELS);
+	feat.push_back(FeatureExtractor::HOG);
 /*
 	// build data matrix
  	ClassifyImages classi(argc,argv,ClassifyImages::EVALUATE,\
-		ClassifyImages::GAUSSIAN_PROCESS);
-	classi.init(0.8,150.0,FeatureExtractor::HOG,&GaussianProcess::sqexp,true);
-	classi.buildDataMatrix(-1,FeatureExtractor::TOP);
+		ClassifyImages::K_NEAREST_NEIGHBORS);
+	classi.init(0.1,50.0,feat,&GaussianProcess::sqexp,true);
+	classi.buildDataMatrix(-1,FeatureExtractor::HEAD);
 */
 	//--------------------------------------------------------------------------
 /*
 	// test
 	float normError = 0.0f;
-	ClassifyImages classi(argc,argv,ClassifyImages::TEST,ClassifyImages::NEURAL_NETWORK);
+	ClassifyImages classi(argc,argv,ClassifyImages::TEST,\
+		ClassifyImages::K_NEAREST_NEIGHBORS);
 	classi.init(0.1,50.0,feat,&GaussianProcess::sqexp,true);
 	classi.runTest(-1,AnnotationsHandle::LONGITUDE,normError,FeatureExtractor::HEAD);
 */
@@ -1205,7 +1362,7 @@ int main(int argc,char **argv){
 
 	// evaluate
  	ClassifyImages classi(argc,argv,ClassifyImages::EVALUATE,\
- 		ClassifyImages::NEURAL_NETWORK);
+ 		ClassifyImages::DIST2PCA);
 	classi.init(0.1,50.0,feat,&GaussianProcess::sqexp,true);
 	classi.runCrossValidation(5,AnnotationsHandle::LONGITUDE,-1,false,\
 		FeatureExtractor::HEAD);
