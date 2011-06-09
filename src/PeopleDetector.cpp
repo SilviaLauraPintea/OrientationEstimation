@@ -747,9 +747,22 @@ unsigned k,float distance,std::deque<int> &assignment){
  */
 float PeopleDetector::fixAngle(const cv::Point2f &headLocation,\
 const cv::Point2f &feetLocation,float angle){
-	float camAngle = -std::atan2((headLocation.y-feetLocation.y),\
-		(headLocation.x-feetLocation.x));
-	camAngle = M_PI/2.0-camAngle;
+	float camAngle = std::atan2((feetLocation.y-headLocation.y),\
+		(feetLocation.x-headLocation.x));
+	Auxiliary::angle0to360(camAngle);
+	// IF THE CAMERA IS SITTING HORIZONTALLY
+
+std::cout<<Helpers::cam()<<std::endl;
+
+	if(Helpers::cam().y<Helpers::height() && Helpers::cam().y>0){
+std::cout<<"INSIDE"<<std::endl;
+
+		camAngle = (M_PI/2.0-camAngle);
+	// IF THE CAMERA IS SITTING VERTICALLY
+	}else{
+std::cout<<"OUTSIDE"<<std::endl;
+		camAngle = (M_PI/2.0-(M_PI-camAngle));
+	}
 	float newAngle = angle+camAngle;
 	Auxiliary::angle0to360(newAngle);
 	return newAngle;
@@ -1213,9 +1226,16 @@ void PeopleDetector::readLocations(){
  */
 float PeopleDetector::rotationAngle(const cv::Point2f &headLocation,\
 const cv::Point2f &feetLocation){
-	float rotAngle = -std::atan2((headLocation.y-feetLocation.y),\
-						(headLocation.x-feetLocation.x));
-	rotAngle  = M_PI/2.0-rotAngle;
+	float rotAngle = std::atan2((feetLocation.y-headLocation.y),\
+		(feetLocation.x-headLocation.x));
+	Auxiliary::angle0to360(rotAngle);
+	// IF THE CAMERA IS SITTING HORIZONTALLY
+	if(Helpers::cam().y<Helpers::height() && Helpers::cam().y>0){
+		rotAngle = (M_PI/2.0-rotAngle);
+	// IF THE CAMERA IS SITTING VERTICALLY
+	}else{
+		rotAngle = (M_PI/2.0-(M_PI-rotAngle));
+	}
 	rotAngle *= (180.0/M_PI);
 	return rotAngle;
 }
@@ -1272,7 +1292,7 @@ void PeopleDetector::extractHeadArea(int i,FeatureExtractor::people &person){
 		this->extractor_->getThresholdBorderes(minX,maxX,minY,maxY,person.thresh_);
 		float headSize = Helpers::dist(this->templates_[i].points_[12],\
 			this->templates_[i].points_[14]);
-		radius       = headSize/3;
+		radius       = headSize/2;
 		headPosition = cv::Point2f((minX+maxX)/2,headSize/2+minY);
 		cv::circle(headMask,headPosition,radius,cv::Scalar(255,255,255),-1);
 		cv::Mat tmpThresh;
@@ -1284,7 +1304,7 @@ void PeopleDetector::extractHeadArea(int i,FeatureExtractor::people &person){
 	//ELSE FIX ONLY THE TEMPLATE
 		float headSize = Helpers::dist(this->templates_[i].points_[12],\
 			this->templates_[i].points_[14]);
-		radius       = headSize/3;
+		radius       = headSize/2;
 		headPosition = cv::Point2f(this->templates_[i].head_.x-person.borders_[0],\
 			this->templates_[i].head_.y-person.borders_[2]);
 		cv::circle(headMask,headPosition,radius,cv::Scalar(255,255,255),-1);

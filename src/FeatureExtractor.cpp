@@ -41,7 +41,7 @@ FeatureExtractor::FeatureExtractor(){
 	this->meanSize_     = 128;
 	this->featureFile_  = "none";
 	this->print_        = false;
-	this->plot_         = false;
+	this->plot_         = true;
 }
 //==============================================================================
 FeatureExtractor::~FeatureExtractor(){
@@ -262,7 +262,6 @@ const FeatureExtractor::templ &aTempl,const cv::Rect &roi){
 	// MATCH SOME HEADS ON TOP AND GET THE RESULTS
 	int radius     = Helpers::dist(aTempl.points_[12],aTempl.points_[13]);
 	cv::Mat result = cv::Mat::zeros(cv::Size(12*20*30+2,1),CV_32FC1);
-	cv::blur(gray,gray,cv::Size(3,3));
 	for(int i=0;i<12;++i){
 		std::string imgName = "templates/templ"+Auxiliary::int2string(i)+".jpg";
 		cv::Mat tmple       = cv::imread(imgName.c_str(),0);
@@ -271,11 +270,13 @@ const FeatureExtractor::templ &aTempl,const cv::Rect &roi){
 			exit(1);
 		}
 		cv::Mat small;
+		cv::blur(tmple,tmple,cv::Size(3,3));
 		cv::resize(tmple,small,cv::Size(radius,radius),0,0,cv::INTER_CUBIC);
 		small.convertTo(small,CV_8UC1);
 		cv::Mat tmp;
 		cv::matchTemplate(gray,small,tmp,CV_TM_CCOEFF_NORMED);
 		cv::Mat resized;
+		cv::blur(tmp,tmp,cv::Size(3,3));
 		cv::resize(tmp,resized,cv::Size(20,30),0,0,cv::INTER_CUBIC);
 		if(this->plot_){
 			cv::imshow("result"+Auxiliary::int2string(i),resized);
@@ -330,13 +331,14 @@ const FeatureExtractor::templ &aTempl,const cv::Rect &roi,bool vChannel){
 	cv::Mat gray;
 	if(!vChannel){
 		cv::cvtColor(large,gray,CV_BGR2GRAY);
-		cv::equalizeHist(gray,gray);
 	}else{
 		cv::cvtColor(large,large,CV_BGR2HSV);
 		std::vector<cv::Mat> threeChannels;
 		cv::split(large,threeChannels);
 		threeChannels[2].copyTo(gray);
 	}
+	cv::blur(gray,gray,cv::Size(5,5));
+
 	if(this->plot_){
 		cv::imshow("gray",gray);
 		cv::waitKey(0);
@@ -425,6 +427,7 @@ const cv::Rect &roi,const FeatureExtractor::templ &aTempl,float rotAngle,bool co
 		contourMat.convertTo(contourMat,CV_32FC1);
 		contourMat = contourMat.reshape(1,1);
 		cv::Mat preResult;
+		cv::blur(contourMat,contourMat,cv::Size(3,3));
 		cv::resize(contourMat,preResult,cv::Size(100,1),0,0,cv::INTER_CUBIC);
 
 		// WRITE IT ON ONE ROW
@@ -1251,7 +1254,7 @@ std::vector<cv::Point2f> &keys){
 				break;
 			case FeatureExtractor::RAW_PIXELS:
 				// NO NEED TO STORE ANY FEATURE,ONLY THE PIXEL VALUES ARE NEEDED
-				dummy = this->getRawPixels(person,aTempl,roi);
+				dummy = this->getRawPixels(person,aTempl,roi,true);
 				break;
 		}
 		cv::Mat tmp = cv::Mat::zeros(cv::Size(result.cols+dummy.cols,1),CV_32FC1);

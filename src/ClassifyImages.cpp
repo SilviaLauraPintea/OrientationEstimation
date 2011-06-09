@@ -30,8 +30,8 @@ ClassifyImages::CLASSIFIER classi){
 	this->modelName_        = "";
 	this->what_             = use;
 	this->useGroundTruth_   = false;
-	this->dimRed_           = false;
-	this->dimPCA_           = 50;
+	this->dimRed_           = true;
+	this->dimPCA_           = 10;
 	this->plot_             = false;
 
 	// INITIALIZE THE DATA MATRIX AND TARGETS MATRIX AND THE GAUSSIAN PROCESSES
@@ -161,7 +161,7 @@ ClassifyImages::~ClassifyImages(){
 		if(!this->testTargets_[i].empty()){
 			this->testTargets_[i].release();
 		}
-		if(!this->pcaDict_[i].empty()){
+		if(this->clasifier_==ClassifyImages::DIST2PCA && !this->pcaDict_[i].empty()){
 			this->pcaDict_[i].release();
 		}
 	}
@@ -364,6 +364,7 @@ void ClassifyImages::trainNN(int i){
 	this->nn_[i].train(this->trainData_[i],this->trainTargets_[i].colRange(0,4),\
 		cv::Mat(),cv::Mat(),CvANN_MLP_TrainParams(cvTermCriteria\
 		(CV_TERMCRIT_ITER,1000,0.01),CvANN_MLP_TrainParams::BACKPROP,0.01));
+	layerSizes.release();
 }
 //==============================================================================
 /** Creates the training data (according to the options),the labels and
@@ -439,7 +440,7 @@ void ClassifyImages::trainDist2PCA(AnnotationsHandle::POSE what,int i){
 			continue;
 		}
 		this->classiPca_[i][l] = std::tr1::shared_ptr<cv::PCA>(new cv::PCA\
-			(trainingData[l],cv::Mat(),CV_PCA_DATA_AS_ROW,5));
+			(trainingData[l],cv::Mat(),CV_PCA_DATA_AS_ROW,4));
 		cv::Mat full = this->classiPca_[i][l]->project(trainingData[l]);
 		cv::Mat mean = cv::Mat::zeros(cv::Size(full.cols,1),CV_32FC1);
 		full.convertTo(full,CV_32FC1);
@@ -452,7 +453,11 @@ void ClassifyImages::trainDist2PCA(AnnotationsHandle::POSE what,int i){
 		}else{
 			this->pcaDict_[i].push_back(mean);
 		}
+		mean.release();
 		full.release();
+	}
+	for(std::size_t l=0;l<trainingData.size();++l){
+		trainingData[l].release();
 	}
 	trainingData.clear();
 }
@@ -665,27 +670,28 @@ std::deque<float> ClassifyImages::predictKNN(int i){
 	std::cout<<"Predicting on the kNN..."<<std::endl;
 	std::deque<float> oneClassPredictions;
 
- 	cv::Mat* sinPreds = new cv::Mat(cv::Size(1,this->testData_[i].rows),CV_32FC1);
- 	cv::Mat* cosPreds = new cv::Mat(cv::Size(1,this->testData_[i].rows),CV_32FC1);
- 	this->sinKNN_[i].find_nearest(this->testData_[i],3,sinPreds,NULL,NULL,NULL);
- 	this->cosKNN_[i].find_nearest(this->testData_[i],3,cosPreds,NULL,NULL,NULL);
- 	std::cout<<"#Predictions_sin="<<sinPreds->size()<<" #Predictions_cos="<<\
- 		cosPreds->size()<<" #Data="<<this->testData_[i].size()<<std::endl;
- 	sinPreds->convertTo((*sinPreds),CV_32FC1);
- 	cosPreds->convertTo((*cosPreds),CV_32FC1);
+ 	cv::Mat sinPreds(cv::Size(1,this->testData_[i].rows),CV_32FC1);
+ 	cv::Mat cosPreds(cv::Size(1,this->testData_[i].rows),CV_32FC1);
+ 	cv::Mat neighbors,dists;
+ 	this->sinKNN_[i].find_nearest(this->testData_[i],3,sinPreds,neighbors,dists);
+ 	this->cosKNN_[i].find_nearest(this->testData_[i],3,cosPreds,neighbors,dists);
+ 	std::cout<<"#Predictions_sin="<<sinPreds.size()<<" #Predictions_cos="<<\
+ 		cosPreds.size()<<" #Data="<<this->testData_[i].size()<<std::endl;
+ 	sinPreds.convertTo(sinPreds,CV_32FC1);
+ 	cosPreds.convertTo(cosPreds,CV_32FC1);
 
 	// FOR EACH ROW IN THE TEST MATRIX COMPUTE THE PREDICTION
 	for(int j=0;j<this->testData_[i].rows;++j){
-		float y = sinPreds->at<float>(j,0);
-		float x = cosPreds->at<float>(j,0);
+		float y = sinPreds.at<float>(j,0);
+		float x = cosPreds.at<float>(j,0);
 		float prediction = std::atan2(y,x);
 		Auxiliary::angle0to360(prediction);
 		oneClassPredictions.push_back(prediction);
 	}
-	sinPreds->release();
-	cosPreds->release();
-	delete sinPreds;
-	delete cosPreds;
+	sinPreds.release();
+	cosPreds.release();
+	neighbors.release();
+	dists.release();
 	return oneClassPredictions;
 }
 //==============================================================================
@@ -724,6 +730,7 @@ std::deque<float> ClassifyImages::predictDist2PCA(AnnotationsHandle::POSE what,i
 		oneClassPredictions.push_back(prediction);
 		minDists.release();
 		minLabs.release();
+		testingData.release();
 	}
 	return oneClassPredictions;
 }
@@ -974,7 +981,7 @@ int colorSp,bool onTrain,FeatureExtractor::FEATUREPART part){
 
 	// SET THE CALIBRATION ONLY ONCE (ALL IMAGES ARE READ FROM THE SAME DIR)
 	this->resetFeatures(this->trainDir_,this->trainImgString_,colorSp,part);
-	for(unsigned i=k-1;i<k;++i){
+	for(unsigned i=0;i<k;++i){
 		std::cout<<"Round "<<i<<"___________________________________________"<<\
 			"_____________________________________________________"<<std::endl;
 		// SPLIT TRAINING AND TESTING ACCORDING TO THE CURRENT FOLD
@@ -1010,9 +1017,6 @@ int colorSp,bool onTrain,FeatureExtractor::FEATUREPART part){
 			predicted.clear();
 		}
 		sleep(6);
-//------------------REMOVE------------------------------------------------------
-		return finalNormError;
-//------------------REMOVE------------------------------------------------------
 	}
 	finalError     /= static_cast<float>(k);
 	finalNormError /= static_cast<float>(k);
@@ -1276,7 +1280,7 @@ kernel,bool useGT,FeatureExtractor::FEATUREPART part){
 		finalPreds.push_back(preFinalPreds);
 	}
 	// FINALLY EVALUATE THE FINAL PREDICTIONS
-	std::cout<<"FINAL EVALUATION________________________________________________"<<\
+	std::cout<<"FINAL EVALUATION____________________________________________"<<\
 		"________________________"<<std::endl;
 	float error = 0.0,normError=0.0,meanDiff=0.0;
 	classi.evaluate(finalPreds,error,normError,meanDiff);
@@ -1349,7 +1353,7 @@ int main(int argc,char **argv){
 //	feat.push_back(FeatureExtractor::HOG);
 //	feat.push_back(FeatureExtractor::GABOR);
 	feat.push_back(FeatureExtractor::RAW_PIXELS);
-	feat.push_back(FeatureExtractor::HOG);
+//	feat.push_back(FeatureExtractor::HOG);
 /*
 	// build data matrix
  	ClassifyImages classi(argc,argv,ClassifyImages::EVALUATE,\
@@ -1370,7 +1374,7 @@ int main(int argc,char **argv){
 
 	// evaluate
  	ClassifyImages classi(argc,argv,ClassifyImages::EVALUATE,\
- 		ClassifyImages::DIST2PCA);
+ 		ClassifyImages::K_NEAREST_NEIGHBORS);
 	classi.init(0.1,50.0,feat,&GaussianProcess::sqexp,true);
 	classi.runCrossValidation(5,AnnotationsHandle::LONGITUDE,-1,false,\
 		FeatureExtractor::HEAD);
@@ -1398,6 +1402,4 @@ int main(int argc,char **argv){
 		85,&GaussianProcess::sqexp,false);
 */
 }
-
-
 
