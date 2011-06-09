@@ -1007,11 +1007,11 @@ boost::mutex AnnotationsHandle::trackbarMutex_;
 std::tr1::shared_ptr<IplImage> AnnotationsHandle::image_;
 std::deque<AnnotationsHandle::ANNOTATION> AnnotationsHandle::annotations_;
 //==============================================================================
-
+/*
 int main(int argc,char **argv){
 	std::string folderSuffix = "_train";
 	AnnotationsHandle::runAnn(argc,argv,1,folderSuffix,-1);
 	//AnnotationsHandle::runAnnArtificial(argc,argv,1,folderSuffix,-1,435,80,145);
 	//AnnotationsHandle::runEvaluation(argc,argv);
 }
-
+*/
