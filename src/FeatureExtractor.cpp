@@ -41,7 +41,7 @@ FeatureExtractor::FeatureExtractor(){
 	this->meanSize_     = 128;
 	this->featureFile_  = "none";
 	this->print_        = false;
-	this->plot_         = true;
+	this->plot_         = false;
 }
 //==============================================================================
 FeatureExtractor::~FeatureExtractor(){

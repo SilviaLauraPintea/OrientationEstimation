@@ -293,10 +293,6 @@ class ClassifyImages {
 		 * The number of components ot be kepr when using PCA.
 		 */
 		unsigned dimPCA_;
-		/** @var pcaDict_
-		 * A dictionary of eigen-orientations.
-		 */
-		std::vector<cv::Mat> pcaDict_;
 		//======================================================================
 	private:
 		DISALLOW_COPY_AND_ASSIGN(ClassifyImages);

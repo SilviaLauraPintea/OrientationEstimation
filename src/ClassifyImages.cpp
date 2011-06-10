@@ -53,9 +53,7 @@ ClassifyImages::CLASSIFIER classi){
 				this->cosKNN_.push_back(CvKNearest());
 				break;
 			case(ClassifyImages::DIST2PCA):
-				this->pcaDict_.push_back(cv::Mat());
-				this->classiPca_.push_back\
-					(std::deque<std::tr1::shared_ptr<cv::PCA> >());
+				this->classiPca_.push_back(std::deque<std::tr1::shared_ptr<cv::PCA> >());
 		}
 	}
 
@@ -160,9 +158,6 @@ ClassifyImages::~ClassifyImages(){
 		}
 		if(!this->testTargets_[i].empty()){
 			this->testTargets_[i].release();
-		}
-		if(this->clasifier_==ClassifyImages::DIST2PCA && !this->pcaDict_[i].empty()){
-			this->pcaDict_[i].release();
 		}
 	}
 	this->trainData_.clear();
@@ -421,44 +416,19 @@ void ClassifyImages::trainDist2PCA(AnnotationsHandle::POSE what,int i){
 		dummy1.release();
 	}
 
-	// PROJECT THE TRAINING DATA ON THE EIGEN SUBSPACE
-	this->pcaDict_[i].release();
+	// COMPUTE THE EIGEN SUBSPACE FOR EACH ORIENTATION-MATRIX
 	this->classiPca_[i].clear();
 	this->classiPca_[i] = std::deque<std::tr1::shared_ptr<cv::PCA> >\
 		(trainingData.size(),std::tr1::shared_ptr<cv::PCA>\
 		(static_cast<cv::PCA*>(0)));
 	for(int l=0;l<trainingData.size();++l){
-		if(trainingData[l].empty()){
-			std::cout<<"Missing class >>>"<<l<<std::endl;
-			cv::Mat empty = cv::Mat::zeros(cv::Size(20,1),CV_32FC1);
-			if(this->pcaDict_[i].empty()){
-				empty.copyTo(this->pcaDict_[i]);
-			}else{
-				this->pcaDict_[i].push_back(empty);
-			}
-			empty.release();
-			continue;
+		if(!trainingData[l].empty()){
+std::cout<<"PCA >>> "<<trainingData[l].size()<<std::endl;
+			this->classiPca_[i][l] = std::tr1::shared_ptr<cv::PCA>(new cv::PCA\
+				(trainingData[l],cv::Mat(),CV_PCA_DATA_AS_ROW,1));
 		}
-		this->classiPca_[i][l] = std::tr1::shared_ptr<cv::PCA>(new cv::PCA\
-			(trainingData[l],cv::Mat(),CV_PCA_DATA_AS_ROW,4));
-		cv::Mat full = this->classiPca_[i][l]->project(trainingData[l]);
-		cv::Mat mean = cv::Mat::zeros(cv::Size(full.cols,1),CV_32FC1);
-		full.convertTo(full,CV_32FC1);
-		for(int e=0;e<full.rows;++e){
-			mean += full.row(e);
-		}
-		mean /= full.rows;
-		if(this->pcaDict_[i].empty()){
-			mean.copyTo(this->pcaDict_[i]);
-		}else{
-			this->pcaDict_[i].push_back(mean);
-		}
-		mean.release();
-		full.release();
 	}
-	for(std::size_t l=0;l<trainingData.size();++l){
-		trainingData[l].release();
-	}
+	// RELEASE THE TRAINING DATA
 	trainingData.clear();
 }
 //==============================================================================
@@ -709,21 +679,25 @@ std::deque<float> ClassifyImages::predictDist2PCA(AnnotationsHandle::POSE what,i
 	}
 	// FOR EACH ROW IN THE TEST MATRIX COMPUTE THE PREDICTION
 	for(int j=0;j<this->testData_[i].rows;++j){
-		// PROJECT IT ON ALL THE POSSIBLE PCAs
 		cv::Mat testingData;
+		// PROJECT EACH IMAGE ON EACH SPACE AND THEN BACKPROJECT IT
 		for(int l=0;l<this->classiPca_[i].size();++l){
+			cv::Mat projectTest = this->classiPca_[i][l]->project\
+				(this->testData_[i].row(j));
+			cv::Mat backprojectTest = this->classiPca_[i][l]->backProject\
+				(projectTest);
 			if(testingData.empty() && this->classiPca_[i][l].get()){
-				(this->classiPca_[i][l]->project(this->testData_[i].row(j))).\
-					copyTo(testingData);
+				backprojectTest.copyTo(testingData);
 			}else{
-				testingData.push_back(this->classiPca_[i][l]->project\
-					(this->testData_[i].row(j)));
+				testingData.push_back(backprojectTest);
 			}
+			projectTest.release();
+			backprojectTest.release();
 		}
 
-		// FIND THE PROJECTION CLOSEST TO ONE OF THE DICTIONARY ORIENTATIONS
+		// FIND THE PROJECTION CLOSEST TO ONE OF THE ORIENTATIONS
 		cv::Mat minDists,minLabs;
-		FeatureExtractor::dist2(testingData,this->pcaDict_[i],minDists,minLabs);
+		FeatureExtractor::dist2(testingData,this->testData_[i].row(j),minDists,minLabs);
 		cv::Point minLoc(0,0);
 		cv::minMaxLoc(minDists,NULL,NULL,&minLoc,NULL,cv::Mat());
 		float prediction = minLoc.x*10.0*(M_PI/180.0);
@@ -749,7 +723,7 @@ bool ClassifyImages::isClassiInit(int i){
 			return (this->sinKNN_[i].get_max_k()!=0 && this->cosKNN_[i].get_max_k()!=0);
 			break;
 		case(ClassifyImages::DIST2PCA):
-			return (!this->pcaDict_[i].empty());
+			return (!this->classiPca_[i].empty());
 			break;
 	}
 }
@@ -1374,10 +1348,10 @@ int main(int argc,char **argv){
 
 	// evaluate
  	ClassifyImages classi(argc,argv,ClassifyImages::EVALUATE,\
- 		ClassifyImages::K_NEAREST_NEIGHBORS);
+ 		ClassifyImages::DIST2PCA);
 	classi.init(0.1,50.0,feat,&GaussianProcess::sqexp,true);
 	classi.runCrossValidation(5,AnnotationsHandle::LONGITUDE,-1,false,\
-		FeatureExtractor::HEAD);
+		FeatureExtractor::WHOLE);
 
 	//--------------------------------------------------------------------------
 /*

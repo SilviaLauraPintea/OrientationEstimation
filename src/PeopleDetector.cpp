@@ -751,17 +751,11 @@ const cv::Point2f &feetLocation,float angle){
 		(feetLocation.x-headLocation.x));
 	Auxiliary::angle0to360(camAngle);
 	// IF THE CAMERA IS SITTING HORIZONTALLY
-
-std::cout<<Helpers::cam()<<std::endl;
-
 	if(Helpers::cam().y<Helpers::height() && Helpers::cam().y>0){
-std::cout<<"INSIDE"<<std::endl;
-
-		camAngle = (M_PI/2.0-camAngle);
+		camAngle = (M_PI/2.0-(M_PI-camAngle));
 	// IF THE CAMERA IS SITTING VERTICALLY
 	}else{
-std::cout<<"OUTSIDE"<<std::endl;
-		camAngle = (M_PI/2.0-(M_PI-camAngle));
+		camAngle = (M_PI/2.0-camAngle);
 	}
 	float newAngle = angle+camAngle;
 	Auxiliary::angle0to360(newAngle);
@@ -1231,10 +1225,10 @@ const cv::Point2f &feetLocation){
 	Auxiliary::angle0to360(rotAngle);
 	// IF THE CAMERA IS SITTING HORIZONTALLY
 	if(Helpers::cam().y<Helpers::height() && Helpers::cam().y>0){
-		rotAngle = (M_PI/2.0-rotAngle);
+		rotAngle = (M_PI/2.0-(M_PI-rotAngle));
 	// IF THE CAMERA IS SITTING VERTICALLY
 	}else{
-		rotAngle = (M_PI/2.0-(M_PI-rotAngle));
+		rotAngle = (M_PI/2.0-rotAngle);
 	}
 	rotAngle *= (180.0/M_PI);
 	return rotAngle;
