@@ -422,8 +422,7 @@ void ClassifyImages::trainDist2PCA(AnnotationsHandle::POSE what,int i){
 		(trainingData.size(),std::tr1::shared_ptr<cv::PCA>\
 		(static_cast<cv::PCA*>(0)));
 	for(int l=0;l<trainingData.size();++l){
-		if(!trainingData[l].empty()){
-std::cout<<"PCA >>> "<<trainingData[l].size()<<std::endl;
+		if(trainingData[l].rows>1){
 			this->classiPca_[i][l] = std::tr1::shared_ptr<cv::PCA>(new cv::PCA\
 				(trainingData[l],cv::Mat(),CV_PCA_DATA_AS_ROW,1));
 		}
@@ -682,11 +681,17 @@ std::deque<float> ClassifyImages::predictDist2PCA(AnnotationsHandle::POSE what,i
 		cv::Mat testingData;
 		// PROJECT EACH IMAGE ON EACH SPACE AND THEN BACKPROJECT IT
 		for(int l=0;l<this->classiPca_[i].size();++l){
-			cv::Mat projectTest = this->classiPca_[i][l]->project\
-				(this->testData_[i].row(j));
-			cv::Mat backprojectTest = this->classiPca_[i][l]->backProject\
-				(projectTest);
-			if(testingData.empty() && this->classiPca_[i][l].get()){
+			cv::Mat backprojectTest,projectTest;
+			if(this->classiPca_[i][l].get()){
+				projectTest = this->classiPca_[i][l]->project\
+					(this->testData_[i].row(j));
+				backprojectTest = this->classiPca_[i][l]->backProject\
+					(projectTest);
+			}else{
+				backprojectTest = cv::Mat::zeros(this->testData_[i].row(j).size(),\
+					CV_32FC1);
+			}
+			if(testingData.empty()){
 				backprojectTest.copyTo(testingData);
 			}else{
 				testingData.push_back(backprojectTest);

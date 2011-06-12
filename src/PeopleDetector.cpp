@@ -750,13 +750,8 @@ const cv::Point2f &feetLocation,float angle){
 	float camAngle = std::atan2((feetLocation.y-headLocation.y),\
 		(feetLocation.x-headLocation.x));
 	Auxiliary::angle0to360(camAngle);
-	// IF THE CAMERA IS SITTING HORIZONTALLY
-	if(Helpers::cam().y<Helpers::height() && Helpers::cam().y>0){
-		camAngle = (M_PI/2.0-(M_PI-camAngle));
-	// IF THE CAMERA IS SITTING VERTICALLY
-	}else{
-		camAngle = (M_PI/2.0-camAngle);
-	}
+//	camAngle       = (M_PI/2.0-camAngle);
+	camAngle       = (M_PI/2.0-(M_PI-camAngle));
 	float newAngle = angle+camAngle;
 	Auxiliary::angle0to360(newAngle);
 	return newAngle;
@@ -1223,13 +1218,8 @@ const cv::Point2f &feetLocation){
 	float rotAngle = std::atan2((feetLocation.y-headLocation.y),\
 		(feetLocation.x-headLocation.x));
 	Auxiliary::angle0to360(rotAngle);
-	// IF THE CAMERA IS SITTING HORIZONTALLY
-	if(Helpers::cam().y<Helpers::height() && Helpers::cam().y>0){
-		rotAngle = (M_PI/2.0-(M_PI-rotAngle));
-	// IF THE CAMERA IS SITTING VERTICALLY
-	}else{
-		rotAngle = (M_PI/2.0-rotAngle);
-	}
+//	rotAngle  = (M_PI/2.0-rotAngle);
+	rotAngle  = (M_PI/2.0-(M_PI-rotAngle));
 	rotAngle *= (180.0/M_PI);
 	return rotAngle;
 }

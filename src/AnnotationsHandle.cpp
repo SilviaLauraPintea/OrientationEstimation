@@ -337,7 +337,7 @@ void AnnotationsHandle::trackbar_callback(int position,void *param){
 void AnnotationsHandle::plotHull(IplImage *img,std::vector<cv::Point2f> &hull){
 	hull.push_back(hull.front());
 	for(unsigned i=1;i<hull.size();++i){
-		cvLine(img,hull[i-1],hull[i],CV_RGB(255,0,0),2);
+		cvLine(img,hull[i-1],hull[i],CV_RGB(255,0,0),1);
 	}
 }
 //==============================================================================

@@ -47,8 +47,8 @@ ADD_LIBRARY(helpers
 #ADD_EXECUTABLE(Tracker ${EIGEN_SRC}/Tracker.cc )
 #TARGET_LINK_LIBRARIES(Tracker helpers opencv_core opencv_calib3d opencv_imgproc opencv_highgui cmn tools iberty vnl_algo vnl v3p_netlib boost_date_time-mt boost_thread-mt ${XML2_LDFLAGS})
 
-ADD_EXECUTABLE(Annotate ${EIGEN_SRC}/Annotate.cc )
-TARGET_LINK_LIBRARIES(Annotate helpers opencv_calib3d opencv_core opencv_imgproc opencv_highgui cmn tools iberty vnl_algo vnl v3p_netlib boost_date_time-mt boost_thread-mt ${XML2_LDFLAGS})
+#ADD_EXECUTABLE(Annotate ${EIGEN_SRC}/Annotate.cc )
+#TARGET_LINK_LIBRARIES(Annotate helpers opencv_calib3d opencv_core opencv_imgproc opencv_highgui cmn tools iberty vnl_algo vnl v3p_netlib boost_date_time-mt boost_thread-mt ${XML2_LDFLAGS})
 #_______________________________________________________________train___________________________________________________________________________
 # FROM NOW ON MY FILES WILL COME
 #ADD_EXECUTABLE(AnnotationsHandle ${MT_SRC}/AnnotationsHandle.cpp)
