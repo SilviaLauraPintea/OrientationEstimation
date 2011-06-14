@@ -31,7 +31,7 @@ ClassifyImages::CLASSIFIER classi){
 	this->what_             = use;
 	this->useGroundTruth_   = false;
 	this->dimRed_           = true;
-	this->dimPCA_           = 10;
+	this->dimPCA_           = 50;
 	this->plot_             = false;
 
 	// INITIALIZE THE DATA MATRIX AND TARGETS MATRIX AND THE GAUSSIAN PROCESSES
@@ -56,6 +56,8 @@ ClassifyImages::CLASSIFIER classi){
 				this->classiPca_.push_back(std::deque<std::tr1::shared_ptr<cv::PCA> >());
 		}
 	}
+	this->pca_ = std::vector<std::tr1::shared_ptr<cv::PCA> >\
+		(3,std::tr1::shared_ptr<cv::PCA>());
 
 	// READ THE COMMAND LINE ARGUMENTS
 	if(argc != 3 && argc != 5){
@@ -159,6 +161,9 @@ ClassifyImages::~ClassifyImages(){
 		if(!this->testTargets_[i].empty()){
 			this->testTargets_[i].release();
 		}
+		if(this->pca_[i]){
+			this->pca_[i].reset();
+		}
 	}
 	this->trainData_.clear();
 	this->trainTargets_.clear();
@@ -177,9 +182,6 @@ ClassifyImages::~ClassifyImages(){
 			this->sinKNN_.clear();
 			this->cosKNN_.clear();
 			break;
-	}
-	if(this->pca_){
-		this->pca_.reset();
 	}
 	this->classiPca_.clear();
 }
@@ -455,7 +457,7 @@ void ClassifyImages::train(AnnotationsHandle::POSE what,bool fromFolder){
 
 		// IF WE CANNOT LOAD DATA,THEN WE BUILD IT
 		if(this->dimRed_ && !outData.empty()){
-			this->trainData_[i] = this->reduceDimensionality(outData,true,\
+			this->trainData_[i] = this->reduceDimensionality(outData,i,true,\
 				this->dimPCA_);
 		}else{
 			outData.copyTo(this->trainData_[i]);
@@ -757,7 +759,7 @@ std::deque<std::deque<float> > ClassifyImages::predict\
 		}
 		if(this->dimRed_){
 			this->testData_[i] = this->reduceDimensionality\
-				(this->features_->data()[i],false,this->dimPCA_);
+				(this->features_->data()[i],i,false,this->dimPCA_);
 		}else{
 			this->features_->data()[i].copyTo(this->testData_[i]);
 		}
@@ -1293,7 +1295,7 @@ AnnotationsHandle::POSE what,GaussianProcess::kernelFunction kernel){
 //==============================================================================
 /** Applies PCA on top of a data-row to reduce its dimensionality.
  */
-cv::Mat ClassifyImages::reduceDimensionality(const cv::Mat &data,\
+cv::Mat ClassifyImages::reduceDimensionality(const cv::Mat &data,int i,\
 bool train,int nEigens,int reshapeRows){
 	cv::Mat preData;
 	data.copyTo(preData);
@@ -1301,15 +1303,15 @@ bool train,int nEigens,int reshapeRows){
 	if(!nEigens){nEigens = data.rows/4;}
 	cv::Mat finalMat;
 	if(train){
-		this->pca_ = std::tr1::shared_ptr<cv::PCA>(new cv::PCA\
+		this->pca_[i] = std::tr1::shared_ptr<cv::PCA>(new cv::PCA\
 			(preData,cv::Mat(),CV_PCA_DATA_AS_ROW,nEigens));
 	}
-	finalMat = this->pca_->project(preData);
+	finalMat = this->pca_[i]->project(preData);
 	finalMat.convertTo(finalMat,CV_32FC1);
 	if(this->plot_ && reshapeRows){
-		for(int i=0;i<finalMat.rows;++i){
-			cv::Mat test1 = this->pca_->backProject(finalMat.row(i));
-			cv::Mat dummy = preData.row(i), test2;
+		for(int j=0;j<finalMat.rows;++j){
+			cv::Mat test1 = this->pca_[i]->backProject(finalMat.row(j));
+			cv::Mat dummy = preData.row(j), test2;
 			dummy.copyTo(test2);
 			test2 = test2.reshape(0,reshapeRows);
 			test1 = test1.reshape(0,reshapeRows);
@@ -1353,10 +1355,10 @@ int main(int argc,char **argv){
 
 	// evaluate
  	ClassifyImages classi(argc,argv,ClassifyImages::EVALUATE,\
- 		ClassifyImages::DIST2PCA);
-	classi.init(0.1,50.0,feat,&GaussianProcess::sqexp,true);
+ 		ClassifyImages::NEURAL_NETWORK);
+	classi.init(0.1,50.0,feat,&GaussianProcess::sqexp,false);
 	classi.runCrossValidation(5,AnnotationsHandle::LONGITUDE,-1,false,\
-		FeatureExtractor::WHOLE);
+		FeatureExtractor::TOP);
 
 	//--------------------------------------------------------------------------
 /*

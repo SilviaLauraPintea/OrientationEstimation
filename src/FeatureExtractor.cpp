@@ -41,7 +41,7 @@ FeatureExtractor::FeatureExtractor(){
 	this->meanSize_     = 128;
 	this->featureFile_  = "none";
 	this->print_        = false;
-	this->plot_         = false;
+	this->plot_         = true;
 }
 //==============================================================================
 FeatureExtractor::~FeatureExtractor(){
@@ -337,11 +337,11 @@ const FeatureExtractor::templ &aTempl,const cv::Rect &roi,bool vChannel){
 		cv::split(large,threeChannels);
 		threeChannels[2].copyTo(gray);
 	}
-	cv::blur(gray,gray,cv::Size(5,5));
+	cv::blur(gray,gray,cv::Size(3,3));
 
 	if(this->plot_){
 		cv::imshow("gray",gray);
-		cv::waitKey(0);
+		cv::waitKey(5);
 	}
 	cv::Mat result = cv::Mat::zeros(cv::Size(gray.cols*gray.rows+2,1),\
 		CV_32FC1);
@@ -1394,7 +1394,7 @@ const cv::Mat &img){
 			}else{
 				aSize.height = sHeight;
 			}
-			aSize.width  = sHeight*3/2;
+			aSize.width  = 3/2*sHeight;
 		}
 		cv::blur(tmp,tmp,cv::Size(3,3));
 		cv::resize(tmp,large,aSize,0,0,cv::INTER_NEAREST);

@@ -121,8 +121,8 @@ class ClassifyImages {
 
 		/** Applies PCA on top of a data-row to reduce its dimensionality.
 		 */
-		cv::Mat reduceDimensionality(const cv::Mat &data,bool train,int nEigens=0,\
-			int reshapeRows=0);
+		cv::Mat reduceDimensionality(const cv::Mat &data,int i,bool train,\
+			int nEigens=0,int reshapeRows=0);
 		/** Read and load the training/testing data.
 		 */
 		void getData(std::string trainFld,std::string annoFld,bool fromFolder);
@@ -273,9 +273,9 @@ class ClassifyImages {
 		 */
 		bool dimRed_;
 		/** @var pca_
-		 * An instance of the class cv::PCA
+		 * A vector of pointers to instance of the class cv::PCA
 		 */
-		std::tr1::shared_ptr<cv::PCA> pca_;
+		std::vector<std::tr1::shared_ptr<cv::PCA> > pca_;
 		/** @var classiPca_
 		 * An instance of the class cv::PCA
 		 */

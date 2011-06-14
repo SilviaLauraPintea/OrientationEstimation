@@ -28,7 +28,7 @@ void operator++(PeopleDetector::CLASSES &refClass){
 //======================================================================
 PeopleDetector::PeopleDetector(int argc,char** argv,bool extract,\
 bool buildBg,int colorSp,FeatureExtractor::FEATUREPART part):Tracker\
-(argc,argv,20,buildBg,true,200){
+(argc,argv,73,buildBg,true,200){
 	if(argc == 3){
 		std::string dataPath  = std::string(argv[1]);
 		std::string imgString = std::string(argv[2]);
@@ -375,6 +375,7 @@ void PeopleDetector::allForegroundPixels(std::deque<FeatureExtractor::people>\
 		cv::cvtColor(thsh,thsh,TO_IMG_FMT);
 		cv::cvtColor(thsh,thrsh,CV_BGR2GRAY);
 		cv::threshold(thrsh,thrsh,threshold,255,cv::THRESH_BINARY);
+		cv::dilate(thrsh,thrsh,cv::Mat(),cv::Point(-1,-1),3);
 	}
 	cv::Mat foregr(this->borderedIpl_.get());
 	// FOR EACH EXISTING TEMPLATE LOOK ON AN AREA OF 100 PIXELS AROUND IT
@@ -420,13 +421,13 @@ void PeopleDetector::allForegroundPixels(std::deque<FeatureExtractor::people>\
 		allPeople[k].borders_[1] = maxX;
 		allPeople[k].borders_[2] = minY;
 		allPeople[k].borders_[3] = maxY;
-		if(this->plot_){
+//		if(this->plot_){
 			cv::imshow("people",allPeople[k].pixels_);
 			if(!allPeople[k].thresh_.empty()){
 				cv::imshow("threshold",allPeople[k].thresh_);
 			}
-			cv::waitKey(0);
-		}
+			cv::waitKey(5);
+//		}
 		colorRoi.release();
 	}
 	thrsh.release();
@@ -902,9 +903,9 @@ const float logBGProb,const vnl_vector<float> &logSumPixelBGProb){
 
 	//5) DILATE A BIT THE BACKGROUND SO THE BACKGROUND NOISE GOES NICELY
 	IplImage *bg = Helpers::vec2img((imgVec-bgVec).apply(fabs));
-	cvSmooth(bg,bg,CV_MEDIAN,7,7);
-	cvErode(bg,bg,NULL,2);
-	cvDilate(bg,bg,NULL,2);
+	cvSmooth(bg,bg,CV_GAUSSIAN,31,31);
+	cvErode(bg,bg,NULL,3);
+	cvDilate(bg,bg,NULL,3);
 
 	//7) SHOW THE FOREGROUND POSSIBLE LOCATIONS AND PLOT THE TEMPLATES
 	cerr<<"no. of detected people: "<<exi.size()<<endl;
@@ -933,7 +934,7 @@ const float logBGProb,const vnl_vector<float> &logSumPixelBGProb){
 	//10) EXTRACT FEATURES FOR THE CURRENTLY DETECTED LOCATIONS
 	cout<<"Number of templates: "<<exi.size()<<endl;
 	this->extractDataRow(bg,exi);
-	cout<<"Number of templates afterwards: "<<exi.size()<<endl;
+	cout<<"Number of templates afterwards: "<<this->existing_.size()<<endl;
 
 	//11) WHILE NOT q WAS PRESSED PROCESS THE NEXT IMAGES
 	cvReleaseImage(&bg);
