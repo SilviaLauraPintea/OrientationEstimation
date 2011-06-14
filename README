@@ -11,7 +11,7 @@ of groups given the estimated orientations.
 After tracking the people in the image, the orientation of each one of 
 them needs to be estimated. 
 The data used in this project is video data obtained from a single ceiling-mounted 
-camera -- this makes the oientation estimation task harder because of the presence of image 
+camera -- this makes the orientation estimation task harder because of the presence of image 
 noise, occlusion, clutter and difference in perspective.
 A number of features and object recognition techniques need to be implemented and 
 tested in order to discover an efficient one. 
