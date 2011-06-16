@@ -62,7 +62,7 @@ class PeopleDetector:public Tracker{
 		 * descriptors.
 		 */
 		void extractDataRow(const IplImage *oldBg,const std::deque<unsigned> &existing=\
-			std::deque<unsigned>(),float threshVal=100.0);
+			std::deque<unsigned>(),float threshVal=60.0);
 		/** For each row added in the data matrix (each person detected for which we
 		 * have extracted some features) find the corresponding label.
 		 */

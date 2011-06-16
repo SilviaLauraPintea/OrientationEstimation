@@ -28,7 +28,7 @@ void operator++(PeopleDetector::CLASSES &refClass){
 //======================================================================
 PeopleDetector::PeopleDetector(int argc,char** argv,bool extract,\
 bool buildBg,int colorSp,FeatureExtractor::FEATUREPART part):Tracker\
-(argc,argv,73,buildBg,true,200){
+(argc,argv,126,buildBg,true,200){
 	if(argc == 3){
 		std::string dataPath  = std::string(argv[1]);
 		std::string imgString = std::string(argv[2]);
@@ -375,7 +375,6 @@ void PeopleDetector::allForegroundPixels(std::deque<FeatureExtractor::people>\
 		cv::cvtColor(thsh,thsh,TO_IMG_FMT);
 		cv::cvtColor(thsh,thrsh,CV_BGR2GRAY);
 		cv::threshold(thrsh,thrsh,threshold,255,cv::THRESH_BINARY);
-		cv::dilate(thrsh,thrsh,cv::Mat(),cv::Point(-1,-1),3);
 	}
 	cv::Mat foregr(this->borderedIpl_.get());
 	// FOR EACH EXISTING TEMPLATE LOOK ON AN AREA OF 100 PIXELS AROUND IT
@@ -511,7 +510,7 @@ void PeopleDetector::fixLocationsTracksBorderes(const std::deque<unsigned> &exi)
 			}
 		}
 		cvShowImage("tracks",tmpSrc);
-		cvWaitKey(0);
+		cvWaitKey(5);
 		cvReleaseImage(&tmpSrc);
 	}
 }
@@ -595,7 +594,8 @@ const std::deque<unsigned> &exi,float threshVal){
 			allPeople[i].thresh_.release();
 			cv::inRange(allPeople[i].pixels_,cv::Scalar(1,1,1),cv::Scalar(255,225,225),\
 				allPeople[i].thresh_);
-			cv::dilate(allPeople[i].thresh_,allPeople[i].thresh_,cv::Mat(),cv::Point(-1,-1),2);
+			//cv::dilate(allPeople[i].thresh_,allPeople[i].thresh_,cv::Mat(),\
+				cv::Point(-1,-1),2);
 		}
 
 		// IF THE PART TO BE CONSIDERED IS ONLY FEET OR ONLY HEAD
@@ -708,7 +708,7 @@ const cv::Point2f &center,bool maxOrAvg){
 		cv::circle(currentImg,cv::Point2f(resFlowX,resFlowY),2,cv::Scalar(0,200,0),\
 			1,8,0);
 		cv::imshow("optical",currentImg);
-		cv::waitKey(0);
+		cv::waitKey(5);
 	}
 
 	// DIRECTION OF THE AVERAGE FLOW
@@ -904,8 +904,10 @@ const float logBGProb,const vnl_vector<float> &logSumPixelBGProb){
 	//5) DILATE A BIT THE BACKGROUND SO THE BACKGROUND NOISE GOES NICELY
 	IplImage *bg = Helpers::vec2img((imgVec-bgVec).apply(fabs));
 	cvSmooth(bg,bg,CV_GAUSSIAN,31,31);
-	cvErode(bg,bg,NULL,3);
-	cvDilate(bg,bg,NULL,3);
+	for(unsigned l=0;l<5;++l){
+		cvErode(bg,bg,NULL,2);
+		cvDilate(bg,bg,NULL,2);
+	}
 
 	//7) SHOW THE FOREGROUND POSSIBLE LOCATIONS AND PLOT THE TEMPLATES
 	cerr<<"no. of detected people: "<<exi.size()<<endl;
@@ -926,7 +928,7 @@ const float logBGProb,const vnl_vector<float> &logSumPixelBGProb){
 		}
 		cvShowImage("bg",tmpBg);
 		cvShowImage("image",tmpSrc);
-		cvWaitKey(0);
+		cvWaitKey(5);
 		cvReleaseImage(&tmpBg);
 		cvReleaseImage(&tmpSrc);
 	}
@@ -1046,7 +1048,7 @@ void PeopleDetector::templatePart(int k,FeatureExtractor::people &person){
 			Helpers::plotTemplate2(person.thresh_,cv::Point2f(0,0),\
 				cv::Scalar(0,255,0),tmpTempl);
 			cv::imshow("part",person.thresh_);
-			cv::waitKey(0);
+			cv::waitKey(5);
 		}
 	}
 }
@@ -1208,7 +1210,7 @@ void PeopleDetector::readLocations(){
 				Helpers::persHeight(),Helpers::camHeight(),cv::Scalar(255,0,0),templ);
 		}
 		cvShowImage("AnnotatedLocations",this->current_->img_.get());
-		cvWaitKey(0);
+		cvWaitKey(5);
 	}
 }
 //==============================================================================
@@ -1277,7 +1279,7 @@ void PeopleDetector::extractHeadArea(int i,FeatureExtractor::people &person){
 		this->extractor_->getThresholdBorderes(minX,maxX,minY,maxY,person.thresh_);
 		float headSize = Helpers::dist(this->templates_[i].points_[12],\
 			this->templates_[i].points_[14]);
-		radius       = headSize/2;
+		radius       = headSize;
 		headPosition = cv::Point2f((minX+maxX)/2,headSize/2+minY);
 		cv::circle(headMask,headPosition,radius,cv::Scalar(255,255,255),-1);
 		cv::Mat tmpThresh;
@@ -1289,7 +1291,7 @@ void PeopleDetector::extractHeadArea(int i,FeatureExtractor::people &person){
 	//ELSE FIX ONLY THE TEMPLATE
 		float headSize = Helpers::dist(this->templates_[i].points_[12],\
 			this->templates_[i].points_[14]);
-		radius       = headSize/2;
+		radius       = headSize;
 		headPosition = cv::Point2f(this->templates_[i].head_.x-person.borders_[0],\
 			this->templates_[i].head_.y-person.borders_[2]);
 		cv::circle(headMask,headPosition,radius,cv::Scalar(255,255,255),-1);
@@ -1316,7 +1318,7 @@ void PeopleDetector::extractHeadArea(int i,FeatureExtractor::people &person){
 		if(!person.thresh_.empty()){
 			cv::imshow("head_thresh",person.thresh_);
 		}
-		cv::waitKey(0);
+		cv::waitKey(5);
 	}
 	tmpPerson.release();
 	headMask.release();

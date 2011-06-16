@@ -30,8 +30,8 @@ ClassifyImages::CLASSIFIER classi){
 	this->modelName_        = "";
 	this->what_             = use;
 	this->useGroundTruth_   = false;
-	this->dimRed_           = true;
-	this->dimPCA_           = 50;
+	this->dimRed_           = false;
+	this->dimPCA_           = 10;
 	this->plot_             = false;
 
 	// INITIALIZE THE DATA MATRIX AND TARGETS MATRIX AND THE GAUSSIAN PROCESSES
@@ -1355,10 +1355,10 @@ int main(int argc,char **argv){
 
 	// evaluate
  	ClassifyImages classi(argc,argv,ClassifyImages::EVALUATE,\
- 		ClassifyImages::NEURAL_NETWORK);
-	classi.init(0.1,50.0,feat,&GaussianProcess::sqexp,false);
+ 		ClassifyImages::GAUSSIAN_PROCESS);
+	classi.init(0.01,20000.0,feat,&GaussianProcess::sqexp,false);
 	classi.runCrossValidation(5,AnnotationsHandle::LONGITUDE,-1,false,\
-		FeatureExtractor::TOP);
+		FeatureExtractor::HEAD);
 
 	//--------------------------------------------------------------------------
 /*

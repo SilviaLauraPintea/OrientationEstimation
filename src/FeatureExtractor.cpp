@@ -256,7 +256,7 @@ const FeatureExtractor::templ &aTempl,const cv::Rect &roi){
 	large.release();
 	if(this->plot_){
 		cv::imshow("part",gray);
-		cv::waitKey(0);
+		cv::waitKey(5);
 	}
 
 	// MATCH SOME HEADS ON TOP AND GET THE RESULTS
@@ -280,7 +280,7 @@ const FeatureExtractor::templ &aTempl,const cv::Rect &roi){
 		cv::resize(tmp,resized,cv::Size(20,30),0,0,cv::INTER_CUBIC);
 		if(this->plot_){
 			cv::imshow("result"+Auxiliary::int2string(i),resized);
-			cv::waitKey(0);
+			cv::waitKey(5);
 		}
 
 		// RESHAPE THE RESULT AND CONVERT IT TO float
@@ -337,8 +337,6 @@ const FeatureExtractor::templ &aTempl,const cv::Rect &roi,bool vChannel){
 		cv::split(large,threeChannels);
 		threeChannels[2].copyTo(gray);
 	}
-	cv::blur(gray,gray,cv::Size(3,3));
-
 	if(this->plot_){
 		cv::imshow("gray",gray);
 		cv::waitKey(5);
@@ -414,7 +412,7 @@ const cv::Rect &roi,const FeatureExtractor::templ &aTempl,float rotAngle,bool co
 	// IF WE WANT TO SEE HOW THE EXTRACTED EDGES LOOK LIKE
  	if(this->plot_){
 		cv::imshow("Edges",tmpEdge);
-		cv::waitKey(0);
+		cv::waitKey(5);
 	}
  	cv::Mat result;
 	if(contours){
@@ -489,7 +487,7 @@ cv::Mat FeatureExtractor::getSURF(cv::Mat &feature,const std::vector<cv::Point2f
 			cv::circle(copyTest,indices[l],3,cv::Scalar(0,0,255));
 		}
 		cv::imshow("SURF",copyTest);
-		cv::waitKey(0);
+		cv::waitKey(5);
 		copyTest.release();
 	}
 
@@ -553,7 +551,7 @@ const FeatureExtractor::templ &aTempl,const cv::Mat &test){
 				3,cv::Scalar(0,0,255));
 		}
 		cv::imshow("IPOINTS",copyTest);
-		cv::waitKey(0);
+		cv::waitKey(5);
 		copyTest.release();
 	}
 
@@ -669,7 +667,7 @@ const FeatureExtractor::templ &aTempl,const float rotAngle,int aheight){
 		if(this->plot_){
 			cv::imshow("WholeGaborResponse",tmp1);
 			cv::imshow("GaborResponse",tmp3);
-			cv::waitKey(0);
+			cv::waitKey(5);
 		}
 
 		// RESHAPE AND STORE IN THE RIGHT PLACE
@@ -789,7 +787,7 @@ std::vector<cv::Point2f> &indices){
 			cv::circle(copyTest,indices[l],3,cv::Scalar(0,0,255));
 		}
 		cv::imshow("SIFT",copyTest);
-		cv::waitKey(0);
+		cv::waitKey(5);
 		copyTest.release();
 	}
 	preFeature.release();
@@ -942,7 +940,7 @@ cv::Mat FeatureExtractor::extractPointsGrid(cv::Mat &image){
 			cv::circle(image,cv::Point2f(ptX,ptY),3,color);
 		}
 		cv::imshow("IPOINTS",image);
-		cv::waitKey(0);
+		cv::waitKey(5);
 	}
 	result.convertTo(result,CV_32FC1);
 	gray.release();
@@ -965,7 +963,7 @@ cv::Mat FeatureExtractor::extractEdges(cv::Mat &image){
 	if(this->plot_){
 		cv::imshow("gray",gray);
 		cv::imshow("edges",result);
-		cv::waitKey(0);
+		cv::waitKey(5);
 	}
 	gray.release();
 	result.convertTo(result,CV_32FC1);
@@ -1025,7 +1023,7 @@ cv::Mat FeatureExtractor::extractSURF(cv::Mat &image){
 				3,cv::Scalar(0,0,255));
 		}
 		cv::imshow("SURFS",image);
-		cv::waitKey(0);
+		cv::waitKey(5);
 	}
 	result.convertTo(result,CV_32FC1);
 	return result;
@@ -1100,7 +1098,7 @@ cv::Mat FeatureExtractor::extractGabor(cv::Mat &image){
 			cv::imshow("Gray",gray);
 			cv::imshow("GaborFilter",agabor);
 			cv::imshow("GaborResponse",response);
-			cv::waitKey(0);
+			cv::waitKey(5);
 		}
 		cv::Mat temp = result.rowRange(i*response.rows,(i+1)*response.rows);
 		response.convertTo(response,CV_32FC1);
@@ -1154,7 +1152,7 @@ const std::vector<cv::Point2f> &templ,const cv::Rect &roi){
 				cv::circle(image,goodKP[i].pt,3,cv::Scalar(0,0,255));
 			}
 			cv::imshow("SIFT_DICT",image);
-			cv::waitKey(0);
+			cv::waitKey(5);
 		}
 	// IF WE ONLY WANT TO STORE THE SIFT FEATURE WE NEED TO ADD THE x-S AND y-S
 	}else if(FeatureExtractor::isFeatureIn(this->featureType_,FeatureExtractor::SIFT)){
@@ -1172,7 +1170,7 @@ const std::vector<cv::Point2f> &templ,const cv::Rect &roi){
 				cv::circle(image,keypoints[i].pt,3,cv::Scalar(0,0,255));
 			}
 			cv::imshow("SIFT",image);
-			cv::waitKey(0);
+			cv::waitKey(5);
 		}
 	}
 
@@ -1307,7 +1305,7 @@ const FeatureExtractor::templ &aTempl,const cv::Rect &roi){
 	std::vector<float> descriptors;
 	if(this->plot_){
 		cv::imshow("image4HOG",gray);
-		cv::waitKey(0);
+		cv::waitKey(5);
 	}
 	hogD.compute(gray,descriptors,cv::Size(stepX,stepY),cv::Size(0,0),\
 		std::vector<cv::Point>());
