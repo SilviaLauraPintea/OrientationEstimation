@@ -165,39 +165,41 @@ class FeatureExtractor {
 		cv::Mat extractSURF(cv::Mat &image);
 		/** Gets the plain pixels corresponding to the upper part of the body.
 		 */
-		cv::Mat getTemplMatches(const FeatureExtractor::people &person,\
+		cv::Mat getTemplMatches(bool flip,const FeatureExtractor::people &person,\
 			const FeatureExtractor::templ &aTempl,const cv::Rect &roi);
 		/** Gets the HOG descriptors over an image.
 		 */
-		cv::Mat getHOG(const FeatureExtractor::people &person,\
+		cv::Mat getHOG(bool flip,const FeatureExtractor::people &person,\
 			const FeatureExtractor::templ &aTempl,const cv::Rect &roi);
 		/** Gets the edges in an image.
 		 */
-		cv::Mat getEdges(cv::Mat &feature,const cv::Mat &thresholded,\
+		cv::Mat getEdges(bool flip,cv::Mat &feature,const cv::Mat &thresholded,\
 			const cv::Rect &roi,const FeatureExtractor::templ &aTempl,float rotAngle,\
 			bool contours = false);
 		/** SURF descriptors (Speeded Up Robust Features).
 		 */
-		cv::Mat getSURF(cv::Mat &feature,const std::vector<cv::Point2f> &templ,\
-			const cv::Rect &roi,const cv::Mat &test,std::vector<cv::Point2f> &indices);
+		cv::Mat getSURF(bool flip,cv::Mat &feature,\
+			const std::vector<cv::Point2f> &templ,const cv::Rect &roi,\
+			const cv::Mat &test,std::vector<cv::Point2f> &indices);
 		/** Compute the features from the SIFT descriptors by doing vector
 		 * quantization.
 		 */
-		cv::Mat getSIFT(const cv::Mat &feature,const std::vector<cv::Point2f> &templ,\
-			const cv::Rect &roi,const cv::Mat &test,std::vector<cv::Point2f> &indices);
+		cv::Mat getSIFT(bool flip,const cv::Mat &feature,\
+			const std::vector<cv::Point2f> &templ,const cv::Rect &roi,\
+			const cv::Mat &test,std::vector<cv::Point2f> &indices);
 		/** Creates a "histogram" of interest points + number of blobs.
 		 */
-		cv::Mat getPointsGrid(const cv::Mat &feature,const cv::Rect &roi,\
+		cv::Mat getPointsGrid(bool flip,const cv::Mat &feature,const cv::Rect &roi,\
 			const FeatureExtractor::templ &aTempl,const cv::Mat &test);
 		/** Convolves an image with a Gabor filter with the given parameters and
 		 * returns the response image.
 		 */
-		cv::Mat getGabor(cv::Mat &feature,const cv::Mat &thresholded,\
+		cv::Mat getGabor(bool flip,cv::Mat &feature,const cv::Mat &thresholded,\
 			const cv::Rect &roi,const cv::Size &foregrSize,\
 			const FeatureExtractor::templ &aTempl,float rotAngle,int aheight);
 		/** Gets the raw pixels corresponding to body of the person +/- background pixels.
 		 */
-		cv::Mat getRawPixels(const FeatureExtractor::people &person,\
+		cv::Mat getRawPixels(bool flip,const FeatureExtractor::people &person,\
 			const FeatureExtractor::templ &aTempl,const cv::Rect &roi,\
 			bool vChannel=true);
 		/** Creates a gabor with the parameters given by the parameter vector.
@@ -208,7 +210,8 @@ class FeatureExtractor {
 		cv::Mat getDataRow(int imageRows,const FeatureExtractor::templ &aTempl,\
 			const cv::Rect &roi,const FeatureExtractor::people &person,\
 			const std::string &imgName,cv::Point2f &absRotCenter,\
-			cv::Point2f &rotBorders,float rotAngle,std::vector<cv::Point2f> &keys);
+			cv::Point2f &rotBorders,float rotAngle,bool flip,\
+			std::vector<cv::Point2f> &keys);
 		/** Compares SURF 2 descriptors and returns the boolean value of their comparison.
 		 */
 		static bool compareDescriptors(const FeatureExtractor::keyDescr &k1,\

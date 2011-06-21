@@ -39,7 +39,7 @@ class PeopleDetector:public Tracker{
 		enum CLASSES {CLOSE,MEDIUM,FAR};
 		PeopleDetector(int argc,char** argv,bool extract=false,bool buildBg=\
 			false,int colorSp=-1,FeatureExtractor::FEATUREPART part=\
-			FeatureExtractor::WHOLE);
+			FeatureExtractor::WHOLE,bool flip=true);
 		virtual ~PeopleDetector();
 		/** Overwrites the \c doFindPeople function from the \c Tracker class
 		 * to make it work with the feature extraction.
@@ -61,12 +61,13 @@ class PeopleDetector:public Tracker{
 		/** Creates on data row in the final data matrix by getting the feature
 		 * descriptors.
 		 */
-		void extractDataRow(const IplImage *oldBg,const std::deque<unsigned> &existing=\
-			std::deque<unsigned>(),float threshVal=60.0);
+		void extractDataRow(const IplImage *oldBg,bool flip,\
+			const std::deque<unsigned> &existing=std::deque<unsigned>(),\
+			float threshVal=60.0);
 		/** For each row added in the data matrix (each person detected for which we
 		 * have extracted some features) find the corresponding label.
 		 */
-		void fixLabels(const std::deque<unsigned> &existing);
+		void fixLabels(const std::deque<unsigned> &existing,bool flip);
 		/** Returns the size of a window around a template centered in a given point.
 		 */
 		void templateWindow(const cv::Size &imgSize,int &minX,int &maxX,\
@@ -84,7 +85,7 @@ class PeopleDetector:public Tracker{
 		 * detected position.
 		 */
 		float fixAngle(const cv::Point2f &feetLocation,\
-			const cv::Point2f &cameraLocation,float angle);
+			const cv::Point2f &cameraLocation,float angle,bool flip);
 		/** Get template extremities (if needed,considering some borders --
 		 * relative to the ROI).
 		 */
@@ -97,12 +98,12 @@ class PeopleDetector:public Tracker{
 		/** Computes the motion vector for the current image given the tracks so far.
 		 */
 		float motionVector(const cv::Point2f &head,const cv::Point2f &center,\
-			bool &moved);
+			bool flip,bool &moved);
 		/** Compute the dominant direction of the SIFT or SURF features.
 		 */
 		float opticalFlow(cv::Mat &currentImg,cv::Mat &nextImg,\
 			const std::vector<cv::Point2f> &keyPts,const cv::Point2f &head,\
-			const cv::Point2f &center,bool maxOrAvg);
+			const cv::Point2f &center,bool maxOrAvg,bool flip);
 		/** Keeps only the largest blob from the thresholded image.
 		 */
 		void keepLargestBlob(cv::Mat &thresh,const cv::Point2f &center,\
@@ -110,7 +111,7 @@ class PeopleDetector:public Tracker{
 		/** Reads the locations at which there are people in the current frame (for the
 		 * case in which we do not want to use the tracker or build a bgModel).
 		 */
-		void readLocations();
+		void readLocations(bool flip);
 		/** Starts running something (either the tracker or just mimics it).
 		 */
 		void start(bool readFromFolder,bool useGT);
@@ -128,7 +129,8 @@ class PeopleDetector:public Tracker{
 		/** Fixes the existing/detected locations of people and updates the tracks and
 		 * creates the bordered image.
 		 */
-		void fixLocationsTracksBorderes(const std::deque<unsigned> &existing);
+		void fixLocationsTracksBorderes(const std::deque<unsigned> &existing,\
+			bool flip);
 		/** Initialize the inverse value of the color space used in feature extraction.
 		 */
 		void initInvColoprSp();
@@ -231,6 +233,10 @@ class PeopleDetector:public Tracker{
 		 * corresponding class.
 		 */
 		std::vector<PeopleDetector::Existing> existing_;
+		/** @var flip_
+		 * To flip the images or not.
+		 */
+		bool flip_;
 		//======================================================================
 	private:
 		DISALLOW_COPY_AND_ASSIGN(PeopleDetector);

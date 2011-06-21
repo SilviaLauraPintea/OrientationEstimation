@@ -31,8 +31,10 @@ ClassifyImages::CLASSIFIER classi){
 	this->what_             = use;
 	this->useGroundTruth_   = false;
 	this->dimRed_           = false;
-	this->dimPCA_           = 10;
+	this->dimPCA_           = 100;
 	this->plot_             = false;
+	this->plot_             = false;
+	this->withFlip_         = true;
 
 	// INITIALIZE THE DATA MATRIX AND TARGETS MATRIX AND THE GAUSSIAN PROCESSES
 	for(unsigned i=0;i<3;++i){
@@ -1100,7 +1102,7 @@ int colorSp,FeatureExtractor::FEATUREPART part){
 	args[1] = const_cast<char*>(dir.c_str());
 	args[2] = const_cast<char*>(imStr.c_str());
 	this->features_ = std::tr1::shared_ptr<PeopleDetector>\
-		(new PeopleDetector(3,args,false,false,colorSp,part));
+		(new PeopleDetector(3,args,false,false,colorSp,part,this->withFlip_));
 	delete [] args;
 }
 //==============================================================================
@@ -1333,33 +1335,35 @@ int main(int argc,char **argv){
 //	feat.push_back(FeatureExtractor::EDGES);
 //	feat.push_back(FeatureExtractor::HOG);
 //	feat.push_back(FeatureExtractor::GABOR);
-	feat.push_back(FeatureExtractor::RAW_PIXELS);
+//	feat.push_back(FeatureExtractor::RAW_PIXELS);
 //	feat.push_back(FeatureExtractor::HOG);
+	feat.push_back(FeatureExtractor::TEMPL_MATCHES);
+
 /*
 	// build data matrix
- 	ClassifyImages classi(argc,argv,ClassifyImages::EVALUATE,\
-		ClassifyImages::K_NEAREST_NEIGHBORS);
-	classi.init(0.1,50.0,feat,&GaussianProcess::sqexp,true);
+ 	ClassifyImages classi(argc,argv,ClassifyImages::TEST,\
+ 		ClassifyImages::GAUSSIAN_PROCESS);
+ 	classi.init(0.01,2000.0,feat,&GaussianProcess::sqexp,false);
 	classi.buildDataMatrix(-1,FeatureExtractor::HEAD);
 */
 	//--------------------------------------------------------------------------
-/*
+
 	// test
 	float normError = 0.0f;
-	ClassifyImages classi(argc,argv,ClassifyImages::TEST,\
-		ClassifyImages::K_NEAREST_NEIGHBORS);
-	classi.init(0.1,50.0,feat,&GaussianProcess::sqexp,true);
+ 	ClassifyImages classi(argc,argv,ClassifyImages::TEST,\
+ 		ClassifyImages::GAUSSIAN_PROCESS);
+	classi.init(0.01,1000000.0,feat,&GaussianProcess::sqexp,false);
 	classi.runTest(-1,AnnotationsHandle::LONGITUDE,normError,FeatureExtractor::HEAD);
-*/
-	//--------------------------------------------------------------------------
 
+	//--------------------------------------------------------------------------
+/*
 	// evaluate
  	ClassifyImages classi(argc,argv,ClassifyImages::EVALUATE,\
  		ClassifyImages::GAUSSIAN_PROCESS);
 	classi.init(0.01,20000.0,feat,&GaussianProcess::sqexp,false);
 	classi.runCrossValidation(5,AnnotationsHandle::LONGITUDE,-1,false,\
 		FeatureExtractor::HEAD);
-
+*
 	//--------------------------------------------------------------------------
 /*
 	// BUILD THE SIFT DICTIONARY

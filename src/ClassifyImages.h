@@ -293,6 +293,10 @@ class ClassifyImages {
 		 * The number of components ot be kepr when using PCA.
 		 */
 		unsigned dimPCA_;
+		/** @var withFlip_
+		 * If the images should be flipped or not.
+		 */
+		bool withFlip_;
 		//======================================================================
 	private:
 		DISALLOW_COPY_AND_ASSIGN(ClassifyImages);
