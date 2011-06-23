@@ -288,7 +288,7 @@ int k,const cv::Mat &thresh,float tmplHeight,cv::Mat &colorRoi){
 	cv::Mat threshROI(thresh.clone(),cv::Rect(minX,minY,maxX-minX,maxY-minY));
 	cv::Mat mask = cv::Mat::zeros(threshROI.size(),threshROI.type());
 	cv::Mat maskROI(mask,roi);
-	maskROI = cv::Scalar(256,256,256);
+	maskROI = cv::Scalar(255,255,255);
 	cv::Mat threshPart;
 	threshROI.copyTo(threshPart,mask);
 
@@ -337,7 +337,7 @@ int k,const cv::Mat &thresh,float tmplHeight,cv::Mat &colorRoi){
 					}
 					// IF THE PIXEL HAS A DIFFERENT LABEL THEN THE CURR TEMPL
 					if(label != k){
-						colorRoi.at<cv::Vec3b>(y,x) = cv::Vec3b(0,0,0);
+						colorRoi.at<cv::Vec3b>(y,x) = cv::Vec3b(127,127,127);
 					}
 				}
 			}
@@ -375,7 +375,7 @@ void PeopleDetector::allForegroundPixels(std::deque<FeatureExtractor::people>\
 		thsh  = cv::Mat(bg);
 		cv::cvtColor(thsh,thsh,TO_IMG_FMT);
 		cv::cvtColor(thsh,thrsh,CV_BGR2GRAY);
-		cv::threshold(thrsh,thrsh,threshold,256,cv::THRESH_BINARY);
+		cv::threshold(thrsh,thrsh,threshold,255,cv::THRESH_BINARY);
 	}
 	cv::Mat foregr(this->borderedIpl_.get());
 	// FOR EACH EXISTING TEMPLATE LOOK ON AN AREA OF 100 PIXELS AROUND IT
@@ -439,7 +439,7 @@ void PeopleDetector::keepLargestBlob(cv::Mat &thresh,const cv::Point2f &center,\
 float tmplArea){
 	std::vector<std::vector<cv::Point> > contours;
 	cv::findContours(thresh,contours,CV_RETR_EXTERNAL,CV_CHAIN_APPROX_SIMPLE);
-	cv::drawContours(thresh,contours,-1,cv::Scalar(256,256,256),CV_FILLED);
+	cv::drawContours(thresh,contours,-1,cv::Scalar(255,255,255),CV_FILLED);
 	std::cout<<"Number of contours: "<<contours.size()<<std::endl;
 	if(contours.size() == 1){
 		return;
@@ -465,7 +465,7 @@ float tmplArea){
 	if(contourIdx!=-1){
 		contours[contourIdx].clear();
 		contours.erase(contours.begin()+contourIdx);
-		cv::drawContours(thresh,contours,-1,cv::Scalar(0,0,0),CV_FILLED);
+		cv::drawContours(thresh,contours,-1,cv::Scalar(127,127,127),CV_FILLED);
 	}
 }
 //==============================================================================
@@ -593,7 +593,7 @@ const std::deque<unsigned> &exi,float threshVal){
 		// EASIER TO REDEFINE THRESH THAN TO ROTATE IT
 		if(!allPeople[i].thresh_.empty()){
 			allPeople[i].thresh_.release();
-			cv::inRange(allPeople[i].pixels_,cv::Scalar(1,1,1),cv::Scalar(256,225,225),\
+			cv::inRange(allPeople[i].pixels_,cv::Scalar(1,1,1),cv::Scalar(255,225,225),\
 				allPeople[i].thresh_);
 		}
 
@@ -689,7 +689,7 @@ const cv::Point2f &center,bool maxOrAvg,bool flip){
 		}
 		if(this->plot_){
 			cv::line(currentImg,cv::Point2f(ix,iy),cv::Point2f(fx,fy),\
-				cv::Scalar(0,0,256),1,8,0);
+				cv::Scalar(0,0,255),1,8,0);
 			cv::circle(currentImg,cv::Point2f(fx,fy),2,cv::Scalar(0,200,0),1,8,0);
 		}
 	}
@@ -701,7 +701,7 @@ const cv::Point2f &center,bool maxOrAvg,bool flip){
 
 	if(this->plot_){
 		cv::line(currentImg,cv::Point2f(flowX,flowY),cv::Point2f(resFlowX,resFlowY),\
-			cv::Scalar(256,0,0),1,8,0);
+			cv::Scalar(255,0,0),1,8,0);
 		cv::circle(currentImg,cv::Point2f(resFlowX,resFlowY),2,cv::Scalar(0,200,0),\
 			1,8,0);
 		cv::imshow("optical",currentImg);
@@ -927,8 +927,8 @@ const float logBGProb,const vnl_vector<float> &logSumPixelBGProb){
 			cv::Point2f pt = this->cvPoint(exi[i],this->current_->img_->width);
 			std::vector<cv::Point2f> points;
 			Helpers::plotTemplate2(tmpSrc,pt,Helpers::persHeight(),Helpers::camHeight(),\
-				CV_RGB(256,256,256),points);
-			//Helpers::plotScanLines(tmpBg,mask,CV_RGB(0,256,0),0.3);
+				CV_RGB(255,255,255),points);
+			//Helpers::plotScanLines(tmpBg,mask,CV_RGB(0,255,0),0.3);
 		}
 		cvShowImage("bg",tmpBg);
 		cvShowImage("image",tmpSrc);
@@ -1051,7 +1051,7 @@ void PeopleDetector::templatePart(int k,FeatureExtractor::people &person){
 		}
 		if(!person.thresh_.empty()){
 			Helpers::plotTemplate2(person.thresh_,cv::Point2f(0,0),\
-				cv::Scalar(0,256,0),tmpTempl);
+				cv::Scalar(0,255,0),tmpTempl);
 			cv::imshow("part",person.thresh_);
 			cv::waitKey(5);
 		}
@@ -1081,7 +1081,7 @@ const cv::Point2f &center,bool flip,bool &moved){
 
 		if(this->plot_){
 			cv::Mat tmp(cvCloneImage(this->borderedIpl_.get()));
-			cv::line(tmp,prev,center,cv::Scalar(50,100,256),1,8,0);
+			cv::line(tmp,prev,center,cv::Scalar(50,100,255),1,8,0);
 			cv::imshow("tracks",tmp);
 		}
 	}
@@ -1213,7 +1213,7 @@ void PeopleDetector::readLocations(bool flip){
 		for(std::size_t i=0;i<this->existing_.size();++i){
 			std::vector<cv::Point2f> templ;
 			Helpers::plotTemplate2(this->current_->img_.get(),this->existing_[i].location_,\
-				Helpers::persHeight(),Helpers::camHeight(),cv::Scalar(256,0,0),templ);
+				Helpers::persHeight(),Helpers::camHeight(),cv::Scalar(255,0,0),templ);
 		}
 		cvShowImage("AnnotatedLocations",this->current_->img_.get());
 		cvWaitKey(5);
@@ -1287,7 +1287,7 @@ void PeopleDetector::extractHeadArea(int i,FeatureExtractor::people &person){
 			this->templates_[i].points_[14]);
 		radius       = headSize;
 		headPosition = cv::Point2f((minX+maxX)/2,headSize/2+minY);
-		cv::circle(headMask,headPosition,radius,cv::Scalar(256,256,256),-1);
+		cv::circle(headMask,headPosition,radius,cv::Scalar(255,255,255),-1);
 		cv::Mat tmpThresh;
 		person.thresh_.copyTo(tmpThresh,headMask);
 		person.thresh_.release();
@@ -1300,7 +1300,7 @@ void PeopleDetector::extractHeadArea(int i,FeatureExtractor::people &person){
 		radius       = headSize;
 		headPosition = cv::Point2f(this->templates_[i].head_.x-person.borders_[0],\
 			this->templates_[i].head_.y-person.borders_[2]);
-		cv::circle(headMask,headPosition,radius,cv::Scalar(256,256,256),-1);
+		cv::circle(headMask,headPosition,radius,cv::Scalar(255,255,255),-1);
 	}
 	//UPDATE THE TEMPLATE POINTS
 	this->templates_[i].points_.clear();
@@ -1343,7 +1343,7 @@ std::tr1::shared_ptr<FeatureExtractor> PeopleDetector::extractor(){
 }
 //==============================================================================
 //==============================================================================
-/*
+
 int main(int argc,char **argv){
 	PeopleDetector feature(argc,argv,true,false,-1);
 	std::deque<FeatureExtractor::FEATURE> feat(1,FeatureExtractor::GABOR);
@@ -1351,4 +1351,4 @@ int main(int argc,char **argv){
 		std::string(argv[1])+"annotated_train.txt",feat,true);
 	feature.start(true,true);
 }
-*/
+

@@ -53,7 +53,7 @@ class ClassifyImages {
 		std::deque<float> predictNN(AnnotationsHandle::POSE what,int i);
 		/** Initialize the options for the Gaussian Process regression.
 		 */
-		void init(float theNoise,float theLength,\
+		void init(float theNoise,float theLengthSin,float theLengthCos,\
 			const std::deque<FeatureExtractor::FEATURE> &theFeature,\
 			GaussianProcess::kernelFunction theKFunction=&GaussianProcess::sqexp,\
 			bool toUseGT=false);
@@ -111,7 +111,7 @@ class ClassifyImages {
 		 * predictions).
 		 */
 		friend void multipleClassifier(int colorSp,AnnotationsHandle::POSE what,\
-			ClassifyImages &classi,float noise,float length,\
+			ClassifyImages &classi,float noise,float lengthSin,float lengthCos,\
 			GaussianProcess::kernelFunction kernel,bool useGT,\
 			FeatureExtractor::FEATUREPART part);
 		/** Get the minimum and maximum angle given the motion vector.
@@ -212,10 +212,14 @@ class ClassifyImages {
 		 * The noise level of the data.
 		 */
 		float noise_;
-		/** @var length_
+		/** @var lengthSin_
 		 * The length in the Gaussian Process.
 		 */
-		float length_;
+		float lengthSin_;
+		/** @var lengthCos_
+		 * The length in the Gaussian Process.
+		 */
+		float lengthCos_;
 		/** @var kFunction_
 		 * The kernel function in the Gaussian Process.
 		 */

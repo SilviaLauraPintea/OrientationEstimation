@@ -22,7 +22,8 @@ ClassifyImages::CLASSIFIER classi){
 	this->annotationsTrain_ = "";
 	this->annotationsTest_  = "";
 	this->noise_            = 0.01;
-	this->length_           = 1.0;
+	this->lengthSin_        = 100.0;
+	this->lengthCos_        = 100.0;
 	this->kFunction_        = &GaussianProcess::sqexp;
 	this->feature_          = std::deque<FeatureExtractor::FEATURE>\
 		(FeatureExtractor::EDGES);
@@ -30,7 +31,7 @@ ClassifyImages::CLASSIFIER classi){
 	this->modelName_        = "";
 	this->what_             = use;
 	this->useGroundTruth_   = false;
-	this->dimRed_           = false;
+	this->dimRed_           = true;
 	this->dimPCA_           = 100;
 	this->plot_             = false;
 	this->plot_             = false;
@@ -190,16 +191,17 @@ ClassifyImages::~ClassifyImages(){
 //==============================================================================
 /** Initialize the options for the Gaussian Process regression.
  */
-void ClassifyImages::init(float theNoise,float theLength,\
+void ClassifyImages::init(float theNoise,float theLengthSin,float theLengthCos,\
 const std::deque<FeatureExtractor::FEATURE> &theFeature,\
 GaussianProcess::kernelFunction theKFunction,bool toUseGT){
 	this->noise_          = theNoise;
-	this->length_         = theLength;
+	this->lengthSin_      = theLengthSin;
+	this->lengthCos_      = theLengthCos;
 	this->kFunction_      = theKFunction;
 	this->feature_        = theFeature;
 	this->useGroundTruth_ = toUseGT;
 	for(FeatureExtractor::FEATURE f=FeatureExtractor::EDGES;\
-	f<FeatureExtractor::TEMPL_MATCHES;++f){
+	f<=FeatureExtractor::TEMPL_MATCHES;++f){
 		if(!FeatureExtractor::isFeatureIn(this->feature_,f)){continue;}
 		switch(f){
 			case(FeatureExtractor::IPOINTS):
@@ -326,10 +328,10 @@ void ClassifyImages::trainGP(AnnotationsHandle::POSE what,int i){
 		cv::Mat cosTargets = this->trainTargets_[i].col(1);
 		this->gpSin_[i].train(this->trainData_[i],sinTargets,\
 			this->kFunction_,static_cast<_float>(this->noise_),\
-			static_cast<_float>(this->length_));
+			static_cast<_float>(this->lengthSin_));
 		this->gpCos_[i].train(this->trainData_[i],cosTargets,\
 			this->kFunction_,static_cast<_float>(this->noise_),\
-			static_cast<_float>(this->length_));
+			static_cast<_float>(this->lengthCos_));
 		sinTargets.release();
 		cosTargets.release();
 
@@ -339,10 +341,10 @@ void ClassifyImages::trainGP(AnnotationsHandle::POSE what,int i){
 		cv::Mat cosTargets = this->trainTargets_[i].col(3);
 		this->gpSin_[i].train(this->trainData_[i],sinTargets,\
 			this->kFunction_,static_cast<_float>(this->noise_),\
-			static_cast<_float>(this->length_));
+			static_cast<_float>(this->lengthSin_));
 		this->gpCos_[i].train(this->trainData_[i],cosTargets,\
 			this->kFunction_,static_cast<_float>(this->noise_),\
-			static_cast<_float>(this->length_));
+			static_cast<_float>(this->lengthCos_));
 		sinTargets.release();
 		cosTargets.release();
 	}
@@ -594,9 +596,9 @@ std::deque<float> ClassifyImages::predictGP(int i){
 	for(int j=0;j<this->testData_[i].rows;++j){
 		GaussianProcess::prediction prediSin;
 		cv::Mat testRow = this->testData_[i].row(j);
-		this->gpSin_[i].predict(testRow,prediSin,static_cast<_float>(this->length_));
+		this->gpSin_[i].predict(testRow,prediSin,static_cast<_float>(this->lengthSin_));
 		GaussianProcess::prediction prediCos;
-		this->gpCos_[i].predict(testRow,prediCos,static_cast<_float>(this->length_));
+		this->gpCos_[i].predict(testRow,prediCos,static_cast<_float>(this->lengthCos_));
 		oneClassPredictions.push_back(this->optimizePrediction(prediSin,prediCos));
 		prediSin.mean_.clear();
 		prediSin.variance_.clear();
@@ -804,11 +806,11 @@ std::deque<std::deque<float> > ClassifyImages::predict\
 void ClassifyImages::evaluate(const std::deque<std::deque<float> > &prediAngles,\
 float &error,float &normError,float &meanDiff){
 	error = 0.0;normError = 0.0;meanDiff = 0.0;
+	float errorSin = 0.0,normErrorSin = 0.0,meanDiffSin = 0.0;
+	float errorCos = 0.0,normErrorCos = 0.0,meanDiffCos = 0.0;
 	unsigned noPeople = 0;
 	std::deque<std::string> names;
-
 	cv::Mat bins = cv::Mat::zeros(cv::Size(18,1),CV_32FC1);
-
 	names.push_back("CLOSE");names.push_back("MEDIUM");	names.push_back("FAR");
 	for(PeopleDetector::CLASSES i=PeopleDetector::CLOSE;i<=PeopleDetector::FAR;++i){
 		std::cout<<"Class "<<names[i]<<": "<<this->testTargets_[i].size()<<\
@@ -817,23 +819,51 @@ float &error,float &normError,float &meanDiff){
 		for(int y=0;y<this->testTargets_[i].rows;++y){
 			float targetAngle = std::atan2(this->testTargets_[i].at<float>(y,0),\
 				this->testTargets_[i].at<float>(y,1));
+			float targetAngleSin = std::asin(this->testTargets_[i].at<float>(y,0));
+			float targetAngleCos = std::acos(this->testTargets_[i].at<float>(y,1));
+			float angleSin       = std::sin(prediAngles[i][y]);
+			float angleCos       = std::cos(prediAngles[i][y]);
+			Auxiliary::angle0to360(angleSin);
+			Auxiliary::angle0to360(angleCos);
 			Auxiliary::angle0to360(targetAngle);
+			Auxiliary::angle0to360(targetAngleSin);
+			Auxiliary::angle0to360(targetAngleCos);
 
-			std::cout<<"Target: "<<targetAngle<<"("<<(targetAngle*180.0/M_PI)<<\
-				") VS "<<prediAngles[i][y]<<"("<<(prediAngles[i][y]*180.0/M_PI)<<\
-				")"<<std::endl;
+			std::cout<<"Target:"<<targetAngle<<"("<<(targetAngle*180.0/M_PI)<<\
+				") VS Angle:"<<prediAngles[i][y]<<"("<<(prediAngles[i][y]*180.0/M_PI)<<\
+				") TargetSin:"<<targetAngleSin<<"("<<(targetAngleSin*180.0/M_PI)<<\
+				") VS AngleSin:"<<angleSin<<"("<<(angleSin*180.0/M_PI)<<\
+				") TargetCos:"<<targetAngleCos<<"("<<(targetAngleCos*180.0/M_PI)<<\
+				") VS AngleCos:"<<angleCos<<"("<<(angleCos*180.0/M_PI)<<")"<<std::endl;
 			float absDiff = std::abs(targetAngle-prediAngles[i][y]);
 			if(absDiff > M_PI){
 				absDiff = 2.0*M_PI - absDiff;
+			}
+			float absDiffSin = std::abs(targetAngleSin-angleSin);
+			if(absDiffSin > M_PI){
+				absDiffSin = 2.0*M_PI - absDiffSin;
+			}
+			float absDiffCos = std::abs(targetAngleCos-angleCos);
+			if(absDiffCos > M_PI){
+				absDiffCos = 2.0*M_PI - absDiffCos;
 			}
 
 			int ind = ((absDiff*180.0/M_PI)/10);
 			++bins.at<float>(0,ind);
 
-			std::cout<<"Difference: "<< absDiff <<std::endl;
+			std::cout<<"Difference:"<<absDiff<<" DifferenceSin:"<<absDiffSin<<\
+				" DifferenceCos:"<<absDiffCos<<std::endl;
 			error     += absDiff*absDiff;
 			normError += (absDiff*absDiff)/(M_PI*M_PI);
 			meanDiff  += absDiff;
+
+			errorSin     += absDiffSin*absDiffSin;
+			normErrorSin += (absDiffSin*absDiffSin)/(M_PI*M_PI);
+			meanDiffSin  += absDiffSin;
+
+			errorCos     += absDiffCos*absDiffCos;
+			normErrorCos += (absDiffCos*absDiffCos)/(M_PI*M_PI);
+			meanDiffCos  += absDiffCos;
 		}
 		noPeople += this->testTargets_[i].rows;
 	}
@@ -842,10 +872,22 @@ float &error,float &normError,float &meanDiff){
 	normError = std::sqrt(normError/(noPeople));
 	meanDiff  = meanDiff/(noPeople);
 
-	std::cout<<"RMS-error normalized: "<<normError<<std::endl;
-	std::cout<<"RMS-accuracy normalized: "<<(1-normError)<<std::endl;
-	std::cout<<"RMS-error: "<<error<<std::endl;
-	std::cout<<"Avg-Radians-Difference: "<<meanDiff<<std::endl;
+	errorSin     = std::sqrt(errorSin/(noPeople));
+	normErrorSin = std::sqrt(normErrorSin/(noPeople));
+	meanDiffSin  = meanDiffSin/(noPeople);
+
+	errorCos     = std::sqrt(errorCos/(noPeople));
+	normErrorCos = std::sqrt(normErrorCos/(noPeople));
+	meanDiffCos  = meanDiffCos/(noPeople);
+
+	std::cout<<"RMSN-error:"<<normError<<" RMSN-error(sin):"<<normErrorSin<<\
+		" RMSN-error(cos):"<<normErrorCos<<std::endl;
+	std::cout<<"RMSN-accuracy:"<<(1-normError)<<" RMSN-accuracy(sin):"<<(1-normErrorSin)<<\
+		" RMSN-accuracy(cos):"<<(1-normErrorCos)<<std::endl;
+	std::cout<<"RMS-error:"<<error<<" RMS-error(sin):"<<errorSin<<" RMS-error(cos):"<<\
+		errorCos<<std::endl;
+	std::cout<<"Avg-Diff-Radians:"<<meanDiff<<" Avg-Diff-Radians(sin):"<<meanDiffSin<<\
+		" Avg-Diff-Radians(cos):"<<meanDiffCos<<std::endl;
 	std::cout<<"bins >>> "<<bins<<""<<std::endl;
 	bins.release();
 }
@@ -1166,10 +1208,11 @@ float &angleMin,float &angleMax){
  * predictions).
  */
 void multipleClassifier(int colorSp,AnnotationsHandle::POSE what,\
-ClassifyImages &classi,float noise,float length,GaussianProcess::kernelFunction \
-kernel,bool useGT,FeatureExtractor::FEATUREPART part){
+ClassifyImages &classi,float noise,float lengthSin,float lengthCos,\
+GaussianProcess::kernelFunction kernel,bool useGT,\
+FeatureExtractor::FEATUREPART part){
 	std::deque<FeatureExtractor::FEATURE> feat(1,FeatureExtractor::IPOINTS);
-	classi.init(noise,length,feat,kernel,useGT);
+	classi.init(noise,lengthSin,lengthCos,feat,kernel,useGT);
 
 	std::deque<std::deque<std::deque<float> > > predictions;
 	std::deque<std::deque<float> > tmpPrediction;
@@ -1280,12 +1323,12 @@ AnnotationsHandle::POSE what,GaussianProcess::kernelFunction kernel){
 	test.open(errorsOnTest.c_str(),std::ios::out | std::ios::app);
 	for(float v=0.1;v<5.0;v+=0.1){
 		for(float l=0.1;l<200.0;l+=1.0){
-			classi.init(v,l,feat,kernel,useGt);
+			classi.init(v,l,l,feat,kernel,useGt);
 			float errorTrain = classi.runCrossValidation(7,what,colorSp,true,\
 				FeatureExtractor::HEAD);
 			train<<v<<" "<<l<<" "<<errorTrain<<std::endl;
 			//-------------------------------------------
-			classi.init(v,l,feat,kernel,useGt);
+			classi.init(v,l,l,feat,kernel,useGt);
 			float errorTest = classi.runCrossValidation(7,what,colorSp,false,\
 				FeatureExtractor::HEAD);
 			test<<v<<" "<<l<<" "<<errorTest<<std::endl;
@@ -1335,15 +1378,14 @@ int main(int argc,char **argv){
 //	feat.push_back(FeatureExtractor::EDGES);
 //	feat.push_back(FeatureExtractor::HOG);
 //	feat.push_back(FeatureExtractor::GABOR);
-//	feat.push_back(FeatureExtractor::RAW_PIXELS);
+	feat.push_back(FeatureExtractor::RAW_PIXELS);
 //	feat.push_back(FeatureExtractor::HOG);
-	feat.push_back(FeatureExtractor::TEMPL_MATCHES);
-
+//	feat.push_back(FeatureExtractor::TEMPL_MATCHES);
 /*
 	// build data matrix
  	ClassifyImages classi(argc,argv,ClassifyImages::TEST,\
  		ClassifyImages::GAUSSIAN_PROCESS);
- 	classi.init(0.01,2000.0,feat,&GaussianProcess::sqexp,false);
+ 	classi.init(0.01,500000.0,500000.0,feat,&GaussianProcess::sqexp,false);
 	classi.buildDataMatrix(-1,FeatureExtractor::HEAD);
 */
 	//--------------------------------------------------------------------------
@@ -1352,7 +1394,7 @@ int main(int argc,char **argv){
 	float normError = 0.0f;
  	ClassifyImages classi(argc,argv,ClassifyImages::TEST,\
  		ClassifyImages::GAUSSIAN_PROCESS);
-	classi.init(0.01,1000000.0,feat,&GaussianProcess::sqexp,false);
+	classi.init(0.1,25000.0,100.0,feat,&GaussianProcess::sqexp,false);
 	classi.runTest(-1,AnnotationsHandle::LONGITUDE,normError,FeatureExtractor::HEAD);
 
 	//--------------------------------------------------------------------------
@@ -1360,7 +1402,7 @@ int main(int argc,char **argv){
 	// evaluate
  	ClassifyImages classi(argc,argv,ClassifyImages::EVALUATE,\
  		ClassifyImages::GAUSSIAN_PROCESS);
-	classi.init(0.01,20000.0,feat,&GaussianProcess::sqexp,false);
+	classi.init(0.01,20000.0,20000.0,feat,&GaussianProcess::sqexp,false);
 	classi.runCrossValidation(5,AnnotationsHandle::LONGITUDE,-1,false,\
 		FeatureExtractor::HEAD);
 *

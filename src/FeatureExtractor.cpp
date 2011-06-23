@@ -41,7 +41,7 @@ FeatureExtractor::FeatureExtractor(){
 	this->meanSize_     = 128;
 	this->featureFile_  = "none";
 	this->print_        = false;
-	this->plot_         = false;
+	this->plot_         = true;
 }
 //==============================================================================
 FeatureExtractor::~FeatureExtractor(){
@@ -155,13 +155,13 @@ std::vector<cv::Point2f> &pts,cv::Mat &toRotate){
 			srcRotate = cv::Mat::zeros(cv::Size(toRotate.cols+2*rotBorders.x,\
 				toRotate.rows+2*rotBorders.y),toRotate.type());
 			cv::copyMakeBorder(toRotate,srcRotate,rotBorders.y,rotBorders.y,\
-				rotBorders.x,rotBorders.x,cv::BORDER_CONSTANT,cv::Scalar(0,0,0));
+				rotBorders.x,rotBorders.x,cv::BORDER_CONSTANT,cv::Scalar(127,127,127));
 			rotCenter = cv::Point2f(srcRotate.cols/2.0,srcRotate.rows/2.0);
 			rotationMat = cv::getRotationMatrix2D(rotCenter,rotAngle,1.0);
 			rotationMat.convertTo(rotationMat,CV_32FC1);
 			rotated     = cv::Mat::zeros(srcRotate.size(),toRotate.type());
 			cv::warpAffine(srcRotate,rotated,rotationMat,srcRotate.size(),\
-				cv::INTER_LINEAR,cv::BORDER_CONSTANT,cv::Scalar(0,0,0));
+				cv::INTER_LINEAR,cv::BORDER_CONSTANT,cv::Scalar(127,127,127));
 			rotated.copyTo(result);
 			break;
 		case(FeatureExtractor::TEMPLATE):
@@ -341,6 +341,14 @@ const cv::Rect &roi,bool vChannel){
 		cv::split(large,threeChannels);
 		threeChannels[2].copyTo(gray);
 	}
+
+//REMOVE-----------------------------------------------
+Auxiliary::mean0Variance1(gray);
+gray *= 255;
+gray.convertTo(gray,CV_8UC1);
+cv::blur(gray,gray,cv::Size(3,3));
+//REMOVE-----------------------------------------------
+
 	if(this->plot_){
 		cv::imshow("gray",gray);
 		cv::waitKey(5);
@@ -490,7 +498,7 @@ std::vector<cv::Point2f> &indices){
 	if(this->plot_ && !test.empty()){
 		cv::Mat copyTest(test);
 		for(std::size_t l=0;l<indices.size();++l){
-			cv::circle(copyTest,indices[l],3,cv::Scalar(0,0,256));
+			cv::circle(copyTest,indices[l],3,cv::Scalar(0,0,255));
 		}
 		cv::imshow("SURF",copyTest);
 		cv::waitKey(5);
@@ -557,7 +565,7 @@ const cv::Rect &roi,const FeatureExtractor::templ &aTempl,const cv::Mat &test){
 		cv::Mat copyTest(test);
 		for(std::size_t l=0;l<indices.size();++l){
 			cv::circle(copyTest,cv::Point2f(indices[l].x-roi.x,indices[l].y-roi.y),\
-				3,cv::Scalar(0,0,256));
+				3,cv::Scalar(0,0,255));
 		}
 		cv::imshow("IPOINTS",copyTest);
 		cv::waitKey(5);
@@ -593,7 +601,7 @@ void FeatureExtractor::createGabor(cv::Mat &gabor, float *params){
 	// params[1] -- gamma: (0.2,1) // how round the filter is
 	// params[2] -- dimension: (1,10) // size
 	// params[3] -- theta: (0,180) or (-90,90) // angle
-	// params[4] -- lambda: (2,256) // thickness
+	// params[4] -- lambda: (2,255) // thickness
 	// params[5] -- psi: (0,180) // number of lines
 
 	// SET THE PARAMTETERS OF THE GABOR FILTER
@@ -801,7 +809,7 @@ std::vector<cv::Point2f> &indices){
 	if(this->plot_ && !test.empty()){
 		cv::Mat copyTest(test);
 		for(std::size_t l=0;l<indices.size();++l){
-			cv::circle(copyTest,indices[l],3,cv::Scalar(0,0,256));
+			cv::circle(copyTest,indices[l],3,cv::Scalar(0,0,255));
 		}
 		cv::imshow("SIFT",copyTest);
 		cv::waitKey(5);
@@ -948,9 +956,9 @@ cv::Mat FeatureExtractor::extractPointsGrid(cv::Mat &image){
 		for(int y=0;y<result.rows;++y){
 			cv::Scalar color;
 			if(y<msersNo){
-				color = cv::Scalar(0,0,256);
+				color = cv::Scalar(0,0,255);
 			}else{
-				color = cv::Scalar(256,0,0);
+				color = cv::Scalar(255,0,0);
 			}
 			float ptX = result.at<float>(y,0);
 			float ptY = result.at<float>(y,1);
@@ -973,7 +981,7 @@ cv::Mat FeatureExtractor::extractEdges(cv::Mat &image){
 	}
 	cv::cvtColor(image,gray,CV_BGR2GRAY);
 	Auxiliary::mean0Variance1(gray);
-	gray *= 256;
+	gray *= 255;
 	gray.convertTo(gray,CV_8UC1);
 	cv::blur(gray,gray,cv::Size(3,3));
 	cv::Canny(gray,result,250,150,3,true);
@@ -1037,7 +1045,7 @@ cv::Mat FeatureExtractor::extractSURF(cv::Mat &image){
 	if(this->plot_){
 		for(std::size_t i=0;i<kD.size();++i){
 			cv::circle(image,cv::Point2f(kD[i].keys_.pt.x,kD[i].keys_.pt.y),\
-				3,cv::Scalar(0,0,256));
+				3,cv::Scalar(0,0,255));
 		}
 		cv::imshow("SURFS",image);
 		cv::waitKey(5);
@@ -1055,7 +1063,7 @@ cv::Mat FeatureExtractor::extractGabor(cv::Mat &image){
 	// params[1] -- gamma: (0.2,1) // how round the filter is
 	// params[2] -- dimension: (1,10) // size
 	// params[3] -- theta: (0,180) or (-90,90) // angle
-	// params[4] -- lambda: (2,256) // thickness
+	// params[4] -- lambda: (2,255) // thickness
 	// params[5] -- psi: (0,180) // number of lines
 	std::deque<float*> allParams;
 	float *params1 = new float[6];
@@ -1172,7 +1180,7 @@ const std::vector<cv::Point2f> &templ,const cv::Rect &roi){
 		preResult.release();
 		if(this->plot_){
 			for(std::size_t i=0;i<goodKP.size();++i){
-				cv::circle(image,goodKP[i].pt,3,cv::Scalar(0,0,256));
+				cv::circle(image,goodKP[i].pt,3,cv::Scalar(0,0,255));
 			}
 			cv::imshow("SIFT_DICT",image);
 			cv::waitKey(5);
@@ -1194,7 +1202,7 @@ const std::vector<cv::Point2f> &templ,const cv::Rect &roi){
 		// PLOT THE KEYPOINTS TO SEE THEM
 		if(this->plot_){
 			for(std::size_t i=0;i<keypoints.size();++i){
-				cv::circle(image,keypoints[i].pt,3,cv::Scalar(0,0,256));
+				cv::circle(image,keypoints[i].pt,3,cv::Scalar(0,0,255));
 			}
 			cv::imshow("SIFT",image);
 			cv::waitKey(5);
