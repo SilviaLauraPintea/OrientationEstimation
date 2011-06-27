@@ -290,4 +290,55 @@ const std::vector<cv::Point> &c2){
 	return (c1.size()<c2.size());
 }
 //==============================================================================
-
+/** Store the PCA model locally so you can load it next time when you need it.
+ */
+void Auxiliary::savePCA(const std::tr1::shared_ptr<cv::PCA> pcaPtr,\
+const std::string &file){
+	CvFileStorage *fs;
+	CvMat *eigenvectors,*eigenvalues,*mean;
+	fs = cvOpenFileStorage(file.c_str(),0,CV_STORAGE_WRITE);
+	eigenvectors = new CvMat(pcaPtr->eigenvectors);
+	eigenvalues  = new CvMat(pcaPtr->eigenvalues);
+	mean         = new CvMat(pcaPtr->mean);
+	cvWrite(fs,"eigenvectors",eigenvectors,cvAttrList(0,0));
+	cvWrite(fs,"eigenvalues",eigenvalues,cvAttrList(0,0));
+	cvWrite(fs,"mean",mean,cvAttrList(0,0));
+	cvReleaseFileStorage(&fs);
+	delete eigenvectors;
+	delete eigenvalues;
+	delete mean;
+}
+//==============================================================================
+/** Load the PCA model locally so you can load it next time when you need it.
+ */
+std::tr1::shared_ptr<cv::PCA> Auxiliary::loadPCA(const std::string &file){
+	CvFileStorage *fs;
+	CvMat *eigenvectors,*eigenvalues,*mean;
+	std::tr1::shared_ptr<cv::PCA> pcaPtr = std::tr1::shared_ptr<cv::PCA>\
+		(new cv::PCA(),Auxiliary::getRidOfPCA);
+	fs = cvOpenFileStorage(file.c_str(),0,CV_STORAGE_READ);
+	eigenvectors = (CvMat*)cvReadByName(fs,0,"eigenvectors",0);
+	eigenvalues  = (CvMat*)cvReadByName(fs,0,"eigenvalues",0);
+	mean         = (CvMat*)cvReadByName(fs,0,"mean",0);
+	(cv::Mat(eigenvectors)).copyTo(pcaPtr->eigenvectors);
+	(cv::Mat(eigenvalues)).copyTo(pcaPtr->eigenvalues);
+	(cv::Mat(mean)).copyTo(pcaPtr->mean);
+	cvReleaseFileStorage(&fs);
+	cvReleaseMat(&eigenvectors);
+	cvReleaseMat(&eigenvalues);
+	cvReleaseMat(&mean);
+	return pcaPtr;
+}
+//==============================================================================
+/** Deallocates a PCA pointed by a pointer.
+ */
+void Auxiliary::getRidOfPCA(cv::PCA *pca){
+	if(pca){
+		pca->eigenvalues.release();
+		pca->eigenvectors.release();
+		pca->mean.release();
+		delete pca;
+		pca = NULL;
+	}
+}
+//==============================================================================

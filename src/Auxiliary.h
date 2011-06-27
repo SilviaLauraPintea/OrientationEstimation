@@ -6,7 +6,7 @@
 #ifndef AUXILIARY_H_
 #define AUXILIARY_H_
 #include "eigenbackground/src/Helpers.hh"
-class Auxiliary{
+class Auxiliary:public Helpers{
 	public:
 		/** Converts a pointer to an IplImage to an OpenCV Mat.
 		 */
@@ -73,6 +73,16 @@ class Auxiliary{
 		 */
 		static bool isLongerContours(const std::vector<cv::Point> &c1,\
 			const std::vector<cv::Point> &c2);
+		/** Store the PCA model locally so you can load it next time when you need it.
+		 */
+		static void savePCA(const std::tr1::shared_ptr<cv::PCA> pcaPtr,\
+			const std::string &file);
+		/** Load the PCA model locally so you can load it next time when you need it.
+		 */
+		static std::tr1::shared_ptr<cv::PCA> loadPCA(const std::string &file);
+		/** Deallocates a PCA pointed by a pointer.
+		 */
+		static void getRidOfPCA(cv::PCA *pca);
 	private:
 		DISALLOW_COPY_AND_ASSIGN(Auxiliary);
 };

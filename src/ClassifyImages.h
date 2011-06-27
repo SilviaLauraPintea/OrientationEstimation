@@ -46,11 +46,11 @@ class ClassifyImages {
 		/** Creates the test data and applies \c GaussianProcess prediction on the test
 		 * data.
 		 */
-		std::deque<float> predictGP(int i);
+		std::deque<cv::Point2f> predictGP(int i);
 		/** Creates the test data and applies \c Neural Network prediction on the test
 		 * data.
 		 */
-		std::deque<float> predictNN(AnnotationsHandle::POSE what,int i);
+		std::deque<cv::Point2f> predictNN(AnnotationsHandle::POSE what,int i);
 		/** Initialize the options for the Gaussian Process regression.
 		 */
 		void init(float theNoise,float theLengthSin,float theLengthCos,\
@@ -62,7 +62,7 @@ class ClassifyImages {
 		bool isClassiInit(int i);
 		/** Evaluate one prediction versus its target.
 		 */
-		void evaluate(const std::deque<std::deque<float> > &prediAngles,\
+		void evaluate(const std::deque<std::deque<cv::Point2f> > &prediAngles,\
 			float &error,float &normError,float &meanDiff);
 
 		/** Do k-fold cross-validation by splitting the training folder into
@@ -77,7 +77,7 @@ class ClassifyImages {
 			FeatureExtractor::WHOLE);
 		/** Runs the final evaluation (test).
 		 */
-		std::deque<std::deque<float> > runTest(int colorSp,\
+		std::deque<std::deque<cv::Point2f> > runTest(int colorSp,\
 			AnnotationsHandle::POSE what,float &normError,\
 			FeatureExtractor::FEATUREPART part);
 		/** Try to optimize the prediction of the angle considering the variance
@@ -128,7 +128,7 @@ class ClassifyImages {
 		void getData(std::string trainFld,std::string annoFld,bool fromFolder);
 		/** Predicts on the test data.
 		 */
-		std::deque<std::deque<float> > predict(AnnotationsHandle::POSE what,\
+		std::deque<std::deque<cv::Point2f> > predict(AnnotationsHandle::POSE what,\
 			bool fromFolder);
 		/** Try to optimize the prediction of the angle considering the variance of
 		 * sin^2 and cos^2.
@@ -141,15 +141,22 @@ class ClassifyImages {
 		void trainKNN(AnnotationsHandle::POSE what,int i);
 		/** Creates the test data and applies \c kNN prediction on the test data.
 		 */
-		std::deque<float> predictKNN(int i);
+		std::deque<cv::Point2f> predictKNN(int i);
 		/** Creates the training data (according to the options),the labels and
 		 * builds the eigen-orientations.
 		 */
-		void trainDist2PCA(AnnotationsHandle::POSE what,int i);
+		void trainDist2PCA(AnnotationsHandle::POSE what,int i,unsigned bins=0,\
+			unsigned dimensions=1);
 		/** Creates the test data and applies computes the distances to the stored
 		 * eigen-orientations.
 		 */
-		std::deque<float> predictDist2PCA(AnnotationsHandle::POSE what,int i);
+		std::deque<cv::Point2f> predictDist2PCA(AnnotationsHandle::POSE what,int i);
+		/** Backproject each image on the 4 models, compute distances and return.
+		 */
+		cv::Mat getPCAModel(const cv::Mat &data,int i,unsigned bins);
+		/** Build a class model for each one of the 4 classes.
+		 */
+		void buildPCAModels(int colorSp,FeatureExtractor::FEATUREPART part);
 		//======================================================================
 	private:
 		/** @var nn_
@@ -294,13 +301,17 @@ class ClassifyImages {
 		 */
 		ClassifyImages::CLASSIFIER clasifier_;
 		/** @var dimPCA_
-		 * The number of components ot be kepr when using PCA.
+		 * The number of components to be kept when using PCA.
 		 */
 		unsigned dimPCA_;
 		/** @var withFlip_
 		 * If the images should be flipped or not.
 		 */
 		bool withFlip_;
+		/** @var usePCAModel_
+		 * A PCA model is build for 4 classes for each data feature
+		 */
+		bool usePCAModel_;
 		//======================================================================
 	private:
 		DISALLOW_COPY_AND_ASSIGN(ClassifyImages);

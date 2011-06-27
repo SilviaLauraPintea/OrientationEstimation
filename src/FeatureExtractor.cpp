@@ -155,13 +155,13 @@ std::vector<cv::Point2f> &pts,cv::Mat &toRotate){
 			srcRotate = cv::Mat::zeros(cv::Size(toRotate.cols+2*rotBorders.x,\
 				toRotate.rows+2*rotBorders.y),toRotate.type());
 			cv::copyMakeBorder(toRotate,srcRotate,rotBorders.y,rotBorders.y,\
-				rotBorders.x,rotBorders.x,cv::BORDER_CONSTANT,cv::Scalar(127,127,127));
+				rotBorders.x,rotBorders.x,cv::BORDER_CONSTANT,cv::Scalar(0,0,0));
 			rotCenter = cv::Point2f(srcRotate.cols/2.0,srcRotate.rows/2.0);
 			rotationMat = cv::getRotationMatrix2D(rotCenter,rotAngle,1.0);
 			rotationMat.convertTo(rotationMat,CV_32FC1);
 			rotated     = cv::Mat::zeros(srcRotate.size(),toRotate.type());
 			cv::warpAffine(srcRotate,rotated,rotationMat,srcRotate.size(),\
-				cv::INTER_LINEAR,cv::BORDER_CONSTANT,cv::Scalar(127,127,127));
+				cv::INTER_LINEAR,cv::BORDER_CONSTANT,cv::Scalar(0,0,0));
 			rotated.copyTo(result);
 			break;
 		case(FeatureExtractor::TEMPLATE):
@@ -264,7 +264,7 @@ const cv::Rect &roi){
 	// MATCH SOME HEADS ON TOP AND GET THE RESULTS
 	int radius     = Helpers::dist(aTempl.points_[12],aTempl.points_[13]);
 	cv::Mat result = cv::Mat::zeros(cv::Size(12*20*30+2,1),CV_32FC1);
-	for(int i=0;i<12;++i){
+	for(int i=0;i<4;++i){
 		std::string imgName = "templates/templ"+Auxiliary::int2string(i)+".jpg";
 		cv::Mat tmple       = cv::imread(imgName.c_str(),0);
 		if(tmple.empty()){
@@ -341,14 +341,6 @@ const cv::Rect &roi,bool vChannel){
 		cv::split(large,threeChannels);
 		threeChannels[2].copyTo(gray);
 	}
-
-//REMOVE-----------------------------------------------
-Auxiliary::mean0Variance1(gray);
-gray *= 255;
-gray.convertTo(gray,CV_8UC1);
-cv::blur(gray,gray,cv::Size(3,3));
-//REMOVE-----------------------------------------------
-
 	if(this->plot_){
 		cv::imshow("gray",gray);
 		cv::waitKey(5);

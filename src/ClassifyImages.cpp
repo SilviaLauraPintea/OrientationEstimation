@@ -31,11 +31,12 @@ ClassifyImages::CLASSIFIER classi){
 	this->modelName_        = "";
 	this->what_             = use;
 	this->useGroundTruth_   = false;
-	this->dimRed_           = true;
+	this->dimRed_           = false;
 	this->dimPCA_           = 100;
 	this->plot_             = false;
 	this->plot_             = false;
-	this->withFlip_         = true;
+	this->withFlip_         = false;
+	this->usePCAModel_      = true;
 
 	// INITIALIZE THE DATA MATRIX AND TARGETS MATRIX AND THE GAUSSIAN PROCESSES
 	for(unsigned i=0;i<3;++i){
@@ -43,6 +44,7 @@ ClassifyImages::CLASSIFIER classi){
 		this->trainTargets_.push_back(cv::Mat());
 		this->testData_.push_back(cv::Mat());
 		this->testTargets_.push_back(cv::Mat());
+		this->classiPca_.push_back(std::deque<std::tr1::shared_ptr<cv::PCA> >());
 		switch(this->clasifier_){
 			case(ClassifyImages::GAUSSIAN_PROCESS):
 				this->gpSin_.push_back(GaussianProcess());
@@ -55,8 +57,6 @@ ClassifyImages::CLASSIFIER classi){
 				this->sinKNN_.push_back(CvKNearest());
 				this->cosKNN_.push_back(CvKNearest());
 				break;
-			case(ClassifyImages::DIST2PCA):
-				this->classiPca_.push_back(std::deque<std::tr1::shared_ptr<cv::PCA> >());
 		}
 	}
 	this->pca_ = std::vector<std::tr1::shared_ptr<cv::PCA> >\
@@ -389,16 +389,107 @@ void ClassifyImages::trainKNN(AnnotationsHandle::POSE what,int i){
 	}
 }
 //==============================================================================
+/** Backproject each image on the 4 models, compute distances and return.
+ */
+cv::Mat ClassifyImages::getPCAModel(const cv::Mat &data,int i,unsigned bins){
+	std::deque<std::string> names;
+	names.push_back("CLOSE");names.push_back("MEDIUM");	names.push_back("FAR");
+	if(this->classiPca_[i].empty()){
+		for(std::size_t l=0;l<bins;++l){
+			std::string modelPCA = this->modelName_+names[i]+"/PCA"+\
+				Auxiliary::int2string(l)+".xml";
+			this->classiPca_[i][l] = Auxiliary::loadPCA(modelPCA);
+
+std::cout<<"loadPCA>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> "<<l<<std::endl;
+std::cout<<"eigenvectors: "<<this->classiPca_[i][l]->eigenvectors.size()<<std::endl;
+std::cout<<"eigenvalues: "<<this->classiPca_[i][l]->eigenvalues.size()<<std::endl;
+std::cout<<"mean: "<<this->classiPca_[i][l]->mean.size()<<std::endl;
+
+		}
+	}
+	cv::Mat result;
+	for(int j=0;j<data.rows;++j){
+		cv::Mat preResult = cv::Mat::zeros(cv::Size(data.cols*classiPca_[i].size(),1),\
+			CV_32FC1);
+		for(int l=0;l<this->classiPca_[i].size();++l){
+			cv::Mat backprojectTest,projectTest;
+			if(this->classiPca_[i][l].get()){
+				projectTest     = this->classiPca_[i][l]->project(data.row(j));
+				backprojectTest = this->classiPca_[i][l]->backProject(projectTest);
+			}
+			cv::Mat part = data.row(j)-backprojectTest;
+			cv::Mat dumm = preResult.colRange(l*data.cols,(l+1)*data.cols);
+			part.copyTo(dumm);
+			dumm.release();
+			projectTest.release();
+			backprojectTest.release();
+		}
+		if(result.empty()){
+			preResult.copyTo(result);
+		}else{
+			result.push_back(preResult);
+		}
+		preResult.release();
+	}
+	return result;
+}
+//==============================================================================
+/** Build a class model for each one of the 4 classes.
+ */
+void ClassifyImages::buildPCAModels(int colorSp,FeatureExtractor::FEATUREPART part){
+	// SET THE CALIBRATION AND OTHER FEATURE SETTINGS
+	this->resetFeatures(this->trainDir_,this->trainImgString_,colorSp,part);
+	for(std::size_t i=0;i<this->trainData_.size();++i){
+		if(!this->trainData_[i].empty()){
+			this->trainData_[i].release();
+		}
+		if(!this->trainTargets_[i].empty()){
+			this->trainTargets_[i].release();
+		}
+	}
+	this->features_->init(this->trainFolder_,this->annotationsTrain_,\
+		this->feature_,true);
+	this->features_->start(true,this->useGroundTruth_);
+	std::deque<std::string> names;
+	names.push_back("CLOSE");names.push_back("MEDIUM");	names.push_back("FAR");
+	for(PeopleDetector::CLASSES i=PeopleDetector::CLOSE;i<=PeopleDetector::FAR;++i){
+		Helpers::file_exists((this->modelName_+names[i]).c_str(),true);
+		(this->features_->data()[i]).copyTo(this->trainData_[i]);
+		(this->features_->targets()[i]).copyTo(this->trainTargets_[i]);
+
+		if(this->trainData_[i].empty()){continue;}
+		//EXTRACT THE EIGENSPACES
+		this->trainDist2PCA(AnnotationsHandle::LONGITUDE,i,4,3);
+		for(std::size_t p=0;p<this->classiPca_[i].size();++p){
+			std::string modelPCA = this->modelName_+names[i]+"/PCA"+\
+				Auxiliary::int2string(p)+".xml";
+			Auxiliary::savePCA(this->classiPca_[i][p],modelPCA);
+			std::cout<<"PCA models stored to: "<<modelPCA<<std::endl;
+		}
+	}
+}
+//==============================================================================
 /** Creates the training data (according to the options),the labels and
  * builds the eigen-orientations.
  */
-void ClassifyImages::trainDist2PCA(AnnotationsHandle::POSE what,int i){
+void ClassifyImages::trainDist2PCA(AnnotationsHandle::POSE what,int i,\
+unsigned bins,unsigned dimensions){
 	std::cout<<"Training the egein-orientations..."<<std::endl;
-	unsigned bins;
+	unsigned binSize;
 	if(what == AnnotationsHandle::LONGITUDE){
-		bins = 36;
-	}else{
-		bins = 18;
+		if(!bins){
+			bins    = 36;
+			binSize = 10;
+		}else{
+			binSize = 360/bins;
+		}
+	}else if(what == AnnotationsHandle::LATITUDE){
+		if(!bins){
+			binSize = 18;
+			binSize = 10;
+		}else{
+			binSize = 180/bins;
+		}
 	}
 	std::vector<cv::Mat> trainingData(bins,cv::Mat());
 	for(int l=0;l<this->trainData_[i].rows;++l){
@@ -412,7 +503,7 @@ void ClassifyImages::trainDist2PCA(AnnotationsHandle::POSE what,int i){
 		}
 		float prediction = std::atan2(y,x);
 		Auxiliary::angle0to360(prediction);
-		unsigned index = (prediction*180.0/M_PI)/10;
+		unsigned index = (prediction*180.0/M_PI)/binSize;
 		cv::Mat dummy1 = this->trainData_[i].row(l);
 		if(trainingData[index].empty()){
 			dummy1.copyTo(trainingData[index]);
@@ -430,7 +521,7 @@ void ClassifyImages::trainDist2PCA(AnnotationsHandle::POSE what,int i){
 	for(int l=0;l<trainingData.size();++l){
 		if(trainingData[l].rows>1){
 			this->classiPca_[i][l] = std::tr1::shared_ptr<cv::PCA>(new cv::PCA\
-				(trainingData[l],cv::Mat(),CV_PCA_DATA_AS_ROW,1));
+				(trainingData[l],cv::Mat(),CV_PCA_DATA_AS_ROW,dimensions));
 		}
 	}
 	// RELEASE THE TRAINING DATA
@@ -458,6 +549,17 @@ void ClassifyImages::train(AnnotationsHandle::POSE what,bool fromFolder){
 		tmpTargets.convertTo(tmpTargets,CV_32FC1);
 		cv::Mat outData,outTargets;
 		this->loadData(tmpData,tmpTargets,i,outData,outTargets);
+
+		// IF DISTANCES TO DATA MODELS SHOULD BE COMPUTED
+		if(this->usePCAModel_){
+			cv::Mat tmpOut = this->getPCAModel(outData,i,4);
+std::cout<<">>>>>>>>>>>>"<<tmpOut.size()<<" "<<outData.size()<<std::endl;
+
+			outData.release();
+			tmpOut.copyTo(outData);
+			tmpOut.release();
+std::cout<<">>>>>>>>>>>>"<<outData.size()<<std::endl;
+		}
 
 		// IF WE CANNOT LOAD DATA,THEN WE BUILD IT
 		if(this->dimRed_ && !outData.empty()){
@@ -589,17 +691,17 @@ void ClassifyImages::buildDataMatrix(int colorSp,FeatureExtractor::FEATUREPART p
 /** Creates the test data and applies \c GaussianProcess prediction on the test
  * data.
  */
-std::deque<float> ClassifyImages::predictGP(int i){
-	std::deque<float> oneClassPredictions;
+std::deque<cv::Point2f> ClassifyImages::predictGP(int i){
+	std::deque<cv::Point2f> oneClassPredictions;
 
 	// FOR EACH ROW IN THE TEST MATRIX PREDICT
 	for(int j=0;j<this->testData_[i].rows;++j){
 		GaussianProcess::prediction prediSin;
+		GaussianProcess::prediction prediCos;
 		cv::Mat testRow = this->testData_[i].row(j);
 		this->gpSin_[i].predict(testRow,prediSin,static_cast<_float>(this->lengthSin_));
-		GaussianProcess::prediction prediCos;
 		this->gpCos_[i].predict(testRow,prediCos,static_cast<_float>(this->lengthCos_));
-		oneClassPredictions.push_back(this->optimizePrediction(prediSin,prediCos));
+		oneClassPredictions.push_back(cv::Point2f(prediCos.mean_[0],prediSin.mean_[0]));
 		prediSin.mean_.clear();
 		prediSin.variance_.clear();
 		prediCos.mean_.clear();
@@ -612,9 +714,9 @@ std::deque<float> ClassifyImages::predictGP(int i){
 /** Creates the test data and applies \c Neural Network prediction on the test
  * data.
  */
-std::deque<float> ClassifyImages::predictNN(AnnotationsHandle::POSE what,int i){
+std::deque<cv::Point2f> ClassifyImages::predictNN(AnnotationsHandle::POSE what,int i){
 	std::cout<<"Predicting on the Neural Network..."<<std::endl;
-	std::deque<float> oneClassPredictions;
+	std::deque<cv::Point2f> oneClassPredictions;
 
 	// FOR EACH ROW IN THE TEST MATRIX PREDICT
 	for(int j=0;j<this->testData_[i].rows;++j){
@@ -631,9 +733,7 @@ std::deque<float> ClassifyImages::predictNN(AnnotationsHandle::POSE what,int i){
 			y = preds.at<float>(0,2);
 			x = preds.at<float>(0,3);
 		}
-		float prediction = std::atan2(y,x);
-		Auxiliary::angle0to360(prediction);
-		oneClassPredictions.push_back(prediction);
+		oneClassPredictions.push_back(cv::Point2f(x,y));
 		preds.release();
 	}
 	return oneClassPredictions;
@@ -641,9 +741,9 @@ std::deque<float> ClassifyImages::predictNN(AnnotationsHandle::POSE what,int i){
 //==============================================================================
 /** Creates the test data and applies \c kNN prediction on the test data.
  */
-std::deque<float> ClassifyImages::predictKNN(int i){
+std::deque<cv::Point2f> ClassifyImages::predictKNN(int i){
 	std::cout<<"Predicting on the kNN..."<<std::endl;
-	std::deque<float> oneClassPredictions;
+	std::deque<cv::Point2f> oneClassPredictions;
 
  	cv::Mat sinPreds(cv::Size(1,this->testData_[i].rows),CV_32FC1);
  	cv::Mat cosPreds(cv::Size(1,this->testData_[i].rows),CV_32FC1);
@@ -659,9 +759,7 @@ std::deque<float> ClassifyImages::predictKNN(int i){
 	for(int j=0;j<this->testData_[i].rows;++j){
 		float y = sinPreds.at<float>(j,0);
 		float x = cosPreds.at<float>(j,0);
-		float prediction = std::atan2(y,x);
-		Auxiliary::angle0to360(prediction);
-		oneClassPredictions.push_back(prediction);
+		oneClassPredictions.push_back(cv::Point2f(x,y));
 	}
 	sinPreds.release();
 	cosPreds.release();
@@ -673,9 +771,9 @@ std::deque<float> ClassifyImages::predictKNN(int i){
 /** Creates the test data and applies computes the distances to the stored
  * eigen-orientations.
  */
-std::deque<float> ClassifyImages::predictDist2PCA(AnnotationsHandle::POSE what,int i){
+std::deque<cv::Point2f> ClassifyImages::predictDist2PCA(AnnotationsHandle::POSE what,int i){
 	std::cout<<"Predicting on the eigen-orientations..."<<std::endl;
-	std::deque<float> oneClassPredictions;
+	std::deque<cv::Point2f> oneClassPredictions;
 	unsigned bins;
 	if(what == AnnotationsHandle::LONGITUDE){
 		bins = 36;
@@ -712,7 +810,8 @@ std::deque<float> ClassifyImages::predictDist2PCA(AnnotationsHandle::POSE what,i
 		cv::Point minLoc(0,0);
 		cv::minMaxLoc(minDists,NULL,NULL,&minLoc,NULL,cv::Mat());
 		float prediction = minLoc.x*10.0*(M_PI/180.0);
-		oneClassPredictions.push_back(prediction);
+		oneClassPredictions.push_back(cv::Point2f(std::cos(prediction),\
+			std::sin(prediction)));
 		minDists.release();
 		minLabs.release();
 		testingData.release();
@@ -741,13 +840,13 @@ bool ClassifyImages::isClassiInit(int i){
 //==============================================================================
 /** Predicts on the test data.
  */
-std::deque<std::deque<float> > ClassifyImages::predict\
+std::deque<std::deque<cv::Point2f> > ClassifyImages::predict\
 (AnnotationsHandle::POSE what,bool fromFolder){
 	this->getData(this->testFolder_,this->annotationsTest_,fromFolder);
 	// FOR TESTING WE ALWAYS BUILT THE DATA (THERE IS NOT SAVED MODEL)
 	std::deque<std::string> names;
 	names.push_back("CLOSE");names.push_back("MEDIUM");	names.push_back("FAR");
-	std::deque<std::deque<float> > predictions;
+	std::deque<std::deque<cv::Point2f> > predictions;
 	for(PeopleDetector::CLASSES i=PeopleDetector::CLOSE;i<=PeopleDetector::FAR;++i){
 		if(!this->testData_[i].empty()){
 			this->testData_[i].release();
@@ -756,17 +855,36 @@ std::deque<std::deque<float> > ClassifyImages::predict\
 			this->testTargets_[i].release();
 		}
 		// CHECK TO SEE IF THERE IS ANY DATA IN THE CURRENT CLASS
-		std::deque<float> oneClassPredictions;
+		std::deque<cv::Point2f> oneClassPredictions;
 		if(this->features_->data()[i].empty() || !this->isClassiInit(i)){
 			predictions.push_back(oneClassPredictions);
 			continue;
 		}
-		if(this->dimRed_){
-			this->testData_[i] = this->reduceDimensionality\
-				(this->features_->data()[i],i,false,this->dimPCA_);
-		}else{
-			this->features_->data()[i].copyTo(this->testData_[i]);
+
+		// IF DISTANCES TO DATA MODELS SHOULD BE COMPUTED
+		cv::Mat outData;
+		this->features_->data()[i].copyTo(outData);
+
+		if(this->usePCAModel_){
+			cv::Mat tmpOut = this->getPCAModel(outData,i,4);
+
+std::cout<<">>>>>>>>>>>>"<<tmpOut.size()<<" "<<outData.size()<<std::endl;
+
+			outData.release();
+			tmpOut.copyTo(outData);
+			tmpOut.release();
+
+std::cout<<"outData>>>>>> "<<outData.size()<<std::endl;
 		}
+		if(this->dimRed_){
+			this->testData_[i] = this->reduceDimensionality(outData,i,false,\
+				this->dimPCA_);
+		}else{
+			outData.copyTo(this->testData_[i]);
+		}
+		outData.release();
+std::cout<<"outData>>>>>> "<<outData.size()<<std::endl;
+
 		// GET ONLY THE ANGLES YOU NEED
 		if(what == AnnotationsHandle::LONGITUDE){
 			cv::Mat dum = this->features_->targets()[i].colRange(0,2);
@@ -803,7 +921,7 @@ std::deque<std::deque<float> > ClassifyImages::predict\
 //==============================================================================
 /** Evaluate one prediction versus its target.
  */
-void ClassifyImages::evaluate(const std::deque<std::deque<float> > &prediAngles,\
+void ClassifyImages::evaluate(const std::deque<std::deque<cv::Point2f> > &prediAngles,\
 float &error,float &normError,float &meanDiff){
 	error = 0.0;normError = 0.0;meanDiff = 0.0;
 	float errorSin = 0.0,normErrorSin = 0.0,meanDiffSin = 0.0;
@@ -811,6 +929,8 @@ float &error,float &normError,float &meanDiff){
 	unsigned noPeople = 0;
 	std::deque<std::string> names;
 	cv::Mat bins = cv::Mat::zeros(cv::Size(18,1),CV_32FC1);
+	cv::Mat binsSin = cv::Mat::zeros(cv::Size(18,1),CV_32FC1);
+	cv::Mat binsCos = cv::Mat::zeros(cv::Size(18,1),CV_32FC1);
 	names.push_back("CLOSE");names.push_back("MEDIUM");	names.push_back("FAR");
 	for(PeopleDetector::CLASSES i=PeopleDetector::CLOSE;i<=PeopleDetector::FAR;++i){
 		std::cout<<"Class "<<names[i]<<": "<<this->testTargets_[i].size()<<\
@@ -821,8 +941,10 @@ float &error,float &normError,float &meanDiff){
 				this->testTargets_[i].at<float>(y,1));
 			float targetAngleSin = std::asin(this->testTargets_[i].at<float>(y,0));
 			float targetAngleCos = std::acos(this->testTargets_[i].at<float>(y,1));
-			float angleSin       = std::sin(prediAngles[i][y]);
-			float angleCos       = std::cos(prediAngles[i][y]);
+			float angle    = std::atan2(prediAngles[i][y].y,prediAngles[i][y].x);
+			float angleSin = std::asin(prediAngles[i][y].y);
+			float angleCos = std::acos(prediAngles[i][y].x);
+			Auxiliary::angle0to360(angle);
 			Auxiliary::angle0to360(angleSin);
 			Auxiliary::angle0to360(angleCos);
 			Auxiliary::angle0to360(targetAngle);
@@ -830,12 +952,12 @@ float &error,float &normError,float &meanDiff){
 			Auxiliary::angle0to360(targetAngleCos);
 
 			std::cout<<"Target:"<<targetAngle<<"("<<(targetAngle*180.0/M_PI)<<\
-				") VS Angle:"<<prediAngles[i][y]<<"("<<(prediAngles[i][y]*180.0/M_PI)<<\
-				") TargetSin:"<<targetAngleSin<<"("<<(targetAngleSin*180.0/M_PI)<<\
+				") VS Angle:"<<angle<<"("<<(angle*180.0/M_PI)<<\
+				") VS TargetSin:"<<targetAngleSin<<"("<<(targetAngleSin*180.0/M_PI)<<\
 				") VS AngleSin:"<<angleSin<<"("<<(angleSin*180.0/M_PI)<<\
-				") TargetCos:"<<targetAngleCos<<"("<<(targetAngleCos*180.0/M_PI)<<\
+				") VS TargetCos:"<<targetAngleCos<<"("<<(targetAngleCos*180.0/M_PI)<<\
 				") VS AngleCos:"<<angleCos<<"("<<(angleCos*180.0/M_PI)<<")"<<std::endl;
-			float absDiff = std::abs(targetAngle-prediAngles[i][y]);
+			float absDiff = std::abs(targetAngle-angle);
 			if(absDiff > M_PI){
 				absDiff = 2.0*M_PI - absDiff;
 			}
@@ -850,6 +972,10 @@ float &error,float &normError,float &meanDiff){
 
 			int ind = ((absDiff*180.0/M_PI)/10);
 			++bins.at<float>(0,ind);
+			int indSin = ((absDiffSin*180.0/M_PI)/10);
+			++binsSin.at<float>(0,indSin);
+			int indCos = ((absDiffCos*180.0/M_PI)/10);
+			++binsCos.at<float>(0,indCos);
 
 			std::cout<<"Difference:"<<absDiff<<" DifferenceSin:"<<absDiffSin<<\
 				" DifferenceCos:"<<absDiffCos<<std::endl;
@@ -889,6 +1015,8 @@ float &error,float &normError,float &meanDiff){
 	std::cout<<"Avg-Diff-Radians:"<<meanDiff<<" Avg-Diff-Radians(sin):"<<meanDiffSin<<\
 		" Avg-Diff-Radians(cos):"<<meanDiffCos<<std::endl;
 	std::cout<<"bins >>> "<<bins<<""<<std::endl;
+	std::cout<<"binsSin >>> "<<binsSin<<""<<std::endl;
+	std::cout<<"binsCos >>> "<<binsCos<<""<<std::endl;
 	bins.release();
 }
 //==============================================================================
@@ -1010,7 +1138,7 @@ int colorSp,bool onTrain,FeatureExtractor::FEATUREPART part){
 		std::cout<<"Round "<<i<<"___________________________________________"<<\
 			"_____________________________________________________"<<std::endl;
 		// SPLIT TRAINING AND TESTING ACCORDING TO THE CURRENT FOLD
-		std::deque<std::deque<float> > predicted;
+		std::deque<std::deque<cv::Point2f> > predicted;
 		this->crossValidation(k,i,onTrain);
 		//______________________________________________________________________
 		if(what == AnnotationsHandle::LONGITUDE){
@@ -1150,10 +1278,10 @@ int colorSp,FeatureExtractor::FEATUREPART part){
 //==============================================================================
 /** Runs the final evaluation (test).
  */
-std::deque<std::deque<float> > ClassifyImages::runTest(int colorSp,\
+std::deque<std::deque<cv::Point2f> > ClassifyImages::runTest(int colorSp,\
 AnnotationsHandle::POSE what,float &normError,FeatureExtractor::FEATUREPART part){
 	// LONGITUDE TRAINING AND PREDICTING
-	std::deque<std::deque<float> > predicted;
+	std::deque<std::deque<cv::Point2f> > predicted;
 	if(what == AnnotationsHandle::LONGITUDE){
 		std::cout<<"Longitude >>> ______________________________________________"<<\
 			"_____________________________________________________"<<std::endl;
@@ -1214,8 +1342,8 @@ FeatureExtractor::FEATUREPART part){
 	std::deque<FeatureExtractor::FEATURE> feat(1,FeatureExtractor::IPOINTS);
 	classi.init(noise,lengthSin,lengthCos,feat,kernel,useGT);
 
-	std::deque<std::deque<std::deque<float> > > predictions;
-	std::deque<std::deque<float> > tmpPrediction;
+	std::deque<std::deque<std::deque<cv::Point2f> > > predictions;
+	std::deque<std::deque<cv::Point2f> > tmpPrediction;
 	float dummy = 0;
 
 	for(FeatureExtractor::FEATURE f=FeatureExtractor::EDGES;\
@@ -1266,9 +1394,9 @@ FeatureExtractor::FEATUREPART part){
 		}
 	}
 	// HOW TO COMBINE THEM?BIN VOTES EVERY 20DEGREES AND AVERAGE THE WINNING BIN
-	std::deque<std::deque<float> > finalPreds;
+	std::deque<std::deque<cv::Point2f> > finalPreds;
 	for(std::size_t n=0;n<predictions[0].size();++n){// CLASSES
-		std::deque<float> preFinalPreds;
+		std::deque<cv::Point2f> preFinalPreds;
 		for(std::size_t o=0;o<predictions[0][n].size();++o){// PREDICTIONS
 			// FOR EACH PREDICTION BIN THE VOTES AND FIND THE "WINNING" ANGLE
 			std::deque<unsigned> votes(18,0);
@@ -1279,12 +1407,13 @@ FeatureExtractor::FEATUREPART part){
 			classi.getAngleLimits(n,o,angleMin,angleMax);
 			for(std::size_t m=0;m<predictions.size();++m){ // OVER FEATURES
 				// CHECK IF THE PREDICTIONS ARE IN THE GOOD RANGE
-				if(predictions[m][n][o]>=angleMin || predictions[m][n][o]<angleMax){
-					unsigned degrees = static_cast<unsigned>(predictions[m][n][o]*\
-						180.0/M_PI);
+				float angle = std::atan2(predictions[m][n][o].y,predictions[m][n][o].x);
+				Auxiliary::angle0to360(angle);
+				if(angle>=angleMin || angle<angleMax){
+					unsigned degrees = static_cast<unsigned>(angle*180.0/M_PI);
 					unsigned label   = degrees/20;
 					++votes[label];
-					bins[label] += predictions[m][n][o];
+					bins[label] += angle;
 					if(votes[label]>winningNoVotes){
 						winningNoVotes = votes[label];
 						winningLabel   = label;
@@ -1299,7 +1428,7 @@ FeatureExtractor::FEATUREPART part){
 				guess = bins[winningLabel]/static_cast<float>(votes[winningLabel]);
 			}
 			// STORE THE FINAL PREDICTIONS
-			preFinalPreds.push_back(guess);
+			preFinalPreds.push_back(cv::Point2f(std::sin(guess),std::cos(guess)));
 			votes.clear();
 			bins.clear();
 		}
@@ -1389,12 +1518,20 @@ int main(int argc,char **argv){
 	classi.buildDataMatrix(-1,FeatureExtractor::HEAD);
 */
 	//--------------------------------------------------------------------------
+/*
+	// build PCA models
+	ClassifyImages classi(argc,argv,ClassifyImages::TEST,\
+ 		ClassifyImages::GAUSSIAN_PROCESS);
+ 	classi.init(0.01,500000.0,500000.0,feat,&GaussianProcess::sqexp,true);
+	classi.buildPCAModels(-1,FeatureExtractor::HEAD);
+*/
+	//--------------------------------------------------------------------------
 
 	// test
 	float normError = 0.0f;
  	ClassifyImages classi(argc,argv,ClassifyImages::TEST,\
  		ClassifyImages::GAUSSIAN_PROCESS);
-	classi.init(0.1,25000.0,100.0,feat,&GaussianProcess::sqexp,false);
+	classi.init(1.0,20000.0,20000.0,feat,&GaussianProcess::sqexp,false);
 	classi.runTest(-1,AnnotationsHandle::LONGITUDE,normError,FeatureExtractor::HEAD);
 
 	//--------------------------------------------------------------------------
