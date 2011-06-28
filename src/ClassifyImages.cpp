@@ -398,25 +398,18 @@ cv::Mat ClassifyImages::getPCAModel(const cv::Mat &data,int i,unsigned bins){
 		for(std::size_t l=0;l<bins;++l){
 			std::string modelPCA = this->modelName_+names[i]+"/PCA"+\
 				Auxiliary::int2string(l)+".xml";
-			this->classiPca_[i][l] = Auxiliary::loadPCA(modelPCA);
-
-std::cout<<"loadPCA>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> "<<l<<std::endl;
-std::cout<<"eigenvectors: "<<this->classiPca_[i][l]->eigenvectors.size()<<std::endl;
-std::cout<<"eigenvalues: "<<this->classiPca_[i][l]->eigenvalues.size()<<std::endl;
-std::cout<<"mean: "<<this->classiPca_[i][l]->mean.size()<<std::endl;
-
+			this->classiPca_[i].push_back(Auxiliary::loadPCA(modelPCA));
 		}
 	}
+
 	cv::Mat result;
 	for(int j=0;j<data.rows;++j){
 		cv::Mat preResult = cv::Mat::zeros(cv::Size(data.cols*classiPca_[i].size(),1),\
 			CV_32FC1);
-		for(int l=0;l<this->classiPca_[i].size();++l){
+		for(std::size_t l=0;l<this->classiPca_[i].size();++l){
 			cv::Mat backprojectTest,projectTest;
-			if(this->classiPca_[i][l].get()){
-				projectTest     = this->classiPca_[i][l]->project(data.row(j));
-				backprojectTest = this->classiPca_[i][l]->backProject(projectTest);
-			}
+			projectTest     = this->classiPca_[i][l]->project(data.row(j));
+			backprojectTest = this->classiPca_[i][l]->backProject(projectTest);
 			cv::Mat part = data.row(j)-backprojectTest;
 			cv::Mat dumm = preResult.colRange(l*data.cols,(l+1)*data.cols);
 			part.copyTo(dumm);
@@ -553,12 +546,9 @@ void ClassifyImages::train(AnnotationsHandle::POSE what,bool fromFolder){
 		// IF DISTANCES TO DATA MODELS SHOULD BE COMPUTED
 		if(this->usePCAModel_){
 			cv::Mat tmpOut = this->getPCAModel(outData,i,4);
-std::cout<<">>>>>>>>>>>>"<<tmpOut.size()<<" "<<outData.size()<<std::endl;
-
 			outData.release();
 			tmpOut.copyTo(outData);
 			tmpOut.release();
-std::cout<<">>>>>>>>>>>>"<<outData.size()<<std::endl;
 		}
 
 		// IF WE CANNOT LOAD DATA,THEN WE BUILD IT
@@ -867,14 +857,9 @@ std::deque<std::deque<cv::Point2f> > ClassifyImages::predict\
 
 		if(this->usePCAModel_){
 			cv::Mat tmpOut = this->getPCAModel(outData,i,4);
-
-std::cout<<">>>>>>>>>>>>"<<tmpOut.size()<<" "<<outData.size()<<std::endl;
-
 			outData.release();
 			tmpOut.copyTo(outData);
 			tmpOut.release();
-
-std::cout<<"outData>>>>>> "<<outData.size()<<std::endl;
 		}
 		if(this->dimRed_){
 			this->testData_[i] = this->reduceDimensionality(outData,i,false,\
@@ -883,7 +868,6 @@ std::cout<<"outData>>>>>> "<<outData.size()<<std::endl;
 			outData.copyTo(this->testData_[i]);
 		}
 		outData.release();
-std::cout<<"outData>>>>>> "<<outData.size()<<std::endl;
 
 		// GET ONLY THE ANGLES YOU NEED
 		if(what == AnnotationsHandle::LONGITUDE){
@@ -1522,7 +1506,7 @@ int main(int argc,char **argv){
 	// build PCA models
 	ClassifyImages classi(argc,argv,ClassifyImages::TEST,\
  		ClassifyImages::GAUSSIAN_PROCESS);
- 	classi.init(0.01,500000.0,500000.0,feat,&GaussianProcess::sqexp,true);
+	classi.init(10.0,1000000.0,100000.0,feat,&GaussianProcess::sqexp,true);
 	classi.buildPCAModels(-1,FeatureExtractor::HEAD);
 */
 	//--------------------------------------------------------------------------
@@ -1531,7 +1515,7 @@ int main(int argc,char **argv){
 	float normError = 0.0f;
  	ClassifyImages classi(argc,argv,ClassifyImages::TEST,\
  		ClassifyImages::GAUSSIAN_PROCESS);
-	classi.init(1.0,20000.0,20000.0,feat,&GaussianProcess::sqexp,false);
+	classi.init(10.0,10000000.0,1000000.0,feat,&GaussianProcess::sqexp,false);
 	classi.runTest(-1,AnnotationsHandle::LONGITUDE,normError,FeatureExtractor::HEAD);
 
 	//--------------------------------------------------------------------------

@@ -28,7 +28,7 @@ void operator++(PeopleDetector::CLASSES &refClass){
 //======================================================================
 PeopleDetector::PeopleDetector(int argc,char** argv,bool extract,\
 bool buildBg,int colorSp,FeatureExtractor::FEATUREPART part,bool flip):Tracker\
-(argc,argv,126,buildBg,true,150){
+(argc,argv,126,buildBg,true,300){
 	if(argc == 3){
 		std::string dataPath  = std::string(argv[1]);
 		std::string imgString = std::string(argv[2]);
@@ -343,7 +343,7 @@ int k,const cv::Mat &thresh,float tmplHeight,cv::Mat &colorRoi){
 					}
 					// IF THE PIXEL HAS A DIFFERENT LABEL THEN THE CURR TEMPL
 					if(label != k){
-						colorRoi.at<cv::Vec3b>(y,x) = cv::Vec3b(0,0,0);
+						colorRoi.at<cv::Vec3b>(y,x) = cv::Vec3b(127,127,127);
 					}
 				}
 			}
@@ -415,6 +415,9 @@ void PeopleDetector::allForegroundPixels(std::deque<FeatureExtractor::people>\
 				this->templates_[k].center_.x)/2 - minX,(this->templates_[k].head_.y+\
 				this->templates_[k].center_.y)/2 - minY);
 			this->keepLargestBlob(thrshRoi,templateMid,tmplArea);
+
+			allPeople[k].pixels_ = cv::Mat::zeros(colorRoi.size(),colorRoi.type());
+			allPeople[k].pixels_ = cv::Scalar(127,127,127);
 			colorRoi.copyTo(allPeople[k].pixels_,thrshRoi);
 			thrshRoi.copyTo(allPeople[k].thresh_);
 			thrshRoi.release();
@@ -588,9 +591,6 @@ const std::deque<unsigned> &exi,float threshVal){
 		absRotCenter = cv::Point2f(allPeople[i].pixels_.cols/2.0+allPeople[i].borders_[0],\
 			allPeople[i].pixels_.rows/2.0+allPeople[i].borders_[2]);
 
-cv::imshow("rotated",allPeople[i].pixels_);
-cv::waitKey(5);
-
 		cv::Mat aDummy;
 		this->extractor_->rotate2Zero(rotAngle,FeatureExtractor::TEMPLATE,roi,\
 			absRotCenter,rotBorders,this->templates_[i].points_,aDummy);
@@ -753,6 +753,7 @@ unsigned k,float distance,std::deque<int> &assignment){
  */
 float PeopleDetector::fixAngle(const cv::Point2f &headLocation,\
 const cv::Point2f &feetLocation,float angle,bool flip){
+//	return angle;
 	float camAngle = std::atan2(headLocation.y-feetLocation.y,\
 		headLocation.x-feetLocation.x);
 	camAngle      += M_PI/2.0;
@@ -917,9 +918,10 @@ const float logBGProb,const vnl_vector<float> &logSumPixelBGProb){
 	//5) DILATE A BIT THE BACKGROUND SO THE BACKGROUND NOISE GOES NICELY
 	IplImage *bg = Helpers::vec2img((imgVec-bgVec).apply(fabs));
 	cvSmooth(bg,bg,CV_GAUSSIAN,31,31);
+	cvDilate(bg,bg,NULL,1);
 	for(unsigned l=0;l<10;++l){
-		cvErode(bg,bg,NULL,2);
-		cvDilate(bg,bg,NULL,2);
+		cvErode(bg,bg,NULL,1);
+		cvDilate(bg,bg,NULL,1);
 	}
 
 	//7) SHOW THE FOREGROUND POSSIBLE LOCATIONS AND PLOT THE TEMPLATES
@@ -1236,6 +1238,8 @@ void PeopleDetector::readLocations(bool flip){
  */
 float PeopleDetector::rotationAngle(const cv::Point2f &headLocation,\
 const cv::Point2f &feetLocation){
+//	return 0;
+
 	float rotAngle = std::atan2(headLocation.y-feetLocation.y,\
 		headLocation.x-feetLocation.x);
 	rotAngle += M_PI/2.0;
@@ -1293,7 +1297,7 @@ void PeopleDetector::extractHeadArea(int i,FeatureExtractor::people &person){
 		this->templates_[i].points_[13]);
 	float headSize2 = Helpers::dist(this->templates_[i].points_[13],\
 		this->templates_[i].points_[14]);
-	int radius = static_cast<int>(std::max(headSize1,headSize2));
+	int radius = static_cast<int>(std::max(headSize1,headSize2)*1.25);
 	if(!person.thresh_.empty()){
 		int minX,maxX,minY,maxY;
 		this->extractor_->getThresholdBorderes(minX,maxX,minY,maxY,person.thresh_);
@@ -1323,9 +1327,11 @@ void PeopleDetector::extractHeadArea(int i,FeatureExtractor::people &person){
 
 	//UPDATE PERSON PIXELS, BORDERES AND THE REST
 	cv::Mat tmpPerson;
-	person.pixels_.copyTo(tmpPerson,headMask);
+	person.pixels_.copyTo(tmpPerson);
 	person.pixels_.release();
-	tmpPerson.copyTo(person.pixels_);
+	person.pixels_ = cv::Mat::zeros(tmpPerson.size(),tmpPerson.type());
+	person.pixels_ = cv::Scalar(127,127,127);
+	tmpPerson.copyTo(person.pixels_,headMask);
 	if(this->plot_){
 		cv::imshow("head_area",person.pixels_);
 		cv::imshow("head_mask",headMask);

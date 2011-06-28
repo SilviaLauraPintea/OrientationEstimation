@@ -146,8 +146,12 @@ const cv::Rect roi,cv::Point2f &rotCenter,cv::Point2f &rotBorders,\
 std::vector<cv::Point2f> &pts,cv::Mat &toRotate){
 	float diag;
 	cv::Mat srcRotate,rotated,rotationMat,result;
+	cv::Scalar threshColor(127,127,127);
 	switch(what){
 		case(FeatureExtractor::MATRIX):
+			if(toRotate.channels()>1){threshColor = cv::Scalar(127,127,127);
+			}else{threshColor = cv::Scalar(0,0,0);}
+
 			diag = std::sqrt(toRotate.cols*toRotate.cols+toRotate.rows*\
 				toRotate.rows);
 			rotBorders.x = std::ceil((diag-toRotate.cols)/2.0);
@@ -155,13 +159,13 @@ std::vector<cv::Point2f> &pts,cv::Mat &toRotate){
 			srcRotate = cv::Mat::zeros(cv::Size(toRotate.cols+2*rotBorders.x,\
 				toRotate.rows+2*rotBorders.y),toRotate.type());
 			cv::copyMakeBorder(toRotate,srcRotate,rotBorders.y,rotBorders.y,\
-				rotBorders.x,rotBorders.x,cv::BORDER_CONSTANT,cv::Scalar(0,0,0));
+				rotBorders.x,rotBorders.x,cv::BORDER_CONSTANT,threshColor);
 			rotCenter = cv::Point2f(srcRotate.cols/2.0,srcRotate.rows/2.0);
 			rotationMat = cv::getRotationMatrix2D(rotCenter,rotAngle,1.0);
 			rotationMat.convertTo(rotationMat,CV_32FC1);
 			rotated     = cv::Mat::zeros(srcRotate.size(),toRotate.type());
 			cv::warpAffine(srcRotate,rotated,rotationMat,srcRotate.size(),\
-				cv::INTER_LINEAR,cv::BORDER_CONSTANT,cv::Scalar(0,0,0));
+				cv::INTER_LINEAR,cv::BORDER_CONSTANT,threshColor);
 			rotated.copyTo(result);
 			break;
 		case(FeatureExtractor::TEMPLATE):
@@ -341,6 +345,9 @@ const cv::Rect &roi,bool vChannel){
 		cv::split(large,threeChannels);
 		threeChannels[2].copyTo(gray);
 	}
+	Auxiliary::normalizeMat(gray);
+	gray *= 255;
+	gray.convertTo(gray,CV_8UC1);
 	if(this->plot_){
 		cv::imshow("gray",gray);
 		cv::waitKey(5);
