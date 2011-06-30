@@ -153,6 +153,7 @@ class PeopleDetector:public Tracker{
 		std::vector<cv::Mat> targets();
 		std::deque<std::deque<float> > dataMotionVectors();
 		std::tr1::shared_ptr<FeatureExtractor> extractor();
+		void setFlip(bool flip);
 		//======================================================================
 	private:
 		/** @var print_

@@ -10,11 +10,11 @@ class Auxiliary:public Helpers{
 	public:
 		/** Converts a pointer to an IplImage to an OpenCV Mat.
 		 */
-		static void ipl2mat(IplImage* ipl_image,cv::Mat &mat_image);
+		static cv::Mat ipl2mat(IplImage* ipl_image);
 
 		/** Converts an OpenCV Mat to a pointer to an IplImage.
 		 */
-		static void mat2ipl(const cv::Mat &image,IplImage* ipl_image);
+		static IplImage* mat2ipl(const cv::Mat &image);
 
 		/** Convert the values from a cv::Mat of floats to be between 0 and 1.
 		 */
@@ -62,7 +62,7 @@ class Auxiliary:public Helpers{
 		/** A function that transforms the data such that it has zero mean and unit
 		 * variance: img = (img-mean(img(:)))/std(img(:)).
 		 */
-		static void mean0Variance1(cv::Mat &mat,bool justMean=false);
+		static void mean0Variance1(cv::Mat &mat);
 		/** Used to sort a vector of points -- compares points on the X coordinate.
 		 */
 		static bool isSmallerPointX(const cv::Point2f &p1,const cv::Point2f &p2);

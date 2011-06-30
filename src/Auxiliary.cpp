@@ -16,19 +16,22 @@
 //==============================================================================
 /** Converts a pointer to an IplImage to an OpenCV Mat.
  */
-void Auxiliary::ipl2mat(IplImage* ipl_image,cv::Mat &mat_image){
-	mat_image = cv::Mat(ipl_image);
+cv::Mat Auxiliary::ipl2mat(IplImage* ipl_image){
+	cv::Mat mat_image = cv::Mat(ipl_image);
+	return mat_image;
 }
 //==============================================================================
 /** Converts an OpenCV Mat to a pointer to an IplImage.
  */
-void Auxiliary::mat2ipl(const cv::Mat &image,IplImage* ipl_image){
-	ipl_image = new IplImage(image);
+IplImage* Auxiliary::mat2ipl(const cv::Mat &image){
+	IplImage* ipl_image = new IplImage(image);
+	return ipl_image;
 }
 //==============================================================================
 /** Convert the values from a cv::Mat of floats to be between 0 and 1.
  */
 void Auxiliary::normalizeMat(cv::Mat &matrix){
+	int matType = matrix.type();
 	matrix.convertTo(matrix,CV_32FC1);
 	float mini = matrix.at<float>(0,0),maxi = matrix.at<float>(0,0);
 	for(int x=0;x<matrix.cols;++x){
@@ -44,6 +47,10 @@ void Auxiliary::normalizeMat(cv::Mat &matrix){
 	matrix -= mini;
 	if(static_cast<int>(maxi-mini)!=0){
 		matrix /= (maxi-mini);
+	}
+	if(matType == CV_8UC1){
+		matrix *= 255;
+		matrix.convertTo(matrix,CV_8UC1);
 	}
 }
 //==============================================================================
@@ -251,7 +258,7 @@ void Auxiliary::showZoomedImage(const cv::Mat &image,const std::string &title){
 /** A function that transforms the data such that it has zero mean and unit
  * variance: img = (img-mean(img(:)))/std(img(:)).
  */
-void Auxiliary::mean0Variance1(cv::Mat &mat,bool justMean){
+void Auxiliary::mean0Variance1(cv::Mat &mat){
 	mat.convertTo(mat,CV_32FC1);
 	unsigned rows = mat.rows;
 	if(rows != 1){
@@ -259,10 +266,8 @@ void Auxiliary::mean0Variance1(cv::Mat &mat,bool justMean){
 	}
 	cv::Scalar mean,stddev;
 	cv::meanStdDev(mat,mean,stddev);
-	if(stddev.val[0] && !justMean){
+	if(stddev.val[0]){
 		mat = (mat-mean.val[0])/stddev.val[0];
-	}else{
-		mat = (mat-mean.val[0]);
 	}
 	mat.convertTo(mat,CV_32FC1);
 	if(rows != 1){

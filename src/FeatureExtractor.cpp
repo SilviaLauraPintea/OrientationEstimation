@@ -314,11 +314,82 @@ const cv::Rect &roi){
 	return result;
 }
 //==============================================================================
+/** Get skin/non-skin ratio of the foreground area.
+ */
+cv::Mat FeatureExtractor::getSkinBins(bool flip,\
+const FeatureExtractor::people &person,const FeatureExtractor::templ &aTempl,\
+const cv::Rect &roi){
+	cv::Rect cutROI;
+	if(!person.thresh_.empty()){
+		this->getThresholdBorderes(cutROI.x,cutROI.width,cutROI.y,cutROI.height,\
+			person.thresh_);
+		cutROI.width  -= cutROI.x;
+		cutROI.height -= cutROI.y;
+	}else{
+		cutROI.x      = aTempl.extremes_[0]-roi.x;
+		cutROI.y      = aTempl.extremes_[2]-roi.y;
+		cutROI.width  = aTempl.extremes_[1]-aTempl.extremes_[0];
+		cutROI.height = aTempl.extremes_[3]-aTempl.extremes_[2];
+	}
+
+	// GET THE SKIN PIXELS OUT OF THE IMAGE
+	cv::Mat img;
+	person.pixels_.copyTo(img);
+	if(this->colorspaceCode_!=-1){
+		cv::cvtColor(img,img,this->invColorspaceCode_);
+	}
+	cv::cvtColor(img,img,CV_BGR2HSV);
+	std::vector<cv::Mat> threeChannels;
+	cv::split(img,threeChannels);
+	cv::Mat skin = threeChannels[1]/threeChannels[2];
+	Auxiliary::normalizeMat(skin);
+	cv::medianBlur(skin,skin,7);
+	cv::erode(skin,skin,cv::Mat(),cv::Point(-1,-1),3);
+	cv::dilate(skin,skin,cv::Mat(),cv::Point(-1,-1),3);
+
+	// INVERT THE SKIN TO HAVE THE FACE REGION WHITE NOT BLACK
+	skin = cv::Scalar(255,255,255) - skin;
+	cv::Mat mask,thresh;
+	person.thresh_.copyTo(thresh);
+	cv::erode(thresh,thresh,cv::Mat(),cv::Point(-1,-1),5);
+	skin.copyTo(mask,thresh);
+	cv::Mat gray;
+	// THRESHOLD THE SKIN IMAGE
+	cv::threshold(mask,gray,250,255,cv::THRESH_BINARY);
+	cv::Mat final = this->cutAndResizeImage(cutROI,gray);
+	img.release();
+	skin.release();
+	mask.release();
+	thresh.release();
+	threeChannels.clear();
+
+	if(flip){cv::flip(final,final,1);}
+	if(this->plot_){
+		cv::imshow("gray",person.pixels_);
+		cv::imshow("final",final);
+		cv::waitKey(5);
+	}
+	cv::Mat result = final.reshape(0,1);
+/*
+	cv::Mat result = cv::Mat::zeros(cv::Size(3,1),CV_32FC1);
+	for(int c=0;c<final.cols;++c){
+		for(int r=0;r<final.rows;++r){
+			if(static_cast<int>(final.at<uchar>(r,c))!=0){
+				++result.at<float>(0,0);
+			}
+		}
+	}
+	result /= static_cast<float>(final.cols*final.rows);
+	final.release();
+*/
+	return result;
+}
+//==============================================================================
 /** Gets the raw pixels corresponding to body of the person +/- background pixels.
  */
 cv::Mat FeatureExtractor::getRawPixels(bool flip,\
 const FeatureExtractor::people &person,const FeatureExtractor::templ &aTempl,\
-const cv::Rect &roi,bool vChannel){
+const cv::Rect &roi,bool color){
 	cv::Rect cutROI;
 	if(!person.thresh_.empty()){
 		this->getThresholdBorderes(cutROI.x,cutROI.width,cutROI.y,cutROI.height,\
@@ -336,18 +407,18 @@ const cv::Rect &roi,bool vChannel){
 	if(this->colorspaceCode_!=-1){
 		cv::cvtColor(large,large,this->invColorspaceCode_);
 	}
+
+	// IF THE IMAGE SHOULD BE GRAY THAN USE THE VALUE CHANNEL
 	cv::Mat gray;
-	if(!vChannel){
-		cv::cvtColor(large,gray,CV_BGR2GRAY);
-	}else{
+	std::vector<cv::Mat> threeChannels;
+	if(!color){
 		cv::cvtColor(large,large,CV_BGR2HSV);
-		std::vector<cv::Mat> threeChannels;
 		cv::split(large,threeChannels);
 		threeChannels[2].copyTo(gray);
+		Auxiliary::normalizeMat(gray);
+	}else{
+		gray = large.reshape(1,0);
 	}
-	Auxiliary::normalizeMat(gray);
-	gray *= 255;
-	gray.convertTo(gray,CV_8UC1);
 	if(this->plot_){
 		cv::imshow("gray",gray);
 		cv::waitKey(5);
@@ -422,14 +493,9 @@ const FeatureExtractor::templ &aTempl,float rotAngle,bool contours){
 	toResize.release();
 	if(flip){cv::flip(tmpEdge,tmpEdge,1);}
 
-	// IF WE WANT TO SEE HOW THE EXTRACTED EDGES LOOK LIKE
- 	if(this->plot_){
-		cv::imshow("Edges",tmpEdge);
-		cv::waitKey(5);
-	}
  	cv::Mat result;
 	if(contours){
-		cv::dilate(tmpEdge,tmpEdge,cv::Mat(),cv::Point(-1,-1),1);
+		cv::dilate(tmpEdge,tmpEdge,cv::Mat(),cv::Point(-1,-1),3);
 		std::vector<std::vector<cv::Point> > contours;
 		cv::findContours(tmpEdge,contours,CV_RETR_EXTERNAL,CV_CHAIN_APPROX_SIMPLE);
 		std::vector<std::vector<cv::Point> >::iterator iter = std::max_element\
@@ -438,7 +504,7 @@ const FeatureExtractor::templ &aTempl,float rotAngle,bool contours){
 		contourMat.convertTo(contourMat,CV_32FC1);
 		contourMat = contourMat.reshape(1,1);
 		cv::Mat preResult;
-		cv::blur(contourMat,contourMat,cv::Size(3,3));
+		cv::blur(contourMat,contourMat,cv::Size(5,5));
 		cv::resize(contourMat,preResult,cv::Size(100,1),0,0,cv::INTER_CUBIC);
 
 		// WRITE IT ON ONE ROW
@@ -448,7 +514,12 @@ const FeatureExtractor::templ &aTempl,float rotAngle,bool contours){
 		dumm.release();
 		preResult.release();
 	}else{
-		cv::blur(tmpEdge,tmpEdge,cv::Size(10,10));
+		cv::dilate(tmpEdge,tmpEdge,cv::Mat(),cv::Point(-1,-1),1);
+		cv::medianBlur(tmpEdge,tmpEdge,3);
+	 	if(this->plot_){
+			cv::imshow("Edges",tmpEdge);
+			cv::waitKey(5);
+		}
 		result = cv::Mat::zeros(cv::Size(tmpEdge.rows*tmpEdge.cols+2,1),CV_32FC1);
 		cv::Mat dumm = result.colRange(0,(tmpEdge.cols*tmpEdge.rows));
 		tmpEdge = tmpEdge.reshape(0,1);
@@ -858,7 +929,7 @@ void FeatureExtractor::extractFeatures(cv::Mat &image,const std::string &sourceN
 	std::vector<cv::Point2f> dummyT;
 	cv::Rect dummyR;
 	for(FeatureExtractor::FEATURE f=FeatureExtractor::EDGES;\
-	f<FeatureExtractor::TEMPL_MATCHES;++f){
+	f<=FeatureExtractor::SKIN_BINS;++f){
 		if(!FeatureExtractor::isFeatureIn(this->featureType_,f)){continue;}
 		cv::Mat dummy;
 		switch(f){
@@ -978,6 +1049,10 @@ cv::Mat FeatureExtractor::extractEdges(cv::Mat &image){
 	if(this->colorspaceCode_!=-1){
 		cv::cvtColor(image,image,this->invColorspaceCode_);
 	}
+	IplImage *im,*res;
+	im = Auxiliary::mat2ipl(image);
+	Auxiliary::myCvtColor(im,res,-1,true,false);
+	image = Auxiliary::ipl2mat(res);
 	cv::cvtColor(image,gray,CV_BGR2GRAY);
 	Auxiliary::mean0Variance1(gray);
 	gray *= 255;
@@ -1236,7 +1311,7 @@ std::vector<cv::Point2f> &keys){
 	std::string toRead;
 	std::cout<<"Image class (CLOSE/MEDIUM/FAR): "<<this->imageClass_<<std::endl;
 	for(FeatureExtractor::FEATURE f=FeatureExtractor::EDGES;\
-	f<=FeatureExtractor::TEMPL_MATCHES;++f){
+	f<=FeatureExtractor::SKIN_BINS;++f){
 		if(!FeatureExtractor::isFeatureIn(this->featureType_,f)){continue;}
 		cv::Mat dummy;
 		switch(f){
@@ -1286,7 +1361,11 @@ std::vector<cv::Point2f> &keys){
 				break;
 			case FeatureExtractor::RAW_PIXELS:
 				// NO NEED TO STORE ANY FEATURE,ONLY THE PIXEL VALUES ARE NEEDED
-				dummy = this->getRawPixels(flip,person,aTempl,roi,true);
+				dummy = this->getRawPixels(flip,person,aTempl,roi);
+				break;
+			case FeatureExtractor::SKIN_BINS:
+				// NO NEED TO STORE ANY FEATURE,ONLY THE PIXEL VALUES ARE NEEDED
+				dummy = this->getSkinBins(flip,person,aTempl,roi);
 				break;
 			default:
 				std::cerr<<"Feature type "<<f<<" unknown"<<std::endl;
@@ -1409,13 +1488,13 @@ const cv::Mat &img){
 	cv::Mat tmp(img.clone(),roiCut),large;
 	cv::Size aSize;
 	if(this->bodyPart_ == FeatureExtractor::HEAD){
-		aSize = cv::Size(50,50);
+		aSize = cv::Size(10,10);
 		cv::blur(tmp,tmp,cv::Size(3,3));
 		cv::resize(tmp,large,aSize,0,0,cv::INTER_NEAREST);
 		tmp.release();
 		return large;
 	}else{
-		unsigned sHeight = 50;
+		unsigned sHeight = 10;
 		if(this->imageClass_=="CLOSE"){
 			aSize.height = sHeight;
 			aSize.width  = aSize.height*6/5;

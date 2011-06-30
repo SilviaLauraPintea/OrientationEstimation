@@ -172,11 +172,11 @@ const std::deque<FeatureExtractor::FEATURE> &feat,const bool readFromFolder){
 		AnnotationsHandle::loadAnnotations(const_cast<char*>\
 			(theAnnotationsFile.c_str()),this->targetAnno_);
 	}
-
 	if(this->onlyExtract_){
 		assert(!FeatureExtractor::isFeatureIn(feat,FeatureExtractor::HOG) &&\
 			!FeatureExtractor::isFeatureIn(feat,FeatureExtractor::TEMPL_MATCHES) &&\
-			!FeatureExtractor::isFeatureIn(feat,FeatureExtractor::RAW_PIXELS));
+			!FeatureExtractor::isFeatureIn(feat,FeatureExtractor::RAW_PIXELS) &&\
+			!FeatureExtractor::isFeatureIn(feat,FeatureExtractor::SKIN_BINS));
 	}
 	this->extractor_->init(feat,this->datasetPath_+"features/",this->colorspaceCode_,\
 		this->invColorspaceCode_,this->featurePart_);
@@ -578,7 +578,6 @@ const std::deque<unsigned> &exi,float threshVal){
 		// COMPUTE THE ROTATION ANGLE ONCE AND FOR ALL
 		float rotAngle = this->rotationAngle(this->templates_[i].head_,\
 						this->templates_[i].center_);
-
 		// ROTATE THE FOREGROUND PIXELS,THREHSOLD AND THE TEMPLATE
 		cv::Point2f rotBorders,absRotCenter;
 		std::vector<cv::Point2f> keys;
@@ -590,7 +589,6 @@ const std::deque<unsigned> &exi,float threshVal){
 			absRotCenter,rotBorders,keys,allPeople[i].pixels_);
 		absRotCenter = cv::Point2f(allPeople[i].pixels_.cols/2.0+allPeople[i].borders_[0],\
 			allPeople[i].pixels_.rows/2.0+allPeople[i].borders_[2]);
-
 		cv::Mat aDummy;
 		this->extractor_->rotate2Zero(rotAngle,FeatureExtractor::TEMPLATE,roi,\
 			absRotCenter,rotBorders,this->templates_[i].points_,aDummy);
@@ -635,7 +633,7 @@ const std::deque<unsigned> &exi,float threshVal){
 			nextImg.release();
 		}
 		dataRow.convertTo(dataRow,CV_32FC1);
-		Auxiliary::mean0Variance1(dataRow,true);
+		Auxiliary::mean0Variance1(dataRow);
 
 		// STORE THE EXTRACTED ROW INTO THE DATA MATRIX
 		if(this->data_[this->existing_[i].groupNo_].empty()){
@@ -644,6 +642,8 @@ const std::deque<unsigned> &exi,float threshVal){
 			this->data_[this->existing_[i].groupNo_].push_back(dataRow);
 		}
 		dataRow.release();
+
+		// OUTPUT THE LABEL FOR THE CURRENT IMAGE
 		float label = std::atan2(this->targets_[this->existing_[i].groupNo_].\
 			at<float>(this->data_[this->existing_[i].groupNo_].rows-1,0),\
 			this->targets_[this->existing_[i].groupNo_].\
@@ -918,7 +918,6 @@ const float logBGProb,const vnl_vector<float> &logSumPixelBGProb){
 	//5) DILATE A BIT THE BACKGROUND SO THE BACKGROUND NOISE GOES NICELY
 	IplImage *bg = Helpers::vec2img((imgVec-bgVec).apply(fabs));
 	cvSmooth(bg,bg,CV_GAUSSIAN,31,31);
-	cvDilate(bg,bg,NULL,1);
 	for(unsigned l=0;l<10;++l){
 		cvErode(bg,bg,NULL,1);
 		cvDilate(bg,bg,NULL,1);
@@ -1297,7 +1296,7 @@ void PeopleDetector::extractHeadArea(int i,FeatureExtractor::people &person){
 		this->templates_[i].points_[13]);
 	float headSize2 = Helpers::dist(this->templates_[i].points_[13],\
 		this->templates_[i].points_[14]);
-	int radius = static_cast<int>(std::max(headSize1,headSize2)*1.25);
+	int radius = static_cast<int>(std::max(headSize1,headSize2));
 	if(!person.thresh_.empty()){
 		int minX,maxX,minY,maxY;
 		this->extractor_->getThresholdBorderes(minX,maxX,minY,maxY,person.thresh_);
@@ -1356,19 +1355,26 @@ std::tr1::shared_ptr<FeatureExtractor> PeopleDetector::extractor(){
 	return this->extractor_;
 }
 //==============================================================================
+void PeopleDetector::setFlip(bool flip){
+	this->flip_ = flip;
+}
+//==============================================================================
 //==============================================================================
 /*
 int main(int argc,char **argv){
 	PeopleDetector feature(argc,argv,true,false,-1);
+
 	for(FeatureExtractor::FEATURE f=FeatureExtractor::IPOINTS;\
 	f<=FeatureExtractor::SURF;++f){
 		if(f==FeatureExtractor::RAW_PIXELS || f==FeatureExtractor::SIFT_DICT){
 			continue;
 		}
+
+FeatureExtractor::FEATURE f=FeatureExtractor::EDGES;
 		std::deque<FeatureExtractor::FEATURE> feat(1,f);
 		feature.init(std::string(argv[1])+"annotated_train",\
 			std::string(argv[1])+"annotated_train.txt",feat,true);
 		feature.start(true,true);
-	}
+//	}
 }
 */

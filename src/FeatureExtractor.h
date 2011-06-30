@@ -127,7 +127,7 @@ class FeatureExtractor {
 		/** All available feature types.
 		 */
 		enum FEATURE {EDGES,GABOR,HOG,IPOINTS,RAW_PIXELS,SIFT,SIFT_DICT,SURF,\
-			TEMPL_MATCHES};
+			TEMPL_MATCHES,SKIN_BINS};
 		/** What needs to be rotated.
 		 */
 		enum ROTATE {MATRIX,TEMPLATE,KEYS};
@@ -201,7 +201,7 @@ class FeatureExtractor {
 		 */
 		cv::Mat getRawPixels(bool flip,const FeatureExtractor::people &person,\
 			const FeatureExtractor::templ &aTempl,const cv::Rect &roi,\
-			bool vChannel=true);
+			bool color=true);
 		/** Creates a gabor with the parameters given by the parameter vector.
 		 */
 		void createGabor(cv::Mat &gabor,float *params = NULL);
@@ -251,6 +251,11 @@ class FeatureExtractor {
 		 */
 		static cv::Mat dist2(const cv::Mat &mat1,const cv::Mat &mat2,\
 			cv::Mat &minDists,cv::Mat &minLabs);
+
+/** ???????????????????????????????????????????????????.
+ */
+		cv::Mat getSkinBins(bool flip,const FeatureExtractor::people &person,\
+			const FeatureExtractor::templ &aTempl,const cv::Rect &roi);
 	//==========================================================================
 	private:
 		/** @var isInit_
