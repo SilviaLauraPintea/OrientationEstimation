@@ -99,13 +99,6 @@ ClassifyImages::CLASSIFIER classi){
 						"textOfImageNameTest]"<<std::endl;
 					exit(1);
 				}
-/*
-				if(this->testDir_ == this->trainDir_){
-					std::cerr<<"The test directory and the train directory coincide"<<\
-						std::endl;
-					std::abort();
-				}
-*/
 				// IF WE WANT TO TEST THE FINAL CLASIFIER'S PERFORMANCE
 				this->trainFolder_      = this->trainDir_+"annotated_train/";
 				this->annotationsTrain_ = this->trainDir_+"annotated_train.txt";
@@ -1507,12 +1500,13 @@ int main(int argc,char **argv){
 //	feat.push_back(FeatureExtractor::HOG);
 //	feat.push_back(FeatureExtractor::TEMPL_MATCHES);
 //	feat.push_back(FeatureExtractor::SKIN_BINS);
+//	feat.push_back(FeatureExtractor::IPOINTS);
 
 /*
 	// build data matrix
  	ClassifyImages classi(argc,argv,ClassifyImages::TEST,\
  		ClassifyImages::GAUSSIAN_PROCESS);
- 	classi.init(0.01,500000.0,500000.0,feat,&GaussianProcess::sqexp,false);
+ 	classi.init(1e-5,200000.0,200000.0,feat,&GaussianProcess::sqexp,false);
 	classi.buildDataMatrix(-1,FeatureExtractor::HEAD);
 */
 	//--------------------------------------------------------------------------
@@ -1520,7 +1514,7 @@ int main(int argc,char **argv){
 	// build PCA models
 	ClassifyImages classi(argc,argv,ClassifyImages::TEST,\
  		ClassifyImages::GAUSSIAN_PROCESS);
-	classi.init(10.0,1000000.0,100000.0,feat,&GaussianProcess::sqexp,true);
+	classi.init(1e-5,200000.0,200000.0,feat,&GaussianProcess::sqexp,true);
 	classi.buildPCAModels(-1,FeatureExtractor::HEAD);
 */
 	//--------------------------------------------------------------------------

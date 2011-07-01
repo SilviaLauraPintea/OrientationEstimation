@@ -587,9 +587,9 @@ const std::deque<unsigned> &exi,float threshVal){
 		}
 		this->extractor_->rotate2Zero(rotAngle,FeatureExtractor::MATRIX,roi,\
 			absRotCenter,rotBorders,keys,allPeople[i].pixels_);
-		absRotCenter = cv::Point2f(allPeople[i].pixels_.cols/2.0+allPeople[i].borders_[0],\
-			allPeople[i].pixels_.rows/2.0+allPeople[i].borders_[2]);
 		cv::Mat aDummy;
+		absRotCenter = cv::Point2f(absRotCenter.x+allPeople[i].borders_[0],\
+			absRotCenter.y+allPeople[i].borders_[2]);
 		this->extractor_->rotate2Zero(rotAngle,FeatureExtractor::TEMPLATE,roi,\
 			absRotCenter,rotBorders,this->templates_[i].points_,aDummy);
 
@@ -918,6 +918,7 @@ const float logBGProb,const vnl_vector<float> &logSumPixelBGProb){
 	//5) DILATE A BIT THE BACKGROUND SO THE BACKGROUND NOISE GOES NICELY
 	IplImage *bg = Helpers::vec2img((imgVec-bgVec).apply(fabs));
 	cvSmooth(bg,bg,CV_GAUSSIAN,31,31);
+	cvDilate(bg,bg,NULL,1);
 	for(unsigned l=0;l<10;++l){
 		cvErode(bg,bg,NULL,1);
 		cvDilate(bg,bg,NULL,1);
@@ -1370,7 +1371,7 @@ int main(int argc,char **argv){
 			continue;
 		}
 
-FeatureExtractor::FEATURE f=FeatureExtractor::EDGES;
+FeatureExtractor::FEATURE f=FeatureExtractor::IPOINTS;
 		std::deque<FeatureExtractor::FEATURE> feat(1,f);
 		feature.init(std::string(argv[1])+"annotated_train",\
 			std::string(argv[1])+"annotated_train.txt",feat,true);

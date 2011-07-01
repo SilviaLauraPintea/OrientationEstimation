@@ -197,7 +197,7 @@ std::vector<cv::Point2f> &pts,cv::Mat &toRotate){
 				cv::Mat tmp = cv::Mat::zeros(cv::Size(3,1),CV_32FC1);
 				tmp.at<float>(0,0) = ptX;
 				tmp.at<float>(0,1) = ptY;
-				tmp.at<float>(0,2) = 0.0f;
+				tmp.at<float>(0,2) = 1.0f;
 				if(srcRotate.empty()){
 					tmp.copyTo(srcRotate);
 				}else{
@@ -222,8 +222,8 @@ std::vector<cv::Point2f> &pts,cv::Mat &toRotate){
 				ptY>(roi.y+roi.height)){
 					continue;
 				}
-				result.at<float>(y,toRotate.cols-2);
-				result.at<float>(y,toRotate.cols-1);
+				result.at<float>(y,toRotate.cols-2) = ptX;
+				result.at<float>(y,toRotate.cols-1) = ptY;
 			}
 			break;
 	}
@@ -341,18 +341,21 @@ const cv::Rect &roi){
 	cv::cvtColor(img,img,CV_BGR2HSV);
 	std::vector<cv::Mat> threeChannels;
 	cv::split(img,threeChannels);
-	cv::Mat skin = threeChannels[1]/threeChannels[2];
+	cv::Mat skin = (threeChannels[1]+threeChannels[2])/threeChannels[0];
 	Auxiliary::normalizeMat(skin);
-	cv::medianBlur(skin,skin,7);
-	cv::erode(skin,skin,cv::Mat(),cv::Point(-1,-1),3);
 	cv::dilate(skin,skin,cv::Mat(),cv::Point(-1,-1),3);
+	for(unsigned l=0;l<10;++l){
+		cv::dilate(skin,skin,cv::Mat(),cv::Point(-1,-1),3);
+		cv::erode(skin,skin,cv::Mat(),cv::Point(-1,-1),3);
+	}
+	cv::medianBlur(skin,skin,7);
 
-	// INVERT THE SKIN TO HAVE THE FACE REGION WHITE NOT BLACK
-	skin = cv::Scalar(255,255,255) - skin;
+	// AVIOD HAVING SKIN IN THE BACKGROUND
 	cv::Mat mask,thresh;
 	person.thresh_.copyTo(thresh);
-	cv::erode(thresh,thresh,cv::Mat(),cv::Point(-1,-1),5);
+	cv::erode(thresh,thresh,cv::Mat(),cv::Point(-1,-1),1);
 	skin.copyTo(mask,thresh);
+
 	cv::Mat gray;
 	// THRESHOLD THE SKIN IMAGE
 	cv::threshold(mask,gray,250,255,cv::THRESH_BINARY);
@@ -367,7 +370,7 @@ const cv::Rect &roi){
 	if(this->plot_){
 		cv::imshow("gray",person.pixels_);
 		cv::imshow("final",final);
-		cv::waitKey(5);
+		cv::waitKey(0);
 	}
 	cv::Mat result = final.reshape(0,1);
 /*
@@ -602,8 +605,8 @@ std::vector<cv::Point2f> &indices){
 cv::Mat FeatureExtractor::getPointsGrid(bool flip,const cv::Mat &feature,\
 const cv::Rect &roi,const FeatureExtractor::templ &aTempl,const cv::Mat &test){
 	// GET THE GRID SIZE FROM THE TEMPLATE SIZE
-	unsigned no       = 30;
-	cv::Mat preResult = cv::Mat::zeros(cv::Size(no*no,3),CV_32FC1);
+	unsigned no    = 30;
+	cv::Mat result = cv::Mat::zeros(cv::Size(no*no+2,1),CV_32FC1);
 	float rateX = (aTempl.extremes_[1]-aTempl.extremes_[0])/static_cast<float>(no);
 	float rateY = (aTempl.extremes_[3]-aTempl.extremes_[2])/static_cast<float>(no);
 
@@ -622,9 +625,7 @@ const cv::Rect &roi,const FeatureExtractor::templ &aTempl,const cv::Mat &test){
 			for(float ix=aTempl.extremes_[0];ix<aTempl.extremes_[1]-0.01;ix+=rateX){
 				for(float iy=aTempl.extremes_[2];iy<aTempl.extremes_[3]-0.01;iy+=rateY){
 					if(ix<=pt.x && pt.x<(ix+rateX) && iy<=pt.y && pt.y<(iy+rateY)){
-						preResult.at<float>(0,counter) += 1.0;
-						preResult.at<float>(1,counter) += pt.x;
-						preResult.at<float>(2,counter) += pt.y;
+						result.at<float>(0,counter) += 1.0;
 					}
 					counter +=1;
 				}
@@ -633,20 +634,19 @@ const cv::Rect &roi,const FeatureExtractor::templ &aTempl,const cv::Mat &test){
 	}
 	if(this->plot_ && !test.empty()){
 		cv::Mat copyTest(test);
+		cv::imshow("image",copyTest);
 		for(std::size_t l=0;l<indices.size();++l){
 			cv::circle(copyTest,cv::Point2f(indices[l].x-roi.x,indices[l].y-roi.y),\
 				3,cv::Scalar(0,0,255));
 		}
 		cv::imshow("IPOINTS",copyTest);
-		cv::waitKey(5);
+		cv::waitKey(0);
 		copyTest.release();
 	}
-	preResult      = preResult.reshape(0,1);
-	cv::Mat result = cv::Mat::zeros(cv::Size(preResult.cols+2,1),CV_32FC1);
-	cv::Mat range  = result.colRange(0,preResult.cols);
-	preResult.copyTo(range);
-	preResult.release();
-	range.release();
+
+	// NORMALIZE THE HOSTOGRAM
+	cv::Scalar scalar = cv::sum(result);
+	result /= static_cast<float>(scalar[0]);
 
 	// IF WE WANT TO SEE THE VALUES THAT WERE STORED
 	if(this->print_){
