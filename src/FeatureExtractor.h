@@ -173,8 +173,9 @@ class FeatureExtractor {
 			const FeatureExtractor::templ &aTempl,const cv::Rect &roi);
 		/** Gets the edges in an image.
 		 */
-		cv::Mat getEdges(bool flip,cv::Mat &feature,const cv::Mat &thresholded,\
-			const cv::Rect &roi,const FeatureExtractor::templ &aTempl,float rotAngle,\
+		cv::Mat getEdges(bool flip,cv::Mat &feature,\
+			const FeatureExtractor::people &person,const cv::Rect &roi,\
+			const FeatureExtractor::templ &aTempl,float rotAngle,\
 			bool contours = false);
 		/** SURF descriptors (Speeded Up Robust Features).
 		 */
@@ -201,7 +202,7 @@ class FeatureExtractor {
 		 */
 		cv::Mat getRawPixels(bool flip,const FeatureExtractor::people &person,\
 			const FeatureExtractor::templ &aTempl,const cv::Rect &roi,\
-			bool color=true);
+			bool color=false);
 		/** Creates a gabor with the parameters given by the parameter vector.
 		 */
 		void createGabor(cv::Mat &gabor,float *params = NULL);
@@ -251,11 +252,15 @@ class FeatureExtractor {
 		 */
 		static cv::Mat dist2(const cv::Mat &mat1,const cv::Mat &mat2,\
 			cv::Mat &minDists,cv::Mat &minLabs);
-
-/** ???????????????????????????????????????????????????.
- */
+		/** Get skin/non-skin ratio of the foreground area.
+		 */
 		cv::Mat getSkinBins(bool flip,const FeatureExtractor::people &person,\
 			const FeatureExtractor::templ &aTempl,const cv::Rect &roi);
+		/** Gets the threshold/template extremities and calls cutAndResize on the input
+		 * image.
+		 */
+		cv::Mat grabCutImage(bool flip,const FeatureExtractor::templ &aTempl,\
+		const cv::Mat &thresh,const cv::Rect &roi,const cv::Mat &feature);
 	//==========================================================================
 	private:
 		/** @var isInit_

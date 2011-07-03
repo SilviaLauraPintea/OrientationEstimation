@@ -430,13 +430,13 @@ void PeopleDetector::allForegroundPixels(std::deque<FeatureExtractor::people>\
 		allPeople[k].borders_[1] = maxX;
 		allPeople[k].borders_[2] = minY;
 		allPeople[k].borders_[3] = maxY;
-//		if(this->plot_){
+		if(this->plot_){
 			cv::imshow("people",allPeople[k].pixels_);
 			if(!allPeople[k].thresh_.empty()){
 				cv::imshow("threshold",allPeople[k].thresh_);
 			}
 			cv::waitKey(5);
-//		}
+		}
 		colorRoi.release();
 	}
 	thrsh.release();
@@ -918,7 +918,6 @@ const float logBGProb,const vnl_vector<float> &logSumPixelBGProb){
 	//5) DILATE A BIT THE BACKGROUND SO THE BACKGROUND NOISE GOES NICELY
 	IplImage *bg = Helpers::vec2img((imgVec-bgVec).apply(fabs));
 	cvSmooth(bg,bg,CV_GAUSSIAN,31,31);
-	cvDilate(bg,bg,NULL,1);
 	for(unsigned l=0;l<10;++l){
 		cvErode(bg,bg,NULL,1);
 		cvDilate(bg,bg,NULL,1);
@@ -943,7 +942,7 @@ const float logBGProb,const vnl_vector<float> &logSumPixelBGProb){
 		}
 		cvShowImage("bg",tmpBg);
 		cvShowImage("image",tmpSrc);
-		cvWaitKey(5);
+		cvWaitKey(0);
 		cvReleaseImage(&tmpBg);
 		cvReleaseImage(&tmpSrc);
 	}
@@ -1371,7 +1370,7 @@ int main(int argc,char **argv){
 			continue;
 		}
 
-FeatureExtractor::FEATURE f=FeatureExtractor::IPOINTS;
+FeatureExtractor::FEATURE f=FeatureExtractor::SIFT;
 		std::deque<FeatureExtractor::FEATURE> feat(1,f);
 		feature.init(std::string(argv[1])+"annotated_train",\
 			std::string(argv[1])+"annotated_train.txt",feat,true);

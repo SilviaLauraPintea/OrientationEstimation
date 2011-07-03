@@ -1073,7 +1073,7 @@ void ClassifyImages::buildDictionary(int colorSp,bool toUseGT){
 	this->resetFeatures(this->trainDir_,this->trainImgString_,colorSp);
 
 	// EXTRACT THE SIFT FEATURES AND CONCATENATE THEM
-	std::deque<FeatureExtractor::FEATURE> feat(FeatureExtractor::SIFT_DICT);
+	std::deque<FeatureExtractor::FEATURE> feat(1,FeatureExtractor::SIFT_DICT);
 	this->features_->init(this->trainFolder_,this->annotationsTrain_,feat,true);
 	this->features_->start(true,toUseGT);
 
@@ -1492,11 +1492,11 @@ bool train,int nEigens,int reshapeRows){
 //==============================================================================
 int main(int argc,char **argv){
 	std::deque<FeatureExtractor::FEATURE> feat;
-//	feat.push_back(FeatureExtractor::HOG);
+	feat.push_back(FeatureExtractor::SIFT);
 //	feat.push_back(FeatureExtractor::EDGES);
-//	feat.push_back(FeatureExtractor::HOG);
+//	feat.push_back(FeatureExtractor::SURF);
 //	feat.push_back(FeatureExtractor::GABOR);
-	feat.push_back(FeatureExtractor::RAW_PIXELS);
+//	feat.push_back(FeatureExtractor::RAW_PIXELS);
 //	feat.push_back(FeatureExtractor::HOG);
 //	feat.push_back(FeatureExtractor::TEMPL_MATCHES);
 //	feat.push_back(FeatureExtractor::SKIN_BINS);
@@ -1534,7 +1534,7 @@ int main(int argc,char **argv){
 	classi.init(1e-5,20000.0,20000.0,feat,&GaussianProcess::sqexp,false);
 	classi.runCrossValidation(5,AnnotationsHandle::LONGITUDE,-1,false,\
 		FeatureExtractor::HEAD);
-*
+*/
 	//--------------------------------------------------------------------------
 /*
 	// BUILD THE SIFT DICTIONARY

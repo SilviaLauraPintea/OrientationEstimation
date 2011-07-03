@@ -41,7 +41,7 @@ FeatureExtractor::FeatureExtractor(){
 	this->meanSize_     = 128;
 	this->featureFile_  = "none";
 	this->print_        = false;
-	this->plot_         = true;
+	this->plot_         = false;
 }
 //==============================================================================
 FeatureExtractor::~FeatureExtractor(){
@@ -461,12 +461,39 @@ int &maxY,const cv::Mat &thresh){
 	}
 }
 //==============================================================================
+/** Gets the threshold/template extremities and calls cutAndResize on the input
+ * image.
+ */
+cv::Mat FeatureExtractor::grabCutImage(bool flip,const FeatureExtractor::templ &aTempl,\
+const cv::Mat &thresh,const cv::Rect &roi,const cv::Mat &feature){
+	// PICK OUT ONLY THE THRESHOLDED ARES RESHAPE IT AND RETURN IT
+	cv::Rect cutROI;
+	cv::Mat toResize;
+	if(!thresh.empty()){
+		feature.copyTo(toResize,thresh);
+		this->getThresholdBorderes(cutROI.x,cutROI.width,cutROI.y,cutROI.height,\
+			thresh);
+		cutROI.width   -= cutROI.x;
+		cutROI.height  -= cutROI.y;
+	}else{
+		feature.copyTo(toResize);
+		cutROI.x      = aTempl.extremes_[0]-roi.x;
+		cutROI.y      = aTempl.extremes_[2]-roi.y;
+		cutROI.width  = aTempl.extremes_[1]-aTempl.extremes_[0];
+		cutROI.height = aTempl.extremes_[3]-aTempl.extremes_[2];
+	}
+	cv::Mat cut = this->cutAndResizeImage(cutROI,toResize);
+	toResize.release();
+	if(flip){cv::flip(cut,cut,1);}
+	return cut;
+}
+//==============================================================================
 /** Gets the edges in an image.
  */
 cv::Mat FeatureExtractor::getEdges(bool flip,cv::Mat &feature,\
-const cv::Mat &thresholded,const cv::Rect &roi,\
+const FeatureExtractor::people &person,const cv::Rect &roi,\
 const FeatureExtractor::templ &aTempl,float rotAngle,bool contours){
-	// EXTRACT THE EDGES AND ROTATE THE EDGES TO THE RIGHT POSSITION
+	// RTOATE THE FEATURE WRT THE CAMERA
 	cv::Point2f rotBorders;
 	feature.convertTo(feature,CV_8UC1);
 	cv::Mat tmpFeat(feature.clone(),roi);
@@ -474,27 +501,8 @@ const FeatureExtractor::templ &aTempl,float rotAngle,bool contours){
 	cv::Point2f rotCenter(tmpFeat.cols/2+roi.x,tmpFeat.rows/2+roi.y);
 	this->rotate2Zero(rotAngle,FeatureExtractor::MATRIX,roi,rotCenter,rotBorders,\
 		dummy,tmpFeat);
-
-	// PICK OUT ONLY THE THRESHOLDED ARES RESHAPE IT AND RETURN IT
-	cv::Rect cutROI;
-	cv::Mat toResize;
-	if(!thresholded.empty()){
-		tmpFeat.copyTo(toResize,thresholded);
-		this->getThresholdBorderes(cutROI.x,cutROI.width,cutROI.y,cutROI.height,\
-			thresholded);
-		cutROI.width   -= cutROI.x;
-		cutROI.height  -= cutROI.y;
-	}else{
-		tmpFeat.copyTo(toResize);
-		cutROI.x      = aTempl.extremes_[0]-roi.x;
-		cutROI.y      = aTempl.extremes_[2]-roi.y;
-		cutROI.width  = aTempl.extremes_[1]-aTempl.extremes_[0];
-		cutROI.height = aTempl.extremes_[3]-aTempl.extremes_[2];
-	}
-	cv::Mat tmpEdge = this->cutAndResizeImage(cutROI,toResize);
-	tmpFeat.release();
-	toResize.release();
-	if(flip){cv::flip(tmpEdge,tmpEdge,1);}
+	// CUT AND RESIZE THE FEATURE (person IS ROTATED)
+	cv::Mat tmpEdge = this->grabCutImage(flip,aTempl,person.thresh_,roi,tmpFeat);
 
  	cv::Mat result;
 	if(contours){
@@ -515,13 +523,14 @@ const FeatureExtractor::templ &aTempl,float rotAngle,bool contours){
 		cv::Mat dumm = result.colRange(0,(preResult.cols*preResult.rows));
 		preResult.copyTo(dumm);
 		dumm.release();
+		contourMat.release();
 		preResult.release();
 	}else{
 		cv::dilate(tmpEdge,tmpEdge,cv::Mat(),cv::Point(-1,-1),1);
-		cv::medianBlur(tmpEdge,tmpEdge,3);
+		cv::medianBlur(tmpEdge,tmpEdge,11);
 	 	if(this->plot_){
 			cv::imshow("Edges",tmpEdge);
-			cv::waitKey(5);
+			cv::waitKey(0);
 		}
 		result = cv::Mat::zeros(cv::Size(tmpEdge.rows*tmpEdge.cols+2,1),CV_32FC1);
 		cv::Mat dumm = result.colRange(0,(tmpEdge.cols*tmpEdge.rows));
@@ -530,7 +539,9 @@ const FeatureExtractor::templ &aTempl,float rotAngle,bool contours){
 		dumm.release();
 	}
 	result.convertTo(result,CV_32FC1);
+	tmpFeat.release();
 	tmpEdge.release();
+
 	if(this->print_){
 		std::cout<<"Size(EDGES): "<<result.size()<<std::endl;
 		for(int i=0;i<std::min(10,result.cols);++i){
@@ -1049,16 +1060,10 @@ cv::Mat FeatureExtractor::extractEdges(cv::Mat &image){
 	if(this->colorspaceCode_!=-1){
 		cv::cvtColor(image,image,this->invColorspaceCode_);
 	}
-	IplImage *im,*res;
-	im = Auxiliary::mat2ipl(image);
-	Auxiliary::myCvtColor(im,res,-1,true,false);
-	image = Auxiliary::ipl2mat(res);
 	cv::cvtColor(image,gray,CV_BGR2GRAY);
-	Auxiliary::mean0Variance1(gray);
-	gray *= 255;
-	gray.convertTo(gray,CV_8UC1);
-	cv::blur(gray,gray,cv::Size(3,3));
-	cv::Canny(gray,result,250,150,3,true);
+	cv::equalizeHist(gray,gray);
+	cv::medianBlur(gray,gray,5);
+	cv::Canny(gray,result,100,50,3,true);
 	if(this->plot_){
 		cv::imshow("gray",gray);
 		cv::imshow("edges",result);
@@ -1122,7 +1127,7 @@ cv::Mat FeatureExtractor::extractSURF(cv::Mat &image){
 				3,cv::Scalar(0,0,255));
 		}
 		cv::imshow("SURFS",image);
-		cv::waitKey(5);
+		cv::waitKey(0);
 	}
 	result.convertTo(result,CV_32FC1);
 	return result;
@@ -1237,21 +1242,30 @@ const std::vector<cv::Point2f> &templ,const cv::Rect &roi){
 
 	// WE USE THE SAME FUNCTION TO BUILD THE DICTIONARY ALSO
 	if(FeatureExtractor::isFeatureIn(this->featureType_,FeatureExtractor::SIFT_DICT)){
-		cv::Mat preResult = cv::Mat::zeros(keypoints.size(),aSIFT.descriptorSize(),CV_32FC1);
 		std::vector<cv::KeyPoint> goodKP;
-		result = cv::Mat::zeros(cv::Size(preResult.cols+2,result.rows),CV_32FC1);
 		for(std::size_t i=0;i<keypoints.size();++i){
 			if(FeatureExtractor::isInTemplate(keypoints[i].pt.x+roi.x,\
 			keypoints[i].pt.y+roi.y,templ)){
+				cv::Mat tmpResult = cv::Mat::zeros(cv::Size\
+					(aSIFT.descriptorSize()+2,1),CV_32FC1);
 				goodKP.push_back(keypoints[i]);
-				result.at<float>(goodKP.size()-1,result.cols-2) = keypoints[i].pt.x;
-				result.at<float>(goodKP.size()-1,result.cols-1) = keypoints[i].pt.y;
+				tmpResult.at<float>(0,tmpResult.cols-2) = keypoints[i].pt.x;
+				tmpResult.at<float>(0,tmpResult.cols-1) = keypoints[i].pt.y;
+				if(result.empty()){
+					tmpResult.copyTo(result);
+				}else{
+					result.push_back(tmpResult);
+				}
+				tmpResult.release();
 			}
 		}
+		cv::Mat preResult = cv::Mat::zeros(goodKP.size(),aSIFT.descriptorSize(),CV_32FC1);
 		aSIFT(gray,cv::Mat(),goodKP,preResult,true);
+		assert(preResult.rows == result.rows);
 		cv::Mat dummy =	result.colRange(0,preResult.cols);
 		preResult.copyTo(dummy);
 		preResult.release();
+		dummy.release();
 		if(this->plot_){
 			for(std::size_t i=0;i<goodKP.size();++i){
 				cv::circle(image,goodKP[i].pt,3,cv::Scalar(0,0,255));
@@ -1261,7 +1275,7 @@ const std::vector<cv::Point2f> &templ,const cv::Rect &roi){
 		}
 	// IF WE ONLY WANT TO STORE THE SIFT FEATURE WE NEED TO ADD THE x-S AND y-S
 	}else if(FeatureExtractor::isFeatureIn(this->featureType_,FeatureExtractor::SIFT)){
-		result = cv::Mat::zeros(keypoints.size(),aSIFT.descriptorSize()+4,CV_32FC1);
+		result = cv::Mat::zeros(keypoints.size(),aSIFT.descriptorSize()+2,CV_32FC1);
 		cv::Mat dummy1 = result.colRange(0,aSIFT.descriptorSize());
 		cv::Mat dummy2;
 		aSIFT(gray,cv::Mat(),keypoints,dummy2,true);
@@ -1325,7 +1339,7 @@ std::vector<cv::Point2f> &keys){
 			case FeatureExtractor::EDGES:
 				toRead = (this->featureFile_+"EDGES/"+imgName+".bin");
 				Auxiliary::binFile2mat(feature,const_cast<char*>(toRead.c_str()));
-				dummy = this->getEdges(flip,feature,person.thresh_,roi,aTempl,rotAngle);
+				dummy = this->getEdges(flip,feature,person,roi,aTempl,rotAngle);
 				break;
 			case FeatureExtractor::SURF:
 				toRead = (this->featureFile_+"SURF/"+imgName+".bin");
@@ -1488,13 +1502,13 @@ const cv::Mat &img){
 	cv::Mat tmp(img.clone(),roiCut),large;
 	cv::Size aSize;
 	if(this->bodyPart_ == FeatureExtractor::HEAD){
-		aSize = cv::Size(10,10);
+		aSize = cv::Size(100,100);
 		cv::blur(tmp,tmp,cv::Size(3,3));
 		cv::resize(tmp,large,aSize,0,0,cv::INTER_NEAREST);
 		tmp.release();
 		return large;
 	}else{
-		unsigned sHeight = 10;
+		unsigned sHeight = 100;
 		if(this->imageClass_=="CLOSE"){
 			aSize.height = sHeight;
 			aSize.width  = aSize.height*6/5;

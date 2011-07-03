@@ -259,6 +259,7 @@ void Auxiliary::showZoomedImage(const cv::Mat &image,const std::string &title){
  * variance: img = (img-mean(img(:)))/std(img(:)).
  */
 void Auxiliary::mean0Variance1(cv::Mat &mat){
+	int matType = mat.type();
 	mat.convertTo(mat,CV_32FC1);
 	unsigned rows = mat.rows;
 	if(rows != 1){
@@ -272,6 +273,10 @@ void Auxiliary::mean0Variance1(cv::Mat &mat){
 	mat.convertTo(mat,CV_32FC1);
 	if(rows != 1){
 		mat = mat.reshape(0,rows);
+	}
+	if(matType == CV_8UC1){
+		mat *= 255;
+		mat.convertTo(mat,CV_8UC1);
 	}
 }
 //==============================================================================
