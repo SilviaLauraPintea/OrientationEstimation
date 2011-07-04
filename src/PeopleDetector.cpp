@@ -430,13 +430,13 @@ void PeopleDetector::allForegroundPixels(std::deque<FeatureExtractor::people>\
 		allPeople[k].borders_[1] = maxX;
 		allPeople[k].borders_[2] = minY;
 		allPeople[k].borders_[3] = maxY;
-		if(this->plot_){
+//		if(this->plot_){
 			cv::imshow("people",allPeople[k].pixels_);
 			if(!allPeople[k].thresh_.empty()){
 				cv::imshow("threshold",allPeople[k].thresh_);
 			}
 			cv::waitKey(5);
-		}
+//		}
 		colorRoi.release();
 	}
 	thrsh.release();
@@ -1370,7 +1370,7 @@ int main(int argc,char **argv){
 			continue;
 		}
 
-FeatureExtractor::FEATURE f=FeatureExtractor::SIFT;
+FeatureExtractor::FEATURE f=FeatureExtractor::GABOR;
 		std::deque<FeatureExtractor::FEATURE> feat(1,f);
 		feature.init(std::string(argv[1])+"annotated_train",\
 			std::string(argv[1])+"annotated_train.txt",feat,true);

@@ -41,7 +41,7 @@ FeatureExtractor::FeatureExtractor(){
 	this->meanSize_     = 128;
 	this->featureFile_  = "none";
 	this->print_        = false;
-	this->plot_         = false;
+	this->plot_         = true;
 }
 //==============================================================================
 FeatureExtractor::~FeatureExtractor(){
@@ -772,7 +772,7 @@ const FeatureExtractor::templ &aTempl,const float rotAngle,int aheight){
 		if(this->plot_){
 			cv::imshow("WholeGaborResponse",tmp1);
 			cv::imshow("GaborResponse",tmp3);
-			cv::waitKey(5);
+			cv::waitKey(0);
 		}
 
 		// RESHAPE AND STORE IN THE RIGHT PLACE
@@ -847,7 +847,7 @@ std::vector<cv::Point2f> &indices){
 		if(FeatureExtractor::isInTemplate(ptX,ptY,templ)){
 			cv::Mat dummy1 = tmp.row(counter);
 			cv::Mat dummy2 = feature.row(y);
-			cv::Mat dummy3 = dummy2.colRange(0,dummy2.cols-2);
+			cv::Mat dummy3 = dummy2.colRange(0,tmp.cols);
 			dummy3.copyTo(dummy1);
 			dummy1.release();
 			dummy2.release();
@@ -1145,40 +1145,26 @@ cv::Mat FeatureExtractor::extractGabor(cv::Mat &image){
 	// params[4] -- lambda: (2,255) // thickness
 	// params[5] -- psi: (0,180) // number of lines
 	std::deque<float*> allParams;
+	float *params0 = new float[6];
+	params0[0] = 1.0;params0[1] = 0.9;params0[2] = 2.0;
+	params0[3] = M_PI/2.0;params0[4] = 200.0;params0[5] = 50.0;
+	allParams.push_back(params0);
 	float *params1 = new float[6];
-	params1[0] = 1.0;params1[1] = 0.9;params1[2] = 2.0;
+	params1[0] = 2.0;params1[1] = 0.9;params1[2] = 2.0;
 	params1[3] = M_PI/6.0;params1[4] = 200.0;params1[5] = 50.0;
 	allParams.push_back(params1);
 	float *params2 = new float[6];
-	params2[0] = 1.0;params2[1] = 0.9;params2[2] = 2.0;
+	params2[0] = 2.0;params2[1] = 0.9;params2[2] = 2.0;
 	params2[3] = M_PI/3.0;params2[4] = 200.0;params2[5] = 50.0;
 	allParams.push_back(params2);
 	float *params3 = new float[6];
-	params3[0] = 1.0;params3[1] = 0.9;params3[2] = 2.0;
+	params3[0] = 2.0;params3[1] = 0.9;params3[2] = 2.0;
 	params3[3] = 2.0*M_PI/3.0;params3[4] = 200.0;params3[5] = 50.0;
 	allParams.push_back(params3);
 	float *params4 = new float[6];
-	params4[0] = 1.0;params4[1] = 0.9;params4[2] = 2.0;
+	params4[0] = 2.0;params4[1] = 0.9;params4[2] = 2.0;
 	params4[3] = 5.0*M_PI/6.0;params4[4] = 200.0;params4[5] = 50.0;
 	allParams.push_back(params4);
-
-	// AND SOME BIGGER ONES
-	float *params5 = new float[6];
-	params5[0] = 3.0;params5[1] = 0.9;params5[2] = 2.0;
-	params5[3] = M_PI/6.0;params5[4] = 200.0;params5[5] = 50.0;
-	allParams.push_back(params5);
-	float *params6 = new float[6];
-	params6[0] = 3.0;params6[1] = 0.9;params6[2] = 2.0;
-	params6[3] = M_PI/3.0;params6[4] = 200.0;params6[5] = 50.0;
-	allParams.push_back(params6);
-	float *params7 = new float[6];
-	params7[0] = 3.0;params7[1] = 0.9;params7[2] = 2.0;
-	params7[3] = 2.0*M_PI/3.0;params7[4] = 200.0;params7[5] = 50.0;
-	allParams.push_back(params7);
-	float *params8 = new float[6];
-	params8[0] = 3.0;params8[1] = 0.9;params8[2] = 2.0;
-	params8[3] = 5.0*M_PI/6.0;params8[4] = 200.0;params8[5] = 50.0;
-	allParams.push_back(params8);
 
 	// CONVERT THE IMAGE TO GRAYSCALE TO APPLY THE FILTER
 	cv::Mat gray,result;
@@ -1200,9 +1186,9 @@ cv::Mat FeatureExtractor::extractGabor(cv::Mat &image){
 		// IF WE WANT TO SEE THE GABOR AND THE RESPONSE
 		if(this->plot_){
 			cv::imshow("Gray",gray);
-			cv::imshow("GaborFilter",agabor);
-			cv::imshow("GaborResponse",response);
-			cv::waitKey(5);
+			cv::imshow("GaborFilter"+Auxiliary::int2string(i),agabor);
+			cv::imshow("GaborResponse"+Auxiliary::int2string(i),response);
+			cv::waitKey(0);
 		}
 		cv::Mat temp = result.rowRange(i*response.rows,(i+1)*response.rows);
 		response.convertTo(response,CV_32FC1);
@@ -1275,7 +1261,7 @@ const std::vector<cv::Point2f> &templ,const cv::Rect &roi){
 		}
 	// IF WE ONLY WANT TO STORE THE SIFT FEATURE WE NEED TO ADD THE x-S AND y-S
 	}else if(FeatureExtractor::isFeatureIn(this->featureType_,FeatureExtractor::SIFT)){
-		result = cv::Mat::zeros(keypoints.size(),aSIFT.descriptorSize()+2,CV_32FC1);
+		result = cv::Mat::zeros(keypoints.size(),aSIFT.descriptorSize()+4,CV_32FC1);
 		cv::Mat dummy1 = result.colRange(0,aSIFT.descriptorSize());
 		cv::Mat dummy2;
 		aSIFT(gray,cv::Mat(),keypoints,dummy2,true);
@@ -1284,8 +1270,8 @@ const std::vector<cv::Point2f> &templ,const cv::Rect &roi){
 		dummy1.release();
 		dummy2.release();
 		for(std::size_t i=0;i<keypoints.size();++i){
-			result.at<float>(i,result.cols-2) = keypoints[i].pt.x;
-			result.at<float>(i,result.cols-1) = keypoints[i].pt.y;
+			result.at<float>(i,result.cols-4) = keypoints[i].pt.x;
+			result.at<float>(i,result.cols-3) = keypoints[i].pt.y;
 		}
 		// PLOT THE KEYPOINTS TO SEE THEM
 		if(this->plot_){
@@ -1295,21 +1281,18 @@ const std::vector<cv::Point2f> &templ,const cv::Rect &roi){
 			cv::imshow("SIFT",image);
 			cv::waitKey(5);
 		}
-	}
 
-	// NORMALIZE THE FEATURE
-	result.convertTo(result,CV_32FC1);
-	for(int i=0;i<result.rows;++i){
-		cv::Mat rowsI = result.row(i);
-		rowsI         = rowsI/cv::norm(rowsI);
-		rowsI.release();
-
-		// IF WE WANT TO STORE THE SIFT FEATURES THEN, WE NEED TO STORE x AND y
-		if(!FeatureExtractor::isFeatureIn(this->featureType_,FeatureExtractor::SIFT)){
-			result.at<float>(i,aSIFT.descriptorSize())   = keypoints[i].pt.x;
-			result.at<float>(i,aSIFT.descriptorSize()+1) = keypoints[i].pt.y;
+		// NORMALIZE THE FEATURES TO HAVE "LENGTH" 1
+		for(int i=0;i<result.rows;++i){
+			cv::Mat rowsI = result.row(i);
+			rowsI         = rowsI/cv::norm(rowsI);
+			rowsI.release();
+			// ADD THE UNORMALIZED COORDINATES TO BE USED FOR ROTATION
+			result.at<float>(i,result.cols-2) = keypoints[i].pt.x;
+			result.at<float>(i,result.cols-1) = keypoints[i].pt.y;
 		}
 	}
+	result.convertTo(result,CV_32FC1);
 	gray.release();
 	return result;
 }
@@ -1428,7 +1411,6 @@ const cv::Rect &roi){
 	}
 	cv::Mat gray;
 	cv::cvtColor(large,gray,CV_BGR2GRAY);
-	//cv::equalizeHist(gray,gray);
 	large.release();
 	cv::blur(gray,gray,cv::Size(3,3));
 	unsigned stepX = (gray.cols%10==0?10:(10+gray.cols%10));

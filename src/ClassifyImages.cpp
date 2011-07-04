@@ -1098,8 +1098,15 @@ void ClassifyImages::buildDictionary(int colorSp,bool toUseGT){
 		dictData.release();
 		labels.release();
 
-		// WRITE TO FILE THE MEANS
+		// NORMALIZE THE DICTIONARY WORDS TO HAVE "LENGTH" 1
 		cv::Mat matrix(*centers);
+		for(int j=0;j<matrix.rows;++j){
+			cv::Mat rowsI = matrix.row(j);
+			rowsI         = rowsI/cv::norm(rowsI);
+			rowsI.release();
+		}
+
+		// WRITE TO FILE THE MEANS
 		std::string dictName = this->features_->extractor()->readDictName();
 		std::cout<<"Size("<<names[i]<<"): "<<this->features_->data()[i].size()<<\
 			" stored in: "<<dictName<<std::endl;
@@ -1492,10 +1499,10 @@ bool train,int nEigens,int reshapeRows){
 //==============================================================================
 int main(int argc,char **argv){
 	std::deque<FeatureExtractor::FEATURE> feat;
-	feat.push_back(FeatureExtractor::SIFT);
+//	feat.push_back(FeatureExtractor::SIFT);
 //	feat.push_back(FeatureExtractor::EDGES);
 //	feat.push_back(FeatureExtractor::SURF);
-//	feat.push_back(FeatureExtractor::GABOR);
+	feat.push_back(FeatureExtractor::GABOR);
 //	feat.push_back(FeatureExtractor::RAW_PIXELS);
 //	feat.push_back(FeatureExtractor::HOG);
 //	feat.push_back(FeatureExtractor::TEMPL_MATCHES);
