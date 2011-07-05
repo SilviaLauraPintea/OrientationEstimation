@@ -319,6 +319,11 @@ class FeatureExtractor {
 		 * It is true if only the upper/lower part of the body is used for training.
 		 */
 		FeatureExtractor::FEATUREPART bodyPart_;
+		/** @var resizedImgSize_
+		 * The size to which the feature/foreground image is resized in the
+		 * function cutAndResize.
+		 */
+		unsigned resizedImgSize_;
 		//======================================================================
 	private:
 		DISALLOW_COPY_AND_ASSIGN(FeatureExtractor);

@@ -33,15 +33,16 @@ struct onScanline{
 };
 //==============================================================================
 FeatureExtractor::FeatureExtractor(){
-	this->isInit_       = false;
-	this->featureType_  = std::deque<FeatureExtractor::FEATURE>\
+	this->isInit_         = false;
+	this->featureType_    = std::deque<FeatureExtractor::FEATURE>\
 		(1,FeatureExtractor::EDGES);
-	this->dictFilename_ = "none";
-	this->noMeans_      = 500;
-	this->meanSize_     = 128;
-	this->featureFile_  = "none";
-	this->print_        = false;
-	this->plot_         = true;
+	this->dictFilename_   = "none";
+	this->noMeans_        = 500;
+	this->meanSize_       = 128;
+	this->featureFile_    = "none";
+	this->print_          = false;
+	this->plot_           = true;
+	this->resizedImgSize_ = 10;
 }
 //==============================================================================
 FeatureExtractor::~FeatureExtractor(){
@@ -266,10 +267,11 @@ const cv::Rect &roi){
 	}
 
 	// MATCH SOME HEADS ON TOP AND GET THE RESULTS
-	int radius     = Helpers::dist(aTempl.points_[12],aTempl.points_[13]);
+//	int radius     = Helpers::dist(aTempl.points_[12],aTempl.points_[13]);
+	int radius     = static_cast<int>(this->resizedImgSize_/2);
 	cv::Mat result = cv::Mat::zeros(cv::Size(12*20*30+2,1),CV_32FC1);
-	for(int i=0;i<4;++i){
-		std::string imgName = "templates/templ"+Auxiliary::int2string(i)+".jpg";
+	for(int i=0;i<8;++i){
+		std::string imgName = "templates/temp"+Auxiliary::int2string(i)+".jpg";
 		cv::Mat tmple       = cv::imread(imgName.c_str(),0);
 		if(tmple.empty()){
 			std::cerr<<"In template matching FILE NOT FOUND: "<<imgName<<std::endl;
@@ -285,8 +287,12 @@ const cv::Rect &roi){
 		cv::blur(tmp,tmp,cv::Size(3,3));
 		cv::resize(tmp,resized,cv::Size(20,30),0,0,cv::INTER_CUBIC);
 		if(this->plot_){
-			cv::imshow("result"+Auxiliary::int2string(i),resized);
+			cv::Mat toShow;
+			cv::resize(tmp,toShow,gray.size(),0,0,cv::INTER_CUBIC);
+			cv::imshow("result"+Auxiliary::int2string(i),toShow);
+			cv::imshow("templ"+Auxiliary::int2string(i),small);
 			cv::waitKey(5);
+			toShow.release();
 		}
 
 		// RESHAPE THE RESULT AND CONVERT IT TO float
@@ -417,12 +423,13 @@ const cv::Rect &roi,bool color){
 	if(!color){
 		cv::cvtColor(large,large,CV_BGR2HSV);
 		cv::split(large,threeChannels);
-		threeChannels[2].copyTo(gray);
+		threeChannels[1].copyTo(gray);
 		Auxiliary::normalizeMat(gray);
 	}else{
 		gray = large.reshape(1,0);
 	}
 	if(this->plot_){
+		cv::imshow("image",large);
 		cv::imshow("gray",gray);
 		cv::waitKey(5);
 	}
@@ -1484,13 +1491,13 @@ const cv::Mat &img){
 	cv::Mat tmp(img.clone(),roiCut),large;
 	cv::Size aSize;
 	if(this->bodyPart_ == FeatureExtractor::HEAD){
-		aSize = cv::Size(100,100);
+		aSize = cv::Size(this->resizedImgSize_,this->resizedImgSize_);
 		cv::blur(tmp,tmp,cv::Size(3,3));
 		cv::resize(tmp,large,aSize,0,0,cv::INTER_NEAREST);
 		tmp.release();
 		return large;
 	}else{
-		unsigned sHeight = 100;
+		unsigned sHeight = this->resizedImgSize_;
 		if(this->imageClass_=="CLOSE"){
 			aSize.height = sHeight;
 			aSize.width  = aSize.height*6/5;

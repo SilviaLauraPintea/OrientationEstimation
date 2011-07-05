@@ -1296,7 +1296,7 @@ void PeopleDetector::extractHeadArea(int i,FeatureExtractor::people &person){
 		this->templates_[i].points_[13]);
 	float headSize2 = Helpers::dist(this->templates_[i].points_[13],\
 		this->templates_[i].points_[14]);
-	int radius = static_cast<int>(std::max(headSize1,headSize2));
+	int radius = static_cast<int>(std::max(headSize1,headSize2)*0.75);
 	if(!person.thresh_.empty()){
 		int minX,maxX,minY,maxY;
 		this->extractor_->getThresholdBorderes(minX,maxX,minY,maxY,person.thresh_);

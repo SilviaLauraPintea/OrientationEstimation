@@ -1502,8 +1502,8 @@ int main(int argc,char **argv){
 //	feat.push_back(FeatureExtractor::SIFT);
 //	feat.push_back(FeatureExtractor::EDGES);
 //	feat.push_back(FeatureExtractor::SURF);
-	feat.push_back(FeatureExtractor::GABOR);
-//	feat.push_back(FeatureExtractor::RAW_PIXELS);
+//	feat.push_back(FeatureExtractor::GABOR);
+	feat.push_back(FeatureExtractor::RAW_PIXELS);
 //	feat.push_back(FeatureExtractor::HOG);
 //	feat.push_back(FeatureExtractor::TEMPL_MATCHES);
 //	feat.push_back(FeatureExtractor::SKIN_BINS);
