@@ -1026,11 +1026,6 @@ float ClassifyImages::optimizeSin2Cos2Prediction(const GaussianProcess::predicti
 	float betaC = 1.0/(predictionsCos.variance_[0]);
 	float y     = predictionsSin.mean_[0];
 	float x     = predictionsCos.mean_[0];
-	if(betaS == betaC){
-		return std::atan2(betaS*y,betaC*x);
-	}else{
-		return std::atan2(y,x);
-	}
 	float closeTo;
 	closeTo = std::atan2(predictionsSin.mean_[0],predictionsCos.mean_[0]);
 	std::deque<float> alphas;

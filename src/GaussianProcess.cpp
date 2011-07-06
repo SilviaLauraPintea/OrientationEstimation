@@ -312,10 +312,10 @@ _float GaussianProcess::sqexp(const cv::Mat &x1,const cv::Mat &x2,_float l){
 	cv::Mat diff = x1-x2;
 	diff.convertTo(diff,_CV_32FC1);
 	cv::Mat tmpDiff = diff.colRange(0,diff.cols-2);
-	_float result1  = std::sqrt(tmpDiff.dot(tmpDiff))/(l/2.0);
-	_float result2  = std::sqrt(diff.at<_float>(0,diff.cols-2)*diff.at<_float>\
-		(0,diff.cols-2))/(2.0*l);
-	_float result  = std::exp(-1.0*(result1+result2));
+	_float result1  = tmpDiff.dot(tmpDiff)/(l*l);
+	_float result2  = diff.at<_float>(0,diff.cols-2)*diff.at<_float>\
+		(0,diff.cols-2)/(1e+3*l*l);
+	_float result   = std::exp(-1.0/2.0*std::sqrt(result1+result2));
 	diff.release();
 	tmpDiff.release();
 	return result;

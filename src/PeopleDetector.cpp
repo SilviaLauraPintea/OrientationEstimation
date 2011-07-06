@@ -1251,6 +1251,11 @@ const cv::Point2f &feetLocation){
  */
 PeopleDetector::CLASSES PeopleDetector::findImageClass(const cv::Point2f &feet,\
 const cv::Point2f &head){
+
+// REMOVE=============================================================
+return PeopleDetector::CLOSE;
+// REMOVE=============================================================
+
 	if(this->classesRange_.empty()){
 		// GET THE CAMERA POSITION IN THE IMAGE PLANE
 		cv::Point2f cam = (*Helpers::proj())(cv::Point3f(Helpers::camPosX(),\
