@@ -29,6 +29,7 @@ class ClassifyImages {
 			ClassifyImages::GAUSSIAN_PROCESS);
 		virtual ~ClassifyImages();
 
+		ClassifyImages::USES what();
 		/** Build dictionary for vector quantization.
 		 */
 		void buildDictionary(int colorSp=-1,bool toUseGT=true);
@@ -106,7 +107,7 @@ class ClassifyImages {
 			const std::string &errorsOnTest,ClassifyImages &classi,int argc,\
 			char** argv,const std::deque<FeatureExtractor::FEATURE> &feat,\
 			int colorSp,bool useGt,AnnotationsHandle::POSE what,\
-			GaussianProcess::kernelFunction kernel);
+			GaussianProcess::kernelFunction kernel,unsigned folds=0);
 		/** Combine the output of multiple classifiers (only on testing,no multiple
 		 * predictions).
 		 */
@@ -312,6 +313,14 @@ class ClassifyImages {
 		 * A PCA model is build for 4 classes for each data feature
 		 */
 		bool usePCAModel_;
+		/** @var trainMean_
+		 * The mean vector of the training dataset.
+		 */
+		std::vector<cv::Mat> trainMean_;
+		/** @var trainVar_
+		 * The variance of the training dataset.
+		 */
+		std::vector<cv::Mat> trainVar_;
 		//======================================================================
 	private:
 		DISALLOW_COPY_AND_ASSIGN(ClassifyImages);

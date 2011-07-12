@@ -83,6 +83,9 @@ class Auxiliary:public Helpers{
 		/** Deallocates a PCA pointed by a pointer.
 		 */
 		static void getRidOfPCA(cv::PCA *pca);
+		/** Mean and stddev for matrices.
+		 */
+		static void mean0Variance1(cv::Mat &mat,cv::Mat &mean, cv::Mat &var);
 	private:
 		DISALLOW_COPY_AND_ASSIGN(Auxiliary);
 };

@@ -40,6 +40,8 @@ ClassifyImages::CLASSIFIER classi){
 
 	// INITIALIZE THE DATA MATRIX AND TARGETS MATRIX AND THE GAUSSIAN PROCESSES
 	for(unsigned i=0;i<3;++i){
+		this->trainMean_.push_back(cv::Mat());
+		this->trainVar_.push_back(cv::Mat());
 		this->trainData_.push_back(cv::Mat());
 		this->trainTargets_.push_back(cv::Mat());
 		this->testData_.push_back(cv::Mat());
@@ -108,6 +110,7 @@ ClassifyImages::CLASSIFIER classi){
 				files2check.push_back(this->annotationsTrain_);
 				files2check.push_back(this->testFolder_);
 				files2check.push_back(this->annotationsTest_);
+				this->modelName_ = "data/TEST/";
 				break;
 			case(ClassifyImages::EVALUATE):
 				// IF WE WANT TO EVALUATE WITH CORSSVALIDATION
@@ -115,6 +118,15 @@ ClassifyImages::CLASSIFIER classi){
 				this->annotationsTrain_ = this->trainDir_+"annotated_train.txt";
 				files2check.push_back(this->trainFolder_);
 				files2check.push_back(this->annotationsTrain_);
+				this->modelName_ = "data/EVALUATE/";
+				break;
+			case(ClassifyImages::BUILD_DATA):
+				// IF WE WANT TO EVALUATE WITH CORSSVALIDATION
+				this->trainFolder_      = this->trainDir_+"annotated_train/";
+				this->annotationsTrain_ = this->trainDir_+"annotated_train.txt";
+				files2check.push_back(this->trainFolder_);
+				files2check.push_back(this->annotationsTrain_);
+				this->modelName_ = "data/BUILD_DATA/";
 				break;
 			case(ClassifyImages::BUILD_DICTIONARY):
 				// IF WE WANT TO BUILD SIFT DICTIONARY
@@ -129,12 +141,6 @@ ClassifyImages::CLASSIFIER classi){
 				std::cerr<<"File/folder not found: "<<files2check[i]<<std::endl;
 				exit(1);
 			}
-		}
-
-		if(use == ClassifyImages::TEST){
-			this->modelName_ = "data/TEST/";
-		}else if(use == ClassifyImages::EVALUATE){
-			this->modelName_ = "data/EVALUATE/";
 		}
 		Helpers::file_exists(this->modelName_.c_str(),true);
 	}
@@ -162,6 +168,12 @@ ClassifyImages::~ClassifyImages(){
 		if(this->pca_[i]){
 			this->pca_[i].reset();
 		}
+		if(!this->trainMean_[i].empty()){
+			this->trainMean_[i].release();
+		}
+		if(!this->trainVar_[i].empty()){
+			this->trainVar_[i].release();
+		}
 	}
 	this->trainData_.clear();
 	this->trainTargets_.clear();
@@ -182,6 +194,10 @@ ClassifyImages::~ClassifyImages(){
 			break;
 	}
 	this->classiPca_.clear();
+}
+//==============================================================================
+ClassifyImages::USES ClassifyImages::what(){
+	return this->what_;
 }
 //==============================================================================
 /** Initialize the options for the Gaussian Process regression.
@@ -359,7 +375,7 @@ void ClassifyImages::trainNN(int i){
 		CV_32S,layerInts);
 	this->nn_[i].create(layerSizes,1);
 
-	// TRAIN THE SIN AND COS SEPARETELY FOR LONGITUDE || LATITUDE
+	// TRAIN THE SIN AND COS FOR both LONGITUDE & LATITUDE
 	this->nn_[i].train(this->trainData_[i],this->trainTargets_[i].colRange(0,4),\
 		cv::Mat(),cv::Mat(),CvANN_MLP_TrainParams(cvTermCriteria\
 		(CV_TERMCRIT_ITER,1000,0.01),CvANN_MLP_TrainParams::BACKPROP,0.01));
@@ -565,6 +581,10 @@ void ClassifyImages::train(AnnotationsHandle::POSE what,bool fromFolder){
 
 		// CHECK TO SEE IF THERE IS ANY DATA IN THE CURRENT CLASS
 		assert(this->trainData_[i].rows==this->trainTargets_[i].rows);
+
+		// GET THE MEAN AND THE VARIANCE OF THE TRAINING DATA
+		Auxiliary::mean0Variance1(this->trainData_[i],this->trainMean_[i],\
+			this->trainVar_[i]);
 
 		// CLASSIFY ON IMAGES USING THE TRAINING
 		switch(this->clasifier_){
@@ -880,6 +900,9 @@ std::deque<std::deque<cv::Point2f> > ClassifyImages::predict\
 		assert(this->testData_[i].rows==this->testTargets_[i].rows);
 		this->testData_[i].convertTo(this->testData_[i],CV_32FC1);
 		this->testTargets_[i].convertTo(this->testTargets_[i],CV_32FC1);
+
+		Auxiliary::mean0Variance1(this->testData_[i],this->trainMean_[i],\
+			this->trainVar_[i]);
 
 		// PREDICT ON THE TEST IMAGES
 		switch(this->clasifier_){
@@ -1437,25 +1460,38 @@ FeatureExtractor::FEATUREPART part){
 void parameterSetting(const std::string &errorsOnTrain,const std::string &errorsOnTest,\
 ClassifyImages &classi,int argc,char** argv,\
 const std::deque<FeatureExtractor::FEATURE> &feat,int colorSp,bool useGt,\
-AnnotationsHandle::POSE what,GaussianProcess::kernelFunction kernel){
+AnnotationsHandle::POSE what,GaussianProcess::kernelFunction kernel,unsigned folds){
   	std::ofstream train,test;
-	train.open(errorsOnTrain.c_str(),std::ios::out | std::ios::app);
 	test.open(errorsOnTest.c_str(),std::ios::out | std::ios::app);
-	for(float v=0.1;v<5.0;v+=0.1){
-		for(float l=0.1;l<200.0;l+=1.0){
+	if(classi.what() == ClassifyImages::EVALUATE){
+		train.open(errorsOnTrain.c_str(),std::ios::out | std::ios::app);
+	}
+	for(float v=1e-10;v<1.0;v*=10.0){
+		for(float l=1;l<1e+7;l*=5.0){
 			classi.init(v,l,l,feat,kernel,useGt);
-			float errorTrain = classi.runCrossValidation(7,what,colorSp,true,\
-				FeatureExtractor::HEAD);
-			train<<v<<" "<<l<<" "<<errorTrain<<std::endl;
+			float errorTest = 0.0f;
+			if(classi.what() == ClassifyImages::EVALUATE){
+				errorTest = classi.runCrossValidation(folds,what,colorSp,false,\
+					FeatureExtractor::HEAD);
+				test<<v<<" "<<l<<" "<<errorTest<<std::endl;
+			}else if(classi.what() == ClassifyImages::TEST){
+				classi.runTest(-1,AnnotationsHandle::LONGITUDE,errorTest,\
+					FeatureExtractor::HEAD);
+				test<<v<<" "<<l<<" "<<errorTest<<std::endl;
+				continue;
+			}
 			//-------------------------------------------
 			classi.init(v,l,l,feat,kernel,useGt);
-			float errorTest = classi.runCrossValidation(7,what,colorSp,false,\
+			float errorTrain = 0.0f;
+			errorTrain = classi.runCrossValidation(folds,what,colorSp,true,\
 				FeatureExtractor::HEAD);
-			test<<v<<" "<<l<<" "<<errorTest<<std::endl;
+			train<<v<<" "<<l<<" "<<errorTrain<<std::endl;
 		}
 	}
-	train.close();
 	test.close();
+	if(classi.what() == ClassifyImages::EVALUATE){
+		train.close();
+	}
 }
 //==============================================================================
 /** Applies PCA on top of a data-row to reduce its dimensionality.
@@ -1506,7 +1542,7 @@ int main(int argc,char **argv){
 
 /*
 	// build data matrix
- 	ClassifyImages classi(argc,argv,ClassifyImages::TEST,\
+ 	ClassifyImages classi(argc,argv,ClassifyImages::BUILD_DATA,\
  		ClassifyImages::GAUSSIAN_PROCESS);
  	classi.init(1e-5,200000.0,200000.0,feat,&GaussianProcess::sqexp,false);
 	classi.buildDataMatrix(-1,FeatureExtractor::HEAD);
@@ -1525,7 +1561,10 @@ int main(int argc,char **argv){
 	float normError = 0.0f;
  	ClassifyImages classi(argc,argv,ClassifyImages::TEST,\
  		ClassifyImages::GAUSSIAN_PROCESS);
-	classi.init(1e-5,200000.0,200000.0,feat,&GaussianProcess::sqexp,false);
+//	classi.init(1e-5,40000.0,50000.0,feat,&GaussianProcess::sqexp,false);
+
+ 	classi.init(1e-5,40000.0,50000.0,feat,&GaussianProcess::sqexp,false);
+
 	classi.runTest(-1,AnnotationsHandle::LONGITUDE,normError,FeatureExtractor::HEAD);
 
 	//--------------------------------------------------------------------------
@@ -1533,9 +1572,9 @@ int main(int argc,char **argv){
 	// evaluate
  	ClassifyImages classi(argc,argv,ClassifyImages::EVALUATE,\
  		ClassifyImages::GAUSSIAN_PROCESS);
-	classi.init(1e-5,20000.0,20000.0,feat,&GaussianProcess::sqexp,false);
-	classi.runCrossValidation(5,AnnotationsHandle::LONGITUDE,-1,false,\
-		FeatureExtractor::HEAD);
+ 	classi.init(1e-5,40000.0,50000.0,feat,&GaussianProcess::sqexp,false);
+	classi.runCrossValidation(14,AnnotationsHandle::LONGITUDE,-1,false,\
+		FeatureExtractor::TOP);
 */
 	//--------------------------------------------------------------------------
 /*
@@ -1546,10 +1585,10 @@ int main(int argc,char **argv){
 	//--------------------------------------------------------------------------
 /*
 	// find parmeteres
-	ClassifyImages classi(argc,argv,ClassifyImages::EVALUATE,\
+	ClassifyImages classi(argc,argv,ClassifyImages::TEST,\
 		ClassifyImages::GAUSSIAN_PROCESS);
-	parameterSetting("train.txt","test.txt",classi,argc,argv,FeatureExtractor::RAW_PIXELS,\
-		-1,true,AnnotationsHandle::LONGITUDE,&GaussianProcess::sqexp);
+	parameterSetting("train_4.txt","test_4.txt",classi,argc,argv,feat,\
+		-1,false,AnnotationsHandle::LONGITUDE,&GaussianProcess::sqexp,0);
 */
 	//-------------------------------------------------------------------------
 /*

@@ -255,6 +255,34 @@ void Auxiliary::showZoomedImage(const cv::Mat &image,const std::string &title){
 	large.release();
 }
 //==============================================================================
+void Auxiliary::mean0Variance1(cv::Mat &mat,cv::Mat &mean, cv::Mat &var){
+	int matType = mat.type();
+	mat.convertTo(mat,CV_32FC1);
+
+	// GE THE MEAN AND COVARIANCE
+	if(mean.empty() || var.empty()){
+		mean = cv::Mat::zeros(cv::Size(mat.cols,1),CV_32FC1);
+		var  = cv::Mat::zeros(cv::Size(mat.cols,1),CV_32FC1);
+		for(unsigned c=0;c<mat.cols;++c){
+			cv::Scalar smean,stddev;
+			cv::Mat aCol = mat.col(c);
+			cv::meanStdDev(aCol,smean,stddev);
+			mean.at<float>(0,c) = smean.val[0];
+			var.at<float>(0,c)  = stddev.val[0];
+		}
+	}
+
+	for(unsigned r=0;r<mat.rows;++r){
+		cv::Mat aRow = mat.row(r);
+		aRow = (aRow - mean);
+		cv::Mat tmp;
+		cv::divide(aRow,var,tmp,1);
+		tmp.copyTo(aRow);
+		tmp.release();
+	}
+	mat.convertTo(mat,matType);
+}
+//==============================================================================
 /** A function that transforms the data such that it has zero mean and unit
  * variance: img = (img-mean(img(:)))/std(img(:)).
  */

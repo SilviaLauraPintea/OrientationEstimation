@@ -395,6 +395,9 @@ int AnnotationsHandle::runAnn(int argc,char **argv,unsigned step,const std::stri
 	/* while 'q' was not pressed,annotate images and store the info in
 	 * the annotation file */
 	int key = 0;
+
+int extra = 878;
+
 	while((char)key != 'q' && (char)key != 'Q' && index<imgs.size()) {
 		std::cerr<<"Annotations for image: "<<imgs[index].substr\
 			(imgs[index].rfind("/")+1)<<std::endl;
@@ -402,7 +405,10 @@ int AnnotationsHandle::runAnn(int argc,char **argv,unsigned step,const std::stri
 		/* if the pressed key is 's' stores the annotated positions
 		 * for the current image */
 		if((char)key == 's'){
-			annoOut<<imgs[index].substr(imgs[index].rfind("/")+1);
+//			annoOut<<imgs[index].substr(imgs[index].rfind("/")+1);
+std::string tmpName = Auxiliary::int2string(index+extra)+"final.jpg";
+annoOut<<tmpName;
+
 			for(unsigned i=0;i!=annotations_.size();++i){
 				annoOut <<" ("<<annotations_[i].location_.x<<","\
 					<<annotations_[i].location_.y<<")|";
@@ -431,7 +437,9 @@ int AnnotationsHandle::runAnn(int argc,char **argv,unsigned step,const std::stri
 			if(!boost::filesystem::is_directory(newLocation)){
 				boost::filesystem::create_directory(newLocation);
 			}
-			newLocation += imgs[index].substr(imgs[index].rfind("/")+1);
+//			newLocation += imgs[index].substr(imgs[index].rfind("/")+1);
+newLocation += tmpName;
+
 			cerr<<"NEW LOCATION >> "<<newLocation<<endl;
 			cerr<<"CURR LOCATION >> "<<currLocation<<endl;
 			if(rename(imgs[index].c_str(),newLocation.c_str())){
@@ -1007,11 +1015,12 @@ boost::mutex AnnotationsHandle::trackbarMutex_;
 std::tr1::shared_ptr<IplImage> AnnotationsHandle::image_;
 std::deque<AnnotationsHandle::ANNOTATION> AnnotationsHandle::annotations_;
 //==============================================================================
-/*
+
 int main(int argc,char **argv){
 	std::string folderSuffix = "_train";
-//	AnnotationsHandle::runAnn(argc,argv,1,folderSuffix,-1);
-	AnnotationsHandle::runAnnArtificial(argc,argv,1,folderSuffix,-1,653,60,146);
+	AnnotationsHandle::runAnn(argc,argv,1,folderSuffix,-1);
+//	AnnotationsHandle::runAnnArtificial(argc,argv,1,folderSuffix,-1,653,60,146);
 	//AnnotationsHandle::runEvaluation(argc,argv);
 }
-*/
+
+

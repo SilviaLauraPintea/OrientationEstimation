@@ -42,7 +42,7 @@ FeatureExtractor::FeatureExtractor(){
 	this->featureFile_    = "none";
 	this->print_          = false;
 	this->plot_           = true;
-	this->resizedImgSize_ = 10;
+	this->resizedImgSize_ = 5;
 }
 //==============================================================================
 FeatureExtractor::~FeatureExtractor(){
@@ -421,9 +421,10 @@ const cv::Rect &roi,bool color){
 	cv::Mat gray;
 	std::vector<cv::Mat> threeChannels;
 	if(!color){
-		cv::cvtColor(large,large,CV_BGR2HSV);
-		cv::split(large,threeChannels);
-		threeChannels[1].copyTo(gray);
+//		cv::cvtColor(large,large,CV_BGR2HSV);
+//		cv::split(large,threeChannels);
+//		threeChannels[1].copyTo(gray);
+		cv::cvtColor(large,gray,CV_BGR2GRAY);
 		Auxiliary::normalizeMat(gray);
 	}else{
 		gray = large.reshape(1,0);

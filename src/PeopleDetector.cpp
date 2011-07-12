@@ -633,7 +633,7 @@ const std::deque<unsigned> &exi,float threshVal){
 			nextImg.release();
 		}
 		dataRow.convertTo(dataRow,CV_32FC1);
-		Auxiliary::mean0Variance1(dataRow);
+//		Auxiliary::mean0Variance1(dataRow);
 
 		// STORE THE EXTRACTED ROW INTO THE DATA MATRIX
 		if(this->data_[this->existing_[i].groupNo_].empty()){
@@ -919,9 +919,10 @@ const float logBGProb,const vnl_vector<float> &logSumPixelBGProb){
 	IplImage *bg = Helpers::vec2img((imgVec-bgVec).apply(fabs));
 	cvSmooth(bg,bg,CV_GAUSSIAN,31,31);
 	for(unsigned l=0;l<10;++l){
-		cvErode(bg,bg,NULL,1);
-		cvDilate(bg,bg,NULL,1);
+		cvDilate(bg,bg,NULL,3);
+		cvErode(bg,bg,NULL,3);
 	}
+	cvDilate(bg,bg,NULL,1);
 
 	//7) SHOW THE FOREGROUND POSSIBLE LOCATIONS AND PLOT THE TEMPLATES
 	cerr<<"no. of detected people: "<<exi.size()<<endl;
@@ -1253,7 +1254,7 @@ PeopleDetector::CLASSES PeopleDetector::findImageClass(const cv::Point2f &feet,\
 const cv::Point2f &head){
 
 // REMOVE=============================================================
-return PeopleDetector::CLOSE;
+return PeopleDetector::FAR;
 // REMOVE=============================================================
 
 	if(this->classesRange_.empty()){
@@ -1301,7 +1302,7 @@ void PeopleDetector::extractHeadArea(int i,FeatureExtractor::people &person){
 		this->templates_[i].points_[13]);
 	float headSize2 = Helpers::dist(this->templates_[i].points_[13],\
 		this->templates_[i].points_[14]);
-	int radius = static_cast<int>(std::max(headSize1,headSize2)*0.75);
+	int radius = static_cast<int>(std::max(headSize1,headSize2))*0.75;
 	if(!person.thresh_.empty()){
 		int minX,maxX,minY,maxY;
 		this->extractor_->getThresholdBorderes(minX,maxX,minY,maxY,person.thresh_);
