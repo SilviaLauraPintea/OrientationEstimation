@@ -281,14 +281,18 @@ int &minY,int &maxY,const FeatureExtractor::templ &aTempl){
 void PeopleDetector::pixels2Templates(int maxX,int minX,int maxY,int minY,\
 int k,const cv::Mat &thresh,float tmplHeight,cv::Mat &colorRoi){
 	// LOOP OVER THE AREA OF OUR TEMPLATE AND THERESHOLD ONLY THOSE PIXELS
+	float tmpSize = std::max(this->templates_[k].extremes_[1]-\
+		this->templates_[k].extremes_[0],this->templates_[k].extremes_[3]-\
+		this->templates_[k].extremes_[2])/16;
+
 	int x1Border = std::max(minX,static_cast<int>(this->templates_[k].extremes_[0]-\
-		tmplHeight/2));
+		tmpSize));
 	int x2Border = std::min(maxX,static_cast<int>(this->templates_[k].extremes_[1]+\
-		tmplHeight/2));
+		tmpSize));
 	int y1Border = std::max(minY,static_cast<int>(this->templates_[k].extremes_[2]-\
-		tmplHeight/2));
+		tmpSize));
 	int y2Border = std::min(maxY,static_cast<int>(this->templates_[k].extremes_[3]+\
-		tmplHeight/2));
+		tmpSize));
 
 	cv::Rect roi(x1Border-minX,y1Border-minY,x2Border-x1Border,y2Border-y1Border);
 	cv::Mat threshROI(thresh.clone(),cv::Rect(minX,minY,maxX-minX,maxY-minY));
@@ -320,7 +324,7 @@ int k,const cv::Mat &thresh,float tmplHeight,cv::Mat &colorRoi){
 						if(l==k){continue;}
 						float tempDist = Helpers::dist(this->templates_[k].center_,\
 							this->templates_[l].center_);
-						if(tempDist >= tmplHeight*1.5){continue;}
+						if(tempDist >= tmplHeight){continue;}
 
 						// IF IT IS IN ANOTHER TEMPLATE THEN IGNORE THE PIXEL
 						if(FeatureExtractor::isInTemplate((x+minX),(y+minY),\
@@ -341,8 +345,9 @@ int k,const cv::Mat &thresh,float tmplHeight,cv::Mat &colorRoi){
 							}
 						}
 					}
+
 					// IF THE PIXEL HAS A DIFFERENT LABEL THEN THE CURR TEMPL
-					if(label != k){
+					if(label != k || minDist >= tmplHeight/1.5){
 						colorRoi.at<cv::Vec3b>(y,x) = cv::Vec3b(127,127,127);
 					}
 				}
@@ -922,7 +927,6 @@ const float logBGProb,const vnl_vector<float> &logSumPixelBGProb){
 		cvDilate(bg,bg,NULL,3);
 		cvErode(bg,bg,NULL,3);
 	}
-	cvDilate(bg,bg,NULL,1);
 
 	//7) SHOW THE FOREGROUND POSSIBLE LOCATIONS AND PLOT THE TEMPLATES
 	cerr<<"no. of detected people: "<<exi.size()<<endl;
@@ -1306,6 +1310,7 @@ void PeopleDetector::extractHeadArea(int i,FeatureExtractor::people &person){
 	if(!person.thresh_.empty()){
 		int minX,maxX,minY,maxY;
 		this->extractor_->getThresholdBorderes(minX,maxX,minY,maxY,person.thresh_);
+		minY += static_cast<int>(headSize1/5.0);
 		headPosition = cv::Point2f((minX+maxX)/2,std::max(headSize1,headSize2)/2+minY);
 		cv::circle(headMask,headPosition,radius,cv::Scalar(255,255,255),-1);
 		cv::Mat tmpThresh;

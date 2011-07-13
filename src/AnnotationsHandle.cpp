@@ -396,7 +396,7 @@ int AnnotationsHandle::runAnn(int argc,char **argv,unsigned step,const std::stri
 	 * the annotation file */
 	int key = 0;
 
-int extra = 878;
+int extra = 1038;
 
 	while((char)key != 'q' && (char)key != 'Q' && index<imgs.size()) {
 		std::cerr<<"Annotations for image: "<<imgs[index].substr\
@@ -1015,12 +1015,12 @@ boost::mutex AnnotationsHandle::trackbarMutex_;
 std::tr1::shared_ptr<IplImage> AnnotationsHandle::image_;
 std::deque<AnnotationsHandle::ANNOTATION> AnnotationsHandle::annotations_;
 //==============================================================================
-
+/*
 int main(int argc,char **argv){
 	std::string folderSuffix = "_train";
 	AnnotationsHandle::runAnn(argc,argv,1,folderSuffix,-1);
 //	AnnotationsHandle::runAnnArtificial(argc,argv,1,folderSuffix,-1,653,60,146);
 	//AnnotationsHandle::runEvaluation(argc,argv);
 }
-
+*/
 

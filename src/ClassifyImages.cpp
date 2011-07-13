@@ -1467,7 +1467,7 @@ AnnotationsHandle::POSE what,GaussianProcess::kernelFunction kernel,unsigned fol
 		train.open(errorsOnTrain.c_str(),std::ios::out | std::ios::app);
 	}
 	for(float v=1e-10;v<1.0;v*=10.0){
-		for(float l=1;l<1e+7;l*=5.0){
+		for(float l=1;l<1e+10;l*=5.0){
 			classi.init(v,l,l,feat,kernel,useGt);
 			float errorTest = 0.0f;
 			if(classi.what() == ClassifyImages::EVALUATE){
@@ -1556,7 +1556,7 @@ int main(int argc,char **argv){
 	classi.buildPCAModels(-1,FeatureExtractor::HEAD);
 */
 	//--------------------------------------------------------------------------
-
+/*
 	// test
 	float normError = 0.0f;
  	ClassifyImages classi(argc,argv,ClassifyImages::TEST,\
@@ -1566,16 +1566,16 @@ int main(int argc,char **argv){
  	classi.init(1e-5,40000.0,50000.0,feat,&GaussianProcess::sqexp,false);
 
 	classi.runTest(-1,AnnotationsHandle::LONGITUDE,normError,FeatureExtractor::HEAD);
-
+*/
 	//--------------------------------------------------------------------------
-/*
+
 	// evaluate
  	ClassifyImages classi(argc,argv,ClassifyImages::EVALUATE,\
  		ClassifyImages::GAUSSIAN_PROCESS);
  	classi.init(1e-5,40000.0,50000.0,feat,&GaussianProcess::sqexp,false);
 	classi.runCrossValidation(14,AnnotationsHandle::LONGITUDE,-1,false,\
 		FeatureExtractor::TOP);
-*/
+
 	//--------------------------------------------------------------------------
 /*
 	// BUILD THE SIFT DICTIONARY

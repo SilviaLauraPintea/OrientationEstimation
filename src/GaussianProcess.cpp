@@ -315,7 +315,7 @@ _float GaussianProcess::sqexp(const cv::Mat &x1,const cv::Mat &x2,_float l){
 	cv::Mat tmpDiff = diff.colRange(0,diff.cols-2);
 	_float result1  = (tmpDiff.dot(tmpDiff))/l;
 	_float result2  = (diff.at<_float>(0,diff.cols-2)*diff.at<_float>\
-		(0,diff.cols-2))/(4.0*l);
+		(0,diff.cols-2))/(1e+3*l);
 	_float result   = std::exp(-1.0/2.0*(result1+result2));
 	diff.release();
 	tmpDiff.release();
