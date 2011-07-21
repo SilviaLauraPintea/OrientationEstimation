@@ -187,7 +187,8 @@ class FeatureExtractor {
 		 */
 		cv::Mat getSIFT(bool flip,const cv::Mat &feature,\
 			const std::vector<cv::Point2f> &templ,const cv::Rect &roi,\
-			const cv::Mat &test,std::vector<cv::Point2f> &indices);
+			const cv::Mat &test,std::vector<cv::Point2f> &indices,\
+			bool oneClass=true);
 		/** Creates a "histogram" of interest points + number of blobs.
 		 */
 		cv::Mat getPointsGrid(bool flip,const cv::Mat &feature,const cv::Rect &roi,\

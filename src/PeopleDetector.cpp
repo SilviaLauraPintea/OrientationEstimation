@@ -283,7 +283,7 @@ int k,const cv::Mat &thresh,float tmplHeight,cv::Mat &colorRoi){
 	// LOOP OVER THE AREA OF OUR TEMPLATE AND THERESHOLD ONLY THOSE PIXELS
 	float tmpSize = std::max(this->templates_[k].extremes_[1]-\
 		this->templates_[k].extremes_[0],this->templates_[k].extremes_[3]-\
-		this->templates_[k].extremes_[2])/16;
+		this->templates_[k].extremes_[2])/8;
 
 	int x1Border = std::max(minX,static_cast<int>(this->templates_[k].extremes_[0]-\
 		tmpSize));
@@ -947,7 +947,7 @@ const float logBGProb,const vnl_vector<float> &logSumPixelBGProb){
 		}
 		cvShowImage("bg",tmpBg);
 		cvShowImage("image",tmpSrc);
-		cvWaitKey(0);
+		cvWaitKey(5);
 		cvReleaseImage(&tmpBg);
 		cvReleaseImage(&tmpSrc);
 	}
@@ -1243,7 +1243,6 @@ void PeopleDetector::readLocations(bool flip){
 float PeopleDetector::rotationAngle(const cv::Point2f &headLocation,\
 const cv::Point2f &feetLocation){
 //	return 0;
-
 	float rotAngle = std::atan2(headLocation.y-feetLocation.y,\
 		headLocation.x-feetLocation.x);
 	rotAngle += M_PI/2.0;
@@ -1310,7 +1309,7 @@ void PeopleDetector::extractHeadArea(int i,FeatureExtractor::people &person){
 	if(!person.thresh_.empty()){
 		int minX,maxX,minY,maxY;
 		this->extractor_->getThresholdBorderes(minX,maxX,minY,maxY,person.thresh_);
-		minY += static_cast<int>(headSize1/5.0);
+		minY += static_cast<int>(headSize1/3.0);
 		headPosition = cv::Point2f((minX+maxX)/2,std::max(headSize1,headSize2)/2+minY);
 		cv::circle(headMask,headPosition,radius,cv::Scalar(255,255,255),-1);
 		cv::Mat tmpThresh;
@@ -1321,7 +1320,8 @@ void PeopleDetector::extractHeadArea(int i,FeatureExtractor::people &person){
 	}else{
 	//ELSE FIX ONLY THE TEMPLATE
 		headPosition = cv::Point2f(this->templates_[i].head_.x-person.borders_[0],\
-			this->templates_[i].head_.y-person.borders_[2]);
+			this->templates_[i].head_.y-person.borders_[2]+\
+			static_cast<int>(headSize1/3.0));
 		cv::circle(headMask,headPosition,radius,cv::Scalar(255,255,255),-1);
 	}
 	//UPDATE THE TEMPLATE POINTS
@@ -1375,17 +1375,18 @@ void PeopleDetector::setFlip(bool flip){
 int main(int argc,char **argv){
 	PeopleDetector feature(argc,argv,true,false,-1);
 
-	for(FeatureExtractor::FEATURE f=FeatureExtractor::IPOINTS;\
-	f<=FeatureExtractor::SURF;++f){
-		if(f==FeatureExtractor::RAW_PIXELS || f==FeatureExtractor::SIFT_DICT){
-			continue;
-		}
+	std::deque<FeatureExtractor::FEATURE> fe;
+//	fe.push_back(FeatureExtractor::EDGES);
+//	fe.push_back(FeatureExtractor::GABOR);
+//	fe.push_back(FeatureExtractor::SURF);
+//	fe.push_back(FeatureExtractor::IPOINTS);
+	fe.push_back(FeatureExtractor::SIFT);
 
-FeatureExtractor::FEATURE f=FeatureExtractor::GABOR;
-		std::deque<FeatureExtractor::FEATURE> feat(1,f);
+	for(std::size_t u=0;u<fe.size();++u){
+		std::deque<FeatureExtractor::FEATURE> feat(1,fe[u]);
 		feature.init(std::string(argv[1])+"annotated_train",\
 			std::string(argv[1])+"annotated_train.txt",feat,true);
 		feature.start(true,true);
-//	}
+	}
 }
 */

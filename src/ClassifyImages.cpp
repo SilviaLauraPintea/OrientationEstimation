@@ -53,6 +53,8 @@ ClassifyImages::CLASSIFIER classi){
 				this->gpCos_.push_back(GaussianProcess());
 				break;
 			case(ClassifyImages::NEURAL_NETWORK):
+				this->nnCos_.push_back(CvANN_MLP());
+				this->nnSin_.push_back(CvANN_MLP());
 				this->nn_.push_back(CvANN_MLP());
 				break;
 			case(ClassifyImages::K_NEAREST_NEIGHBORS):
@@ -186,6 +188,8 @@ ClassifyImages::~ClassifyImages(){
 			this->gpCos_.clear();
 			break;
 		case(ClassifyImages::NEURAL_NETWORK):
+			this->nnCos_.clear();
+			this->nnSin_.clear();
 			this->nn_.clear();
 			break;
 		case(ClassifyImages::K_NEAREST_NEIGHBORS):
@@ -251,23 +255,39 @@ GaussianProcess::kernelFunction theKFunction,bool toUseGT){
 /** Concatenate the loaded data from the files to the currently computed data.
  */
 void ClassifyImages::loadData(const cv::Mat &tmpData1,const cv::Mat &tmpTargets1,\
-unsigned i,cv::Mat &outData,cv::Mat &outTargets){
+unsigned i,cv::Mat &outData,cv::Mat &outTargets,bool oneClass){
 	// LOAD THE DATA AND TARGET MATRIX FROM THE FILE IF IT'S THERE
 	std::deque<std::string> names;
 	names.push_back("CLOSE");names.push_back("MEDIUM");	names.push_back("FAR");
 
-	cv::Mat tmpData2,tmpTargets2;
-	std::string modelDataName    = this->modelName_+names[i]+"/Data.bin";
-	std::string modelTargetsName = this->modelName_+names[i]+"/Labels.bin";
-	if(Helpers::file_exists(modelDataName.c_str())){
-		Auxiliary::binFile2mat(tmpData2,const_cast<char*>(modelDataName.c_str()));
+	cv::Mat tmpData2 = cv::Mat(),tmpTargets2 = cv::Mat();
+	std::deque<std::string> modelDataName;
+	std::deque<std::string> modelTargetsName;
+	if(oneClass){
+		modelDataName.push_back(this->modelName_+names[i]+"/Data.bin");
+		modelTargetsName.push_back(this->modelName_+names[i]+"/Labels.bin");
 	}else{
-		tmpData2 = cv::Mat();
+		for(std::size_t n=0;n<names.size();++n){
+			modelDataName.push_back(this->modelName_+names[n]+"/Data.bin");
+			modelTargetsName.push_back(this->modelName_+names[n]+"/Labels.bin");
+		}
 	}
-	if(Helpers::file_exists(modelTargetsName.c_str())){
-		Auxiliary::binFile2mat(tmpTargets2,const_cast<char*>(modelTargetsName.c_str()));
-	}else{
-		tmpTargets2 = cv::Mat();
+
+	// lOAD THE DESIRED DATA
+	for(std::size_t d=0;d<modelDataName.size();++d){
+		cv::Mat loadData, loadTargs;
+		if(Helpers::file_exists(modelDataName[d].c_str())){
+			Auxiliary::binFile2mat(loadData,const_cast<char*>(modelDataName[d].c_str()));
+		}
+		if(Helpers::file_exists(modelTargetsName[d].c_str())){
+			Auxiliary::binFile2mat(loadTargs,const_cast<char*>(modelTargetsName[d].c_str()));
+		}
+		if(tmpData2.empty()){loadData.copyTo(tmpData2);
+		}else{tmpData2.push_back(loadData);}
+		if(tmpTargets2.empty()){loadTargs.copyTo(tmpTargets2);
+		}else{tmpTargets2.push_back(loadTargs);}
+		loadData.release();
+		loadTargs.release();
 	}
 
 	// NOW COPY THEM TOGETHER INTO A FINAL MATRIX AND STORE IT.
@@ -367,19 +387,41 @@ void ClassifyImages::trainGP(AnnotationsHandle::POSE what,int i){
 /** Creates the training data (according to the options),the labels and
  * trains the a \c Neural Network on the data.
  */
-void ClassifyImages::trainNN(int i){
+void ClassifyImages::trainNN(int i,bool together){
 	// DEFINE THE NETWORK ARCHITECTURE
-	std::cout<<"Training the Neural Network..."<<std::endl;
-	int layerInts[] = {this->trainData_[i].cols,100,100,4};
-	cv::Mat layerSizes(1,static_cast<int>(sizeof(layerInts)/sizeof(layerInts[0])),\
-		CV_32S,layerInts);
-	this->nn_[i].create(layerSizes,1);
+	if(together){
+		std::cout<<"Training the Neural Network..."<<std::endl;
+		int layerInts[] = {this->trainData_[i].cols,100,100,4};
+		cv::Mat layerSizes(1,static_cast<int>(sizeof(layerInts)/sizeof(layerInts[0])),\
+			CV_32S,layerInts);
+		this->nn_[i].create(layerSizes,1);
 
-	// TRAIN THE SIN AND COS FOR both LONGITUDE & LATITUDE
-	this->nn_[i].train(this->trainData_[i],this->trainTargets_[i].colRange(0,4),\
-		cv::Mat(),cv::Mat(),CvANN_MLP_TrainParams(cvTermCriteria\
-		(CV_TERMCRIT_ITER,1000,0.01),CvANN_MLP_TrainParams::BACKPROP,0.01));
-	layerSizes.release();
+		// TRAIN THE SIN AND COS FOR both LONGITUDE & LATITUDE
+		this->nn_[i].train(this->trainData_[i],this->trainTargets_[i].colRange(0,4),\
+			cv::Mat(),cv::Mat(),CvANN_MLP_TrainParams(cvTermCriteria\
+			(CV_TERMCRIT_ITER,1000,0.01),CvANN_MLP_TrainParams::BACKPROP,0.01));
+		layerSizes.release();
+	}else{
+		int layerInts[] = {this->trainData_[i].cols,100,100,1};
+		std::cout<<"Training the Neural Network Sin..."<<std::endl;
+		cv::Mat layerSizesSin(1,static_cast<int>(sizeof(layerInts)/sizeof(layerInts[0])),\
+			CV_32S,layerInts);
+		this->nnSin_[i].create(layerSizesSin,1);
+		this->nnSin_[i].train(this->trainData_[i],this->trainTargets_[i].col(0),\
+			cv::Mat(),cv::Mat(),CvANN_MLP_TrainParams(cvTermCriteria\
+			(CV_TERMCRIT_ITER,1000,0.01),CvANN_MLP_TrainParams::BACKPROP,0.01));
+		layerSizesSin.release();
+
+		// AND FOR THE COSINE
+		std::cout<<"Training the Neural Network Cos..."<<std::endl;
+		cv::Mat layerSizesCos(1,static_cast<int>(sizeof(layerInts)/sizeof(layerInts[0])),\
+			CV_32S,layerInts);
+		this->nnCos_[i].create(layerSizesCos,1);
+		this->nnCos_[i].train(this->trainData_[i],this->trainTargets_[i].col(1),\
+			cv::Mat(),cv::Mat(),CvANN_MLP_TrainParams(cvTermCriteria\
+			(CV_TERMCRIT_ITER,1000,0.01),CvANN_MLP_TrainParams::BACKPROP,0.01));
+		layerSizesCos.release();
+	}
 }
 //==============================================================================
 /** Creates the training data (according to the options),the labels and
@@ -722,27 +764,40 @@ std::deque<cv::Point2f> ClassifyImages::predictGP(int i){
 /** Creates the test data and applies \c Neural Network prediction on the test
  * data.
  */
-std::deque<cv::Point2f> ClassifyImages::predictNN(AnnotationsHandle::POSE what,int i){
+std::deque<cv::Point2f> ClassifyImages::predictNN(AnnotationsHandle::POSE what,\
+int i,bool together){
 	std::cout<<"Predicting on the Neural Network..."<<std::endl;
 	std::deque<cv::Point2f> oneClassPredictions;
 
 	// FOR EACH ROW IN THE TEST MATRIX PREDICT
 	for(int j=0;j<this->testData_[i].rows;++j){
-	 	cv::Mat preds;
-		this->nn_[i].predict(this->testData_[i].row(j),preds);
-		preds.convertTo(preds,CV_32FC1);
-		std::cout<<"#Predictions="<<preds.size()<<" #Data="<<\
-			this->testData_[i].size()<<std::endl;
-		float x,y;
-		if(what == AnnotationsHandle::LONGITUDE){
-			y = preds.at<float>(0,0);
-			x = preds.at<float>(0,1);
-		}else if(what == AnnotationsHandle::LATITUDE){
-			y = preds.at<float>(0,2);
-			x = preds.at<float>(0,3);
-		}
+	 	float x,y;
+	 	if(together){
+		 	cv::Mat preds;
+			this->nn_[i].predict(this->testData_[i].row(j),preds);
+			preds.convertTo(preds,CV_32FC1);
+			std::cout<<"#Predictions="<<preds.size()<<" #Data="<<\
+				this->testData_[i].size()<<std::endl;
+			if(what == AnnotationsHandle::LONGITUDE){
+				y = preds.at<float>(0,0);
+				x = preds.at<float>(0,1);
+			}else if(what == AnnotationsHandle::LATITUDE){
+				y = preds.at<float>(0,2);
+				x = preds.at<float>(0,3);
+			}
+			preds.release();
+	 	}else{
+		 	cv::Mat predsSin,predsCos;
+			this->nnSin_[i].predict(this->testData_[i].row(j),predsSin);
+			predsSin.convertTo(predsSin,CV_32FC1);
+			y = predsSin.at<float>(0,0);
+			this->nnCos_[i].predict(this->testData_[i].row(j),predsCos);
+			predsSin.convertTo(predsCos,CV_32FC1);
+			x = predsCos.at<float>(0,0);
+			predsSin.release();
+			predsCos.release();
+	 	}
 		oneClassPredictions.push_back(cv::Point2f(x,y));
-		preds.release();
 	}
 	return oneClassPredictions;
 }
@@ -835,7 +890,9 @@ bool ClassifyImages::isClassiInit(int i){
 			return (!this->gpSin_[i].empty() || !this->gpCos_[i].empty());
 			break;
 		case(ClassifyImages::NEURAL_NETWORK):
-			return (this->nn_[i].get_layer_count()!=0);
+			return (this->nn_[i].get_layer_count()!=0 ||\
+				(this->nnSin_[i].get_layer_count()!=0 &&\
+				this->nnSin_[i].get_layer_count()!=0));
 			break;
 		case(ClassifyImages::K_NEAREST_NEIGHBORS):
 			return (this->sinKNN_[i].get_max_k()!=0 && this->cosKNN_[i].get_max_k()!=0);
@@ -1144,7 +1201,9 @@ int colorSp,bool onTrain,FeatureExtractor::FEATUREPART part){
 
 	// SET THE CALIBRATION ONLY ONCE (ALL IMAGES ARE READ FROM THE SAME DIR)
 	this->resetFeatures(this->trainDir_,this->trainImgString_,colorSp,part);
+
 	for(unsigned i=0;i<k;++i){
+//for(unsigned i=5;i<k;i+=6){
 		std::cout<<"Round "<<i<<"___________________________________________"<<\
 			"_____________________________________________________"<<std::endl;
 		// SPLIT TRAINING AND TESTING ACCORDING TO THE CURRENT FOLD
@@ -1186,6 +1245,11 @@ int colorSp,bool onTrain,FeatureExtractor::FEATUREPART part){
 	finalError     /= static_cast<float>(k);
 	finalNormError /= static_cast<float>(k);
 	finalMeanDiff  /= static_cast<float>(k);
+/*
+finalError     /= static_cast<float>(2);
+finalNormError /= static_cast<float>(2);
+finalMeanDiff  /= static_cast<float>(2);
+*/
 	std::cout<<">>> final-RMS-error:"<<finalError<<std::endl;
 	std::cout<<">>> final-RMS-normalized-error:"<<finalNormError<<std::endl;
 	std::cout<<">>> final-avg-difference:"<<finalMeanDiff<<std::endl;
@@ -1466,17 +1530,20 @@ AnnotationsHandle::POSE what,GaussianProcess::kernelFunction kernel,unsigned fol
 	if(classi.what() == ClassifyImages::EVALUATE){
 		train.open(errorsOnTrain.c_str(),std::ios::out | std::ios::app);
 	}
-	for(float v=1e-10;v<1.0;v*=10.0){
-		for(float l=1;l<1e+10;l*=5.0){
+//	for(float v=1e-10;v<1.0;v*=10.0){
+//		for(float l=1;l<1e+10;l*=5.0){
+		for(float v=1e-10;v<1.1;v+=0.1){
+			for(float l=1;l<1100;l+=100.0){
+
 			classi.init(v,l,l,feat,kernel,useGt);
 			float errorTest = 0.0f;
 			if(classi.what() == ClassifyImages::EVALUATE){
 				errorTest = classi.runCrossValidation(folds,what,colorSp,false,\
-					FeatureExtractor::HEAD);
+					FeatureExtractor::TOP);
 				test<<v<<" "<<l<<" "<<errorTest<<std::endl;
 			}else if(classi.what() == ClassifyImages::TEST){
 				classi.runTest(-1,AnnotationsHandle::LONGITUDE,errorTest,\
-					FeatureExtractor::HEAD);
+					FeatureExtractor::TOP);
 				test<<v<<" "<<l<<" "<<errorTest<<std::endl;
 				continue;
 			}
@@ -1484,7 +1551,7 @@ AnnotationsHandle::POSE what,GaussianProcess::kernelFunction kernel,unsigned fol
 			classi.init(v,l,l,feat,kernel,useGt);
 			float errorTrain = 0.0f;
 			errorTrain = classi.runCrossValidation(folds,what,colorSp,true,\
-				FeatureExtractor::HEAD);
+				FeatureExtractor::TOP);
 			train<<v<<" "<<l<<" "<<errorTrain<<std::endl;
 		}
 	}
@@ -1518,7 +1585,7 @@ bool train,int nEigens,int reshapeRows){
 			test1 = test1.reshape(0,reshapeRows);
 			cv::imshow("back_proj",test1);
 			cv::imshow("original",test2);
-			cv::waitKey(0);
+			cv::waitKey(5);
 			test1.release();
 			test2.release();
 			dummy.release();
@@ -1539,13 +1606,12 @@ int main(int argc,char **argv){
 //	feat.push_back(FeatureExtractor::TEMPL_MATCHES);
 //	feat.push_back(FeatureExtractor::SKIN_BINS);
 //	feat.push_back(FeatureExtractor::IPOINTS);
-
 /*
 	// build data matrix
  	ClassifyImages classi(argc,argv,ClassifyImages::BUILD_DATA,\
  		ClassifyImages::GAUSSIAN_PROCESS);
- 	classi.init(1e-5,200000.0,200000.0,feat,&GaussianProcess::sqexp,false);
-	classi.buildDataMatrix(-1,FeatureExtractor::HEAD);
+	classi.init(1.0,625.0,125.0,feat,&GaussianProcess::sqexp,false);
+	classi.buildDataMatrix(-1,FeatureExtractor::TOP);
 */
 	//--------------------------------------------------------------------------
 /*
@@ -1561,19 +1627,20 @@ int main(int argc,char **argv){
 	float normError = 0.0f;
  	ClassifyImages classi(argc,argv,ClassifyImages::TEST,\
  		ClassifyImages::GAUSSIAN_PROCESS);
-//	classi.init(1e-5,40000.0,50000.0,feat,&GaussianProcess::sqexp,false);
-
- 	classi.init(1e-5,40000.0,50000.0,feat,&GaussianProcess::sqexp,false);
-
-	classi.runTest(-1,AnnotationsHandle::LONGITUDE,normError,FeatureExtractor::HEAD);
+//	classi.init(1e-05,5e+06,1e+07,feat,&GaussianProcess::sqexp,true);
+ 	classi.init(1.0,100.0,125.0,feat,&GaussianProcess::sqexp,false);
+// 	classi.init(1.0,625.0,125.0,feat,&GaussianProcess::sqexp,false);
+	classi.runTest(-1,AnnotationsHandle::LONGITUDE,normError,FeatureExtractor::TOP);
 */
 	//--------------------------------------------------------------------------
 
 	// evaluate
  	ClassifyImages classi(argc,argv,ClassifyImages::EVALUATE,\
  		ClassifyImages::GAUSSIAN_PROCESS);
- 	classi.init(1e-5,40000.0,50000.0,feat,&GaussianProcess::sqexp,false);
-	classi.runCrossValidation(14,AnnotationsHandle::LONGITUDE,-1,false,\
+// 	classi.init(1e-5,1e+5,5e+4,feat,&GaussianProcess::sqexp,true);
+ 	classi.init(1.0,100.0,125.0,feat,&GaussianProcess::sqexp,false);
+// 	classi.init(1e-5,5e+4,1e+4,feat,&GaussianProcess::sqexp,true);
+	classi.runCrossValidation(12,AnnotationsHandle::LONGITUDE,-1,false,\
 		FeatureExtractor::TOP);
 
 	//--------------------------------------------------------------------------
@@ -1585,10 +1652,10 @@ int main(int argc,char **argv){
 	//--------------------------------------------------------------------------
 /*
 	// find parmeteres
-	ClassifyImages classi(argc,argv,ClassifyImages::TEST,\
+	ClassifyImages classi(argc,argv,ClassifyImages::EVALUATE,\
 		ClassifyImages::GAUSSIAN_PROCESS);
-	parameterSetting("train_4.txt","test_4.txt",classi,argc,argv,feat,\
-		-1,false,AnnotationsHandle::LONGITUDE,&GaussianProcess::sqexp,0);
+	parameterSetting("train_rawPixThesis.txt","test_rawPixThesis.txt",classi,argc,argv,feat,\
+		-1,true,AnnotationsHandle::LONGITUDE,&GaussianProcess::sqexp,14);
 */
 	//-------------------------------------------------------------------------
 /*

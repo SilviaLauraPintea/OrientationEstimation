@@ -42,7 +42,7 @@ FeatureExtractor::FeatureExtractor(){
 	this->featureFile_    = "none";
 	this->print_          = false;
 	this->plot_           = true;
-	this->resizedImgSize_ = 5;
+	this->resizedImgSize_ = 10;
 }
 //==============================================================================
 FeatureExtractor::~FeatureExtractor(){
@@ -376,7 +376,7 @@ const cv::Rect &roi){
 	if(this->plot_){
 		cv::imshow("gray",person.pixels_);
 		cv::imshow("final",final);
-		cv::waitKey(0);
+		cv::waitKey(5);
 	}
 	cv::Mat result = final.reshape(0,1);
 /*
@@ -535,11 +535,12 @@ const FeatureExtractor::templ &aTempl,float rotAngle,bool contours){
 		preResult.release();
 	}else{
 		cv::dilate(tmpEdge,tmpEdge,cv::Mat(),cv::Point(-1,-1),1);
-		cv::medianBlur(tmpEdge,tmpEdge,11);
+		cv::medianBlur(tmpEdge,tmpEdge,3);
 	 	if(this->plot_){
 			cv::imshow("Edges",tmpEdge);
-			cv::waitKey(0);
+			cv::waitKey(5);
 		}
+
 		result = cv::Mat::zeros(cv::Size(tmpEdge.rows*tmpEdge.cols+2,1),CV_32FC1);
 		cv::Mat dumm = result.colRange(0,(tmpEdge.cols*tmpEdge.rows));
 		tmpEdge = tmpEdge.reshape(0,1);
@@ -659,7 +660,7 @@ const cv::Rect &roi,const FeatureExtractor::templ &aTempl,const cv::Mat &test){
 				3,cv::Scalar(0,0,255));
 		}
 		cv::imshow("IPOINTS",copyTest);
-		cv::waitKey(0);
+		cv::waitKey(5);
 		copyTest.release();
 	}
 
@@ -780,7 +781,7 @@ const FeatureExtractor::templ &aTempl,const float rotAngle,int aheight){
 		if(this->plot_){
 			cv::imshow("WholeGaborResponse",tmp1);
 			cv::imshow("GaborResponse",tmp3);
-			cv::waitKey(0);
+			cv::waitKey(5);
 		}
 
 		// RESHAPE AND STORE IN THE RIGHT PLACE
@@ -844,7 +845,7 @@ cv::Mat &minDists,cv::Mat &minLabs){
  */
 cv::Mat FeatureExtractor::getSIFT(bool flip,const cv::Mat &feature,\
 const std::vector<cv::Point2f> &templ,const cv::Rect &roi,const cv::Mat &test,\
-std::vector<cv::Point2f> &indices){
+std::vector<cv::Point2f> &indices,bool oneClass){
 	// KEEP ONLY THE SIFT FEATURES THAT ARE WITHIN THE TEMPLATE
 	cv::Mat tmp      = cv::Mat::zeros(cv::Size(feature.cols-2,feature.rows),CV_32FC1);
 	unsigned counter = 0;
@@ -875,8 +876,23 @@ std::vector<cv::Point2f> &indices){
 
 	// ASSUME THAT THERE IS ALREADY A SIFT DICTIONARY AVAILABLE
 	if(this->dictionarySIFT_.empty()){
-		Auxiliary::binFile2mat(this->dictionarySIFT_,const_cast<char*>\
-			(this->dictFilename_.c_str()));
+		if(!oneClass){
+			Auxiliary::binFile2mat(this->dictionarySIFT_,const_cast<char*>\
+				(this->dictFilename_.c_str()));
+		}else{
+			std::deque<std::string> names;
+			names.push_back("CLOSE");names.push_back("MEDIUM");	names.push_back("FAR");
+			for(std::size_t n=0;n<names.size();++n){
+				std::string dictFilename = "data/"+names[n]+"_SIFT"+".bin";
+				cv::Mat tmp;
+				Auxiliary::binFile2mat(tmp,const_cast<char*>(dictFilename.c_str()));
+				if(this->dictionarySIFT_.empty()){
+					tmp.copyTo(this->dictionarySIFT_);
+				}else{
+					this->dictionarySIFT_.push_back(tmp);
+				}
+			}
+		}
 	}
 
 	// COMPUTE THE DISTANCES FROM EACH NEW FEATURE TO THE DICTIONARY ONES
@@ -1135,7 +1151,7 @@ cv::Mat FeatureExtractor::extractSURF(cv::Mat &image){
 				3,cv::Scalar(0,0,255));
 		}
 		cv::imshow("SURFS",image);
-		cv::waitKey(0);
+		cv::waitKey(5);
 	}
 	result.convertTo(result,CV_32FC1);
 	return result;
@@ -1196,7 +1212,7 @@ cv::Mat FeatureExtractor::extractGabor(cv::Mat &image){
 			cv::imshow("Gray",gray);
 			cv::imshow("GaborFilter"+Auxiliary::int2string(i),agabor);
 			cv::imshow("GaborResponse"+Auxiliary::int2string(i),response);
-			cv::waitKey(0);
+			cv::waitKey(5);
 		}
 		cv::Mat temp = result.rowRange(i*response.rows,(i+1)*response.rows);
 		response.convertTo(response,CV_32FC1);

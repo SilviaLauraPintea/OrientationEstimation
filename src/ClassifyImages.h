@@ -43,7 +43,7 @@ class ClassifyImages {
 		/** Creates the training data (according to the options),the labels and
 		 * trains the a \c Neural Network on the data.
 		 */
-		void trainNN(int i);
+		void trainNN(int i,bool together=true);
 		/** Creates the test data and applies \c GaussianProcess prediction on the test
 		 * data.
 		 */
@@ -51,7 +51,8 @@ class ClassifyImages {
 		/** Creates the test data and applies \c Neural Network prediction on the test
 		 * data.
 		 */
-		std::deque<cv::Point2f> predictNN(AnnotationsHandle::POSE what,int i);
+		std::deque<cv::Point2f> predictNN(AnnotationsHandle::POSE what,int i,\
+			bool together=true);
 		/** Initialize the options for the Gaussian Process regression.
 		 */
 		void init(float theNoise,float theLengthSin,float theLengthCos,\
@@ -100,7 +101,7 @@ class ClassifyImages {
 		/** Concatenate the loaded data from the files to the currently computed data.
 		 */
 		void loadData(const cv::Mat &tmpData1,const cv::Mat &tmpTargets1,\
-			unsigned i,cv::Mat &outData,cv::Mat &outTargets);
+			unsigned i,cv::Mat &outData,cv::Mat &outTargets,bool oneClass=true);
 		/** Run over multiple settings of the parameters to find the best ones.
 		 */
 		friend void parameterSetting(const std::string &errorsOnTrain,\
@@ -164,6 +165,14 @@ class ClassifyImages {
 		 * An instance of the class cv_ANN_MLP.
 		 */
 		std::deque<CvANN_MLP> nn_;
+		/** @var nn_
+		 * An instance of the class cv_ANN_MLP.
+		 */
+		std::deque<CvANN_MLP> nnCos_;
+		/** @var nn_
+		 * An instance of the class cv_ANN_MLP.
+		 */
+		std::deque<CvANN_MLP> nnSin_;
 		/** @var sinKNN_
 		 * An instance of the class CvKNearest.
 		 */
