@@ -17,7 +17,7 @@
 /** Converts a pointer to an IplImage to an OpenCV Mat.
  */
 cv::Mat Auxiliary::ipl2mat(IplImage* ipl_image){
-	cv::Mat mat_image = cv::Mat(ipl_image);
+	cv::Mat mat_image = cv::Mat(ipl_image,true);
 	return mat_image;
 }
 //==============================================================================

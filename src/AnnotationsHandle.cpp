@@ -187,7 +187,7 @@ unsigned int orient,AnnotationsHandle::POSE pose){
 /** Shows how the selected orientation looks on the image.
  */
 void AnnotationsHandle::drawOrientation(const cv::Point2f &center,\
-unsigned int orient,AnnotationsHandle::POSE pose){
+unsigned int orient,const std::tr1::shared_ptr<IplImage> im){
 	unsigned int length = 60;
 	float angle = (M_PI * orient)/180;
 	cv::Point point1,point2;
@@ -196,12 +196,12 @@ unsigned int orient,AnnotationsHandle::POSE pose){
 	point2.x = center.x - length * cos(angle + M_PI);
 	point2.y = center.y + length * sin(angle + M_PI);
 
-	cv::Size imgSize(image_->width,image_->height);
+	cv::Size imgSize(im->width,im->height);
 	cv::clipLine(imgSize,point1,point2);
 
-	cv::Mat tmpImage1(image_.get());
+	cv::Mat tmpImage1(im.get());
 	cv::Mat tmpImage(tmpImage1.clone());
-	cv::line(tmpImage,point1,point2,cv::Scalar(100,255,0),2,8,0);
+	cv::line(tmpImage,point1,point2,cv::Scalar(150,50,0),2,8,0);
 
 	cv::Point2f point3,point4,point5;
 	point3.x = center.x - length * 4/5 * cos(angle + M_PI);
@@ -221,6 +221,45 @@ unsigned int orient,AnnotationsHandle::POSE pose){
 	cv::circle(tmpImage,center,1,cv::Scalar(255,50,0),1,8,0);
 	cv::imshow("image",tmpImage);
 	tmpImage.release();
+	tmpImage1.release();
+}
+//==============================================================================
+/** Overloaded version for cv::Mat -- shows how the selected orientation
+ * looks on the image.
+ */
+cv::Mat AnnotationsHandle::drawOrientation(const cv::Point2f &center,\
+unsigned int orient,const cv::Mat &im,const cv::Scalar &color){
+	unsigned int length = 60;
+	float angle = (M_PI * orient)/180;
+	cv::Point point1,point2;
+	point1.x = center.x - length * cos(angle);
+	point1.y = center.y + length * sin(angle);
+	point2.x = center.x - length * cos(angle + M_PI);
+	point2.y = center.y + length * sin(angle + M_PI);
+
+	cv::Size imgSize(im.cols,im.rows);
+	cv::clipLine(imgSize,point1,point2);
+
+	cv::Mat tmpImage1(im.clone());
+	cv::Mat tmpImage(tmpImage1.clone());
+	cv::line(tmpImage,point1,point2,color,2,8,0);
+
+	cv::Point2f point3,point4,point5;
+	point3.x = center.x - length * 4/5 * cos(angle + M_PI);
+	point3.y = center.y + length * 4/5 * sin(angle + M_PI);
+	point4.x = point3.x - 7 * cos(M_PI/2.0 + angle);
+	point4.y = point3.y + 7 * sin(M_PI/2.0 + angle);
+	point5.x = point3.x - 7 * cos(M_PI/2.0 + angle  + M_PI);
+	point5.y = point3.y + 7 * sin(M_PI/2.0 + angle  + M_PI);
+
+	cv::Point *pts = new cv::Point[4];
+	pts[0] = point4;
+	pts[1] = point2;
+	pts[2] = point5;
+	cv::fillConvexPoly(tmpImage,pts,3,cv::Scalar(255,50,0),8,0);
+	delete [] pts;
+	cv::circle(tmpImage,center,1,cv::Scalar(255,50,0),1,8,0);
+	return tmpImage;
 	tmpImage1.release();
 }
 //==============================================================================
@@ -300,7 +339,7 @@ void AnnotationsHandle::trackBarHandleFct(int position,void *param){
 	cv::Point2f headCenter((points[12].x+points[14].x)/2,\
 		(points[12].y+points[14].y)/2);
 	if((POSE)(*ii)==LONGITUDE){
-		AnnotationsHandle::drawOrientation(headCenter,position,(POSE)(*ii));
+		AnnotationsHandle::drawOrientation(headCenter,position,image_);
 	}else if((POSE)(*ii)==LATITUDE){
 		AnnotationsHandle::drawLatitude(headCenter,lastAnno.location_,position,(POSE)(*ii));
 	}
@@ -396,7 +435,7 @@ int AnnotationsHandle::runAnn(int argc,char **argv,unsigned step,const std::stri
 	 * the annotation file */
 	int key = 0;
 
-int extra = 1038;
+int extra = 37;
 
 	while((char)key != 'q' && (char)key != 'Q' && index<imgs.size()) {
 		std::cerr<<"Annotations for image: "<<imgs[index].substr\
@@ -406,7 +445,7 @@ int extra = 1038;
 		 * for the current image */
 		if((char)key == 's'){
 //			annoOut<<imgs[index].substr(imgs[index].rfind("/")+1);
-std::string tmpName = Auxiliary::int2string(index+extra)+"final.jpg";
+std::string tmpName = "japanese_00"+Auxiliary::int2string(index+extra)+".jpg";
 annoOut<<tmpName;
 
 			for(unsigned i=0;i!=annotations_.size();++i){

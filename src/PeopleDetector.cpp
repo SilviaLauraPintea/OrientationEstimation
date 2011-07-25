@@ -35,6 +35,7 @@ bool buildBg,int colorSp,FeatureExtractor::FEATUREPART part,bool flip):Tracker\
 		if(dataPath[dataPath.size()-1]!='/'){
 			dataPath += "/";
 		}
+		this->isTest_         = false;
 		this->flip_           = flip;
 		this->plot_           = false;
 		this->print_          = true;
@@ -145,7 +146,9 @@ struct compareImg{
  */
 void PeopleDetector::init(const std::string &dataFolder,\
 const std::string &theAnnotationsFile,\
-const std::deque<FeatureExtractor::FEATURE> &feat,const bool readFromFolder){
+const std::deque<FeatureExtractor::FEATURE> &feat,bool test,\
+bool readFromFolder){
+	this->isTest_ = test;
 	this->dataMotionVectors_.clear();
 	this->existing_.clear();
 	this->classesRange_.clear();
@@ -435,13 +438,13 @@ void PeopleDetector::allForegroundPixels(std::deque<FeatureExtractor::people>\
 		allPeople[k].borders_[1] = maxX;
 		allPeople[k].borders_[2] = minY;
 		allPeople[k].borders_[3] = maxY;
-//		if(this->plot_){
+		if(this->plot_){
 			cv::imshow("people",allPeople[k].pixels_);
 			if(!allPeople[k].thresh_.empty()){
 				cv::imshow("threshold",allPeople[k].thresh_);
 			}
 			cv::waitKey(5);
-//		}
+		}
 		colorRoi.release();
 	}
 	thrsh.release();
@@ -638,13 +641,24 @@ const std::deque<unsigned> &exi,float threshVal){
 			nextImg.release();
 		}
 		dataRow.convertTo(dataRow,CV_32FC1);
-//		Auxiliary::mean0Variance1(dataRow);
 
 		// STORE THE EXTRACTED ROW INTO THE DATA MATRIX
 		if(this->data_[this->existing_[i].groupNo_].empty()){
 			dataRow.copyTo(this->data_[this->existing_[i].groupNo_]);
 		}else{
 			this->data_[this->existing_[i].groupNo_].push_back(dataRow);
+		}
+
+		if(this->isTest_){
+			{
+				boost::mutex::scoped_lock lock(PeopleDetector::dataMutex_);
+				std::cout<<"Produce another test row..."<<std::endl;
+				while(this->dataInfo_.size()>1){sleep(.1);}
+				PeopleDetector::DataRow aRow(this->existing_[i].location_,\
+					this->existing_[i].groupNo_,this->current_->sourceName_,\
+					dataRow,this->targets_[this->existing_[i].groupNo_].row(i));
+				this->dataInfo_.push_back(aRow);
+			}
 		}
 		dataRow.release();
 
@@ -661,6 +675,52 @@ const std::deque<unsigned> &exi,float threshVal){
 	if(bg){
 		cvReleaseImage(&bg);
 	}
+}
+//==============================================================================
+/** Draws the target orientation and the predicted orientation on the image.
+ */
+void PeopleDetector::drawPredictions(const cv::Point2f &pred,\
+std::tr1::shared_ptr<PeopleDetector::DataRow> dataRow){
+	cv::Mat load = cv::imread(dataRow->imgName_);
+	float pAngle = std::atan2(pred.y,pred.x);
+	float tAngle = std::atan2(dataRow->testTarg_.at<float>(0,0),\
+		dataRow->testTarg_.at<float>(0,1));
+	std::vector<cv::Point2f> templ;
+	dataRow->location_.x -= this->border_/2.0;
+	dataRow->location_.y -= this->border_/2.0;
+	Helpers::plotTemplate2(load,dataRow->location_,cv::Scalar(255,255,255),templ);
+	cv::Point2f headLocation = cv::Point2f((templ[12].x+templ[14].x)/2,\
+		(templ[12].y+templ[14].y)/2);
+	pAngle = this->unfixAngle(headLocation,dataRow->location_,pAngle);
+	tAngle = this->unfixAngle(headLocation,dataRow->location_,tAngle);
+
+	cv::Point2f center((headLocation.x + dataRow->location_.x)/2.0,\
+		(headLocation.y + dataRow->location_.y)/2.0);
+	unsigned predA = static_cast<unsigned>((pAngle*180.0)/M_PI);
+	unsigned targA = static_cast<unsigned>((tAngle*180.0)/M_PI);
+	cv::Mat tmp = AnnotationsHandle::drawOrientation(center,predA,\
+		load,cv::Scalar(0,255,0));
+	cv::Mat fin = AnnotationsHandle::drawOrientation(center,targA,\
+		tmp,cv::Scalar(0,0,255));
+	cv::imshow("orientation_image",fin);
+	cv::waitKey(10);
+	load.release();
+	fin.release();
+	tmp.release();
+}
+//==============================================================================
+/** Returns the last element in the data vector.
+ */
+std::tr1::shared_ptr<PeopleDetector::DataRow> PeopleDetector::popDataRow(){
+	if(!this->dataInfo_.empty()){
+		PeopleDetector::DataRow aRow = this->dataInfo_.back();
+		std::tr1::shared_ptr<PeopleDetector::DataRow> ptRow = std::tr1::shared_ptr\
+			<PeopleDetector::DataRow>(new PeopleDetector::DataRow(aRow));
+		this->dataInfo_.pop_back();
+		return ptRow;
+	}
+	return std::tr1::shared_ptr<PeopleDetector::DataRow>(static_cast\
+		<PeopleDetector::DataRow*>(NULL));
 }
 //==============================================================================
 /** Compute the dominant direction of the SIFT or SURF features.
@@ -778,6 +838,19 @@ const cv::Point2f &feetLocation,float angle,bool flip){
 	}
 	std::cout<<"Angle: "<<(newAngle*180/M_PI)<<std::endl;
 	return finalAngle;
+}
+//==============================================================================
+/** Un-does the rotation with respect to the camera.
+ */
+float PeopleDetector::unfixAngle(const cv::Point2f &headLocation,\
+const cv::Point2f &feetLocation,float angle){
+	float camAngle = std::atan2(headLocation.y-feetLocation.y,\
+		headLocation.x-feetLocation.x);
+	camAngle      += M_PI/2.0;
+	float newAngle = angle-camAngle;
+	Auxiliary::angle0to360(newAngle);
+	std::cout<<"Angle: "<<(newAngle*180/M_PI)<<std::endl;
+	return newAngle;
 }
 //==============================================================================
 /** For each row added in the data matrix (each person detected for which we
@@ -1163,6 +1236,7 @@ void PeopleDetector::start(bool readFromFolder,bool useGT){
 		this->useGroundTruth_ = false;
 		this->run(readFromFolder);
 	}
+	PeopleDetector::dataIsProduced_ = false;
 }
 //==============================================================================
 /** Reads the locations at which there are people in the current frame (for the
@@ -1254,12 +1328,8 @@ const cv::Point2f &feetLocation){
  * 3 classes depending on the position of the person wrt camera).
  */
 PeopleDetector::CLASSES PeopleDetector::findImageClass(const cv::Point2f &feet,\
-const cv::Point2f &head){
-
-// REMOVE=============================================================
-return PeopleDetector::FAR;
-// REMOVE=============================================================
-
+const cv::Point2f &head,bool oneClass){
+	if(oneClass){return PeopleDetector::FAR;}
 	if(this->classesRange_.empty()){
 		// GET THE CAMERA POSITION IN THE IMAGE PLANE
 		cv::Point2f cam = (*Helpers::proj())(cv::Point3f(Helpers::camPosX(),\
@@ -1370,6 +1440,9 @@ void PeopleDetector::setFlip(bool flip){
 	this->flip_ = flip;
 }
 //==============================================================================
+boost::mutex PeopleDetector::dataMutex_;
+bool PeopleDetector::dataIsProduced_;
+//==============================================================================
 //==============================================================================
 /*
 int main(int argc,char **argv){
@@ -1380,7 +1453,7 @@ int main(int argc,char **argv){
 //	fe.push_back(FeatureExtractor::GABOR);
 //	fe.push_back(FeatureExtractor::SURF);
 //	fe.push_back(FeatureExtractor::IPOINTS);
-	fe.push_back(FeatureExtractor::SIFT);
+	fe.push_back(FeatureExtractor::EDGES);
 
 	for(std::size_t u=0;u<fe.size();++u){
 		std::deque<FeatureExtractor::FEATURE> feat(1,fe[u]);

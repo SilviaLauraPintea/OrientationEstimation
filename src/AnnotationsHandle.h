@@ -164,7 +164,12 @@ class AnnotationsHandle {
 		/** Shows how the selected orientation looks on the image.
 		 */
 		static void drawOrientation(const cv::Point2f &center,unsigned int orient,\
-			AnnotationsHandle::POSE pose);
+			const std::tr1::shared_ptr<IplImage> im);
+		/** Overloaded version for cv::Mat -- shows how the selected orientation
+		 * looks on the image.
+		 */
+		static cv::Mat drawOrientation(const cv::Point2f &center,\
+			unsigned int orient,const cv::Mat &im,const cv::Scalar &color);
 		/** Shows how the selected orientation looks on the image.
 		 */
 		static void drawLatitude(const cv::Point2f &head,const cv::Point2f &feet,\

@@ -41,7 +41,7 @@ FeatureExtractor::FeatureExtractor(){
 	this->meanSize_       = 128;
 	this->featureFile_    = "none";
 	this->print_          = false;
-	this->plot_           = true;
+	this->plot_           = false;
 	this->resizedImgSize_ = 10;
 }
 //==============================================================================
@@ -535,7 +535,7 @@ const FeatureExtractor::templ &aTempl,float rotAngle,bool contours){
 		preResult.release();
 	}else{
 		cv::dilate(tmpEdge,tmpEdge,cv::Mat(),cv::Point(-1,-1),1);
-		cv::medianBlur(tmpEdge,tmpEdge,3);
+//		cv::medianBlur(tmpEdge,tmpEdge,3);
 	 	if(this->plot_){
 			cv::imshow("Edges",tmpEdge);
 			cv::waitKey(5);
@@ -1086,8 +1086,8 @@ cv::Mat FeatureExtractor::extractEdges(cv::Mat &image){
 	}
 	cv::cvtColor(image,gray,CV_BGR2GRAY);
 	cv::equalizeHist(gray,gray);
-	cv::medianBlur(gray,gray,5);
-	cv::Canny(gray,result,100,50,3,true);
+//	cv::medianBlur(gray,gray,7);
+	cv::Canny(gray,result,255,0,3,true);
 	if(this->plot_){
 		cv::imshow("gray",gray);
 		cv::imshow("edges",result);
@@ -1514,25 +1514,22 @@ const cv::Mat &img){
 		tmp.release();
 		return large;
 	}else{
-		unsigned sHeight = this->resizedImgSize_;
 		if(this->imageClass_=="CLOSE"){
-			aSize.height = sHeight;
-			aSize.width  = aSize.height*6/5;
+			aSize.height = this->resizedImgSize_;
 		}else if(this->imageClass_=="FAR"){
 			if(this->bodyPart_ == FeatureExtractor::WHOLE){
-				aSize.height = 3*sHeight;
+				aSize.height = 3*this->resizedImgSize_;
 			}else{
-				aSize.height = 3/2*sHeight;
+				aSize.height = this->resizedImgSize_;
 			}
-			aSize.width  = 3/2*sHeight;
 		}else if(this->imageClass_=="MEDIUM"){
 			if(this->bodyPart_ == FeatureExtractor::WHOLE){
-				aSize.height = 2*sHeight;
+				aSize.height = 2*this->resizedImgSize_;
 			}else{
-				aSize.height = sHeight;
+				aSize.height = this->resizedImgSize_;
 			}
-			aSize.width  = 3/2*sHeight;
 		}
+		aSize.width  = 3/2*this->resizedImgSize_;
 		cv::blur(tmp,tmp,cv::Size(3,3));
 		cv::resize(tmp,large,aSize,0,0,cv::INTER_NEAREST);
 		tmp.release();

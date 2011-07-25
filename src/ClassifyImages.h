@@ -35,7 +35,7 @@ class ClassifyImages {
 		void buildDictionary(int colorSp=-1,bool toUseGT=true);
 		/** Trains on the training data using the indicated classifier.
 		 */
-		void train(AnnotationsHandle::POSE what,bool fromFolder);
+		void train(AnnotationsHandle::POSE what,bool fromFolder,bool justLoad=false);
 		/** Creates the training data (according to the options),the labels and
 		 * trains the a \c GaussianProcess on the data.
 		 */
@@ -43,16 +43,16 @@ class ClassifyImages {
 		/** Creates the training data (according to the options),the labels and
 		 * trains the a \c Neural Network on the data.
 		 */
-		void trainNN(int i,bool together=true);
+		void trainNN(int i,bool together=false);
 		/** Creates the test data and applies \c GaussianProcess prediction on the test
 		 * data.
 		 */
-		std::deque<cv::Point2f> predictGP(int i);
+		cv::Point2f predictGP(cv::Mat &testRow,int i);
 		/** Creates the test data and applies \c Neural Network prediction on the test
 		 * data.
 		 */
-		std::deque<cv::Point2f> predictNN(AnnotationsHandle::POSE what,int i,\
-			bool together=true);
+		cv::Point2f predictNN(cv::Mat &testRow,AnnotationsHandle::POSE what,\
+			int i,bool together=false);
 		/** Initialize the options for the Gaussian Process regression.
 		 */
 		void init(float theNoise,float theLengthSin,float theLengthCos,\
@@ -101,7 +101,7 @@ class ClassifyImages {
 		/** Concatenate the loaded data from the files to the currently computed data.
 		 */
 		void loadData(const cv::Mat &tmpData1,const cv::Mat &tmpTargets1,\
-			unsigned i,cv::Mat &outData,cv::Mat &outTargets,bool oneClass=true);
+			unsigned i,cv::Mat &outData,cv::Mat &outTargets);
 		/** Run over multiple settings of the parameters to find the best ones.
 		 */
 		friend void parameterSetting(const std::string &errorsOnTrain,\
@@ -127,10 +127,17 @@ class ClassifyImages {
 			int nEigens=0,int reshapeRows=0);
 		/** Read and load the training/testing data.
 		 */
-		void getData(std::string trainFld,std::string annoFld,bool fromFolder);
-		/** Predicts on the test data.
+		void getData(std::string &trainFld,std::string &annoFld,bool fromFolder,\
+			bool test,bool justLoad=false);
+		/** Starts the threading such that each test row is generated and
+		 * predicted in real time.
 		 */
 		std::deque<std::deque<cv::Point2f> > predict(AnnotationsHandle::POSE what,\
+			bool fromFolder);
+		/** Predicts on the test data.
+		 */
+		std::deque<cv::Point2f> doPredict(std::tr1::shared_ptr\
+			<PeopleDetector::DataRow> dataRow,AnnotationsHandle::POSE what,\
 			bool fromFolder);
 		/** Try to optimize the prediction of the angle considering the variance of
 		 * sin^2 and cos^2.
@@ -143,7 +150,7 @@ class ClassifyImages {
 		void trainKNN(AnnotationsHandle::POSE what,int i);
 		/** Creates the test data and applies \c kNN prediction on the test data.
 		 */
-		std::deque<cv::Point2f> predictKNN(int i);
+		cv::Point2f predictKNN(cv::Mat &testRow,int i);
 		/** Creates the training data (according to the options),the labels and
 		 * builds the eigen-orientations.
 		 */
@@ -152,7 +159,8 @@ class ClassifyImages {
 		/** Creates the test data and applies computes the distances to the stored
 		 * eigen-orientations.
 		 */
-		std::deque<cv::Point2f> predictDist2PCA(AnnotationsHandle::POSE what,int i);
+		cv::Point2f predictDist2PCA(cv::Mat &testRow,\
+			AnnotationsHandle::POSE what,int i);
 		/** Backproject each image on the 4 models, compute distances and return.
 		 */
 		cv::Mat getPCAModel(const cv::Mat &data,int i,unsigned bins);

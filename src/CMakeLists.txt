@@ -61,7 +61,7 @@ ADD_LIBRARY(helpers
 #TARGET_LINK_LIBRARIES(GaussianProcess helpers opencv_core opencv_imgproc opencv_highgui cmn tools iberty vnl_algo vnl v3p_netlib ${XML2_LDFLAGS})
 
 ADD_EXECUTABLE(ClassifyImages ${MT_SRC}/ClassifyImages.cpp)
-TARGET_LINK_LIBRARIES(ClassifyImages helpers opencv_core opencv_ml opencv_objdetect opencv_imgproc opencv_video opencv_highgui opencv_features2d cmn tools iberty vnl_algo vnl v3p_netlib boost_filesystem boost_date_time-mt boost_thread-mt ${XML2_LDFLAGS})
+TARGET_LINK_LIBRARIES(ClassifyImages helpers boost_date_time-mt boost_thread-mt opencv_core opencv_ml opencv_objdetect opencv_imgproc opencv_video opencv_highgui opencv_features2d cmn tools iberty vnl_algo vnl v3p_netlib boost_filesystem boost_date_time-mt boost_thread-mt ${XML2_LDFLAGS})
 
 
 

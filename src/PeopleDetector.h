@@ -17,6 +17,44 @@ class PeopleDetector:public Tracker{
 	public:
 		/** Structure to store the existing/detected locations.
 		 */
+		struct DataRow{
+			std::string imgName_;
+			cv::Point2f location_;
+			unsigned int groupNo_;
+			cv::Mat testRow_;
+			cv::Mat testTarg_;
+			DataRow(const cv::Point2f &exi,unsigned int grNo,std::string name,\
+			const cv::Mat &row,const cv::Mat &targ):imgName_(name),location_(exi),\
+			groupNo_(grNo){
+				row.copyTo(this->testRow_);
+				targ.copyTo(this->testTarg_);
+			}
+			virtual ~DataRow(){
+				this->testRow_.release();
+				this->testTarg_.release();
+			}
+			DataRow(const DataRow &exi){
+				this->location_ = exi.location_;
+				this->groupNo_  = exi.groupNo_;
+				this->imgName_  = exi.imgName_;
+				exi.testRow_.copyTo(this->testRow_);
+				exi.testTarg_.copyTo(this->testTarg_);
+			}
+			DataRow& operator=(const DataRow &exi){
+				if(this == &exi) return *this;
+				this->location_ = exi.location_;
+				this->groupNo_  = exi.groupNo_;
+				this->imgName_  = exi.imgName_;
+				this->testRow_.release();
+				this->testTarg_.release();
+				exi.testRow_.copyTo(this->testRow_);
+				exi.testTarg_.copyTo(this->testTarg_);
+				return *this;
+			}
+		};
+
+		/** Structure to store the existing/detected locations.
+		 */
 		struct Existing{
 			cv::Point2f location_;
 			unsigned int groupNo_;
@@ -76,8 +114,8 @@ class PeopleDetector:public Tracker{
 		/** Initializes the parameters of the tracker.
 		 */
 		void init(const std::string &dataFolder,const std::string &theAnnotationsFile,\
-			const std::deque<FeatureExtractor::FEATURE> &feat,\
-			const bool readFromFolder = true);
+			const std::deque<FeatureExtractor::FEATURE> &feat,bool test,\
+			bool readFromFolder = true);
 		/** Checks to see if an annotation can be assigned to a detection.
 		 */
 		bool canBeAssigned(unsigned l,std::deque<float> &minDistances,\
@@ -87,6 +125,10 @@ class PeopleDetector:public Tracker{
 		 */
 		float fixAngle(const cv::Point2f &feetLocation,\
 			const cv::Point2f &cameraLocation,float angle,bool flip);
+		/** Un-does the rotation with respect to the camera.
+		 */
+		float unfixAngle(const cv::Point2f &headLocation,\
+			const cv::Point2f &feetLocation,float angle);
 		/** Get template extremities (if needed,considering some borders --
 		 * relative to the ROI).
 		 */
@@ -139,7 +181,7 @@ class PeopleDetector:public Tracker{
 		 * 3 classes depending on the position of the person wrt camera).
 		 */
 		PeopleDetector::CLASSES findImageClass(const cv::Point2f &feet,\
-			const cv::Point2f &head);
+			const cv::Point2f &head,bool oneClass=true);
 		/** Get distance wrt the camera in the image.
 		 */
 		float distanceWRTcamera(const cv::Point2f &feet);
@@ -155,7 +197,22 @@ class PeopleDetector:public Tracker{
 		std::deque<std::deque<float> > dataMotionVectors();
 		std::tr1::shared_ptr<FeatureExtractor> extractor();
 		void setFlip(bool flip);
+		/** Draws the target orientation and the predicted orientation on the image.
+		 */
+		void drawPredictions(const cv::Point2f &pred,std::tr1::shared_ptr\
+			<PeopleDetector::DataRow> dataRow);
+		/** Returns the last element in the data vector.
+		 */
+		std::tr1::shared_ptr<PeopleDetector::DataRow> popDataRow();
 		//======================================================================
+		/** @var dataMutex_
+		 * Used to check if the data is produced or not.
+		 */
+		static boost::mutex dataMutex_;
+		/** @var dataIsProduced_
+		 * It is true if the data is produced.
+		 */
+		static bool dataIsProduced_;
 	private:
 		/** @var print_
 		 * To print some feature values or not.
@@ -239,6 +296,14 @@ class PeopleDetector:public Tracker{
 		 * To flip the images or not.
 		 */
 		bool flip_;
+		/** @var dataInfo_;
+		 * Information regarding each row in the data matrix.
+		 */
+		std::vector<PeopleDetector::DataRow> dataInfo_;
+		/** @var isTest_;
+		 * True if the data is the test set.
+		 */
+		bool isTest_;
 		//======================================================================
 	private:
 		DISALLOW_COPY_AND_ASSIGN(PeopleDetector);
