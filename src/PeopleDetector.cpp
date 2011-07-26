@@ -91,6 +91,7 @@ PeopleDetector::~PeopleDetector(){
 	this->dataMotionVectors_.clear();
 	this->existing_.clear();
 	this->classesRange_.clear();
+	this->dataInfo_.clear();
 }
 //==============================================================================
 /** Initialize the inverse value of the color space used in feature extraction.
@@ -652,11 +653,14 @@ const std::deque<unsigned> &exi,float threshVal){
 		if(this->isTest_){
 			{
 				boost::mutex::scoped_lock lock(PeopleDetector::dataMutex_);
-				std::cout<<"Produce another test row..."<<std::endl;
+				std::cout<<"Produce another test row..."<<\
+					(this->data_[0].rows+this->data_[1].rows+this->data_[2].rows)<<\
+					") "<<this->current_->sourceName_<<std::endl;
 				while(this->dataInfo_.size()>1){sleep(.1);}
 				PeopleDetector::DataRow aRow(this->existing_[i].location_,\
 					this->existing_[i].groupNo_,this->current_->sourceName_,\
-					dataRow,this->targets_[this->existing_[i].groupNo_].row(i));
+					dataRow,this->targets_[this->existing_[i].groupNo_].row\
+					(this->data_[this->existing_[i].groupNo_].rows-1));
 				this->dataInfo_.push_back(aRow);
 			}
 		}
@@ -685,6 +689,8 @@ std::tr1::shared_ptr<PeopleDetector::DataRow> dataRow){
 	float pAngle = std::atan2(pred.y,pred.x);
 	float tAngle = std::atan2(dataRow->testTarg_.at<float>(0,0),\
 		dataRow->testTarg_.at<float>(0,1));
+	Auxiliary::angle0to360(pAngle);
+	Auxiliary::angle0to360(tAngle);
 	std::vector<cv::Point2f> templ;
 	dataRow->location_.x -= this->border_/2.0;
 	dataRow->location_.y -= this->border_/2.0;
@@ -703,10 +709,11 @@ std::tr1::shared_ptr<PeopleDetector::DataRow> dataRow){
 	cv::Mat fin = AnnotationsHandle::drawOrientation(center,targA,\
 		tmp,cv::Scalar(0,0,255));
 	cv::imshow("orientation_image",fin);
-	cv::waitKey(10);
+	cv::waitKey(20);
 	load.release();
 	fin.release();
 	tmp.release();
+	std::cout<<"==================================================="<<std::endl;
 }
 //==============================================================================
 /** Returns the last element in the data vector.
@@ -818,7 +825,7 @@ unsigned k,float distance,std::deque<int> &assignment){
  */
 float PeopleDetector::fixAngle(const cv::Point2f &headLocation,\
 const cv::Point2f &feetLocation,float angle,bool flip){
-//	return angle;
+	return angle;
 	float camAngle = std::atan2(headLocation.y-feetLocation.y,\
 		headLocation.x-feetLocation.x);
 	camAngle      += M_PI/2.0;
@@ -844,6 +851,9 @@ const cv::Point2f &feetLocation,float angle,bool flip){
  */
 float PeopleDetector::unfixAngle(const cv::Point2f &headLocation,\
 const cv::Point2f &feetLocation,float angle){
+
+return angle;
+
 	float camAngle = std::atan2(headLocation.y-feetLocation.y,\
 		headLocation.x-feetLocation.x);
 	camAngle      += M_PI/2.0;

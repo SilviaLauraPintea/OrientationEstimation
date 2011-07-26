@@ -879,8 +879,10 @@ std::deque<std::deque<cv::Point2f> > ClassifyImages::predict\
 	PeopleDetector::dataMutex_.unlock();
 	std::tr1::shared_ptr<PeopleDetector::DataRow> dataRow;
 	while((PeopleDetector::dataIsProduced_)||(dataRow=this->features_->popDataRow())){
-		std::cout<<"Consume another test row..."<<std::endl;
 		while(!dataRow){dataRow=this->features_->popDataRow();sleep(.1);};
+		std::cout<<"Consume another test row..."<<(this->testData_[0].rows+\
+			this->testData_[1].rows+this->testData_[2].rows)<<") "<<\
+			dataRow->imgName_<<std::endl;
 		std::deque<cv::Point2f> predictions = this->doPredict(dataRow,what,\
 			fromFolder);
 		for(std::size_t p=0;p<predictions.size();++p){
@@ -890,6 +892,7 @@ std::deque<std::deque<cv::Point2f> > ClassifyImages::predict\
 				this->features_->drawPredictions(predictions[p],dataRow);
 			}
 		}
+		dataRow.reset(static_cast<PeopleDetector::DataRow*>(NULL));
 	}
 
 	// JOIN THE THREADS
