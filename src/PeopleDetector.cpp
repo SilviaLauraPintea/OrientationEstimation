@@ -651,12 +651,12 @@ const std::deque<unsigned> &exi,float threshVal){
 		}
 
 		if(this->isTest_){
+			while(this->dataInfo_.size()>1){sleep(.1);}
 			{
 				boost::mutex::scoped_lock lock(PeopleDetector::dataMutex_);
 				std::cout<<"Produce another test row..."<<\
 					(this->data_[0].rows+this->data_[1].rows+this->data_[2].rows)<<\
 					") "<<this->current_->sourceName_<<std::endl;
-				while(this->dataInfo_.size()>1){sleep(.1);}
 				PeopleDetector::DataRow aRow(this->existing_[i].location_,\
 					this->existing_[i].groupNo_,this->current_->sourceName_,\
 					dataRow,this->targets_[this->existing_[i].groupNo_].row\
@@ -709,21 +709,31 @@ std::tr1::shared_ptr<PeopleDetector::DataRow> dataRow){
 	cv::Mat fin = AnnotationsHandle::drawOrientation(center,targA,\
 		tmp,cv::Scalar(0,0,255));
 	cv::imshow("orientation_image",fin);
-	cv::waitKey(20);
+	cv::waitKey(0);
 	load.release();
 	fin.release();
 	tmp.release();
 	std::cout<<"==================================================="<<std::endl;
 }
 //==============================================================================
+/** Returns the data info size.
+ */
+unsigned PeopleDetector::dataInfoSize(){
+	return this->dataInfo_.size();
+}
+//==============================================================================
 /** Returns the last element in the data vector.
  */
 std::tr1::shared_ptr<PeopleDetector::DataRow> PeopleDetector::popDataRow(){
 	if(!this->dataInfo_.empty()){
-		PeopleDetector::DataRow aRow = this->dataInfo_.back();
-		std::tr1::shared_ptr<PeopleDetector::DataRow> ptRow = std::tr1::shared_ptr\
-			<PeopleDetector::DataRow>(new PeopleDetector::DataRow(aRow));
-		this->dataInfo_.pop_back();
+		std::tr1::shared_ptr<PeopleDetector::DataRow> ptRow;
+		{
+			boost::mutex::scoped_lock lock(PeopleDetector::dataMutex_);
+			PeopleDetector::DataRow aRow = this->dataInfo_.back();
+			ptRow = std::tr1::shared_ptr<PeopleDetector::DataRow>\
+				(new PeopleDetector::DataRow(aRow));
+			this->dataInfo_.pop_back();
+		}
 		return ptRow;
 	}
 	return std::tr1::shared_ptr<PeopleDetector::DataRow>(static_cast\

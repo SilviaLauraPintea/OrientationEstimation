@@ -869,17 +869,16 @@ std::deque<std::deque<cv::Point2f> > ClassifyImages::predict\
 	this->testTargets_.clear();
 
 	std::deque<std::deque<cv::Point2f> > allPreds(3,std::deque<cv::Point2f>());
-	PeopleDetector::dataMutex_.lock();
 	PeopleDetector::dataIsProduced_ = true;
 	boost::thread* predictor;
 	predictor = new boost::thread(&ClassifyImages::getData,this,\
 		this->testFolder_,this->annotationsTest_,fromFolder,true,false);
 
 	// AS LONG AS THERE IS A ROW IN THE DATA MATRIX
-	PeopleDetector::dataMutex_.unlock();
 	std::tr1::shared_ptr<PeopleDetector::DataRow> dataRow;
-	while((PeopleDetector::dataIsProduced_)||(dataRow=this->features_->popDataRow())){
-		while(!dataRow){dataRow=this->features_->popDataRow();sleep(.1);};
+	while(PeopleDetector::dataIsProduced_ || this->features_->dataInfoSize()){
+		while(!this->features_->dataInfoSize()){sleep(.1);};
+		dataRow=this->features_->popDataRow();
 		std::cout<<"Consume another test row..."<<(this->testData_[0].rows+\
 			this->testData_[1].rows+this->testData_[2].rows)<<") "<<\
 			dataRow->imgName_<<std::endl;
@@ -894,7 +893,6 @@ std::deque<std::deque<cv::Point2f> > ClassifyImages::predict\
 		}
 		dataRow.reset(static_cast<PeopleDetector::DataRow*>(NULL));
 	}
-
 	// JOIN THE THREADS
 	predictor->join();
 	delete predictor;
@@ -1617,8 +1615,9 @@ int main(int argc,char **argv){
  	ClassifyImages classi(argc,argv,ClassifyImages::TEST,\
  		ClassifyImages::GAUSSIAN_PROCESS);
 //	classi.init(1e-05,5e+06,1e+07,feat,&GaussianProcess::sqexp,true);
-// 	classi.init(1.0,100.0,125.0,feat,&GaussianProcess::sqexp,false);
- 	classi.init(1.0,625.0,125.0,feat,&GaussianProcess::sqexp,true);
+// 	classi.init(1.0,100.0,125.0,feat,&GaussianProcess::sqexp,true);
+// 	classi.init(1.0,625.0,125.0,feat,&GaussianProcess::sqexp,true);
+ 	classi.init(1e-05,1e+07,5e+06,feat,&GaussianProcess::sqexp,true);
 	classi.runTest(-1,AnnotationsHandle::LONGITUDE,normError,FeatureExtractor::TOP);
 
 	//--------------------------------------------------------------------------

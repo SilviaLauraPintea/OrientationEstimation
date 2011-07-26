@@ -204,6 +204,9 @@ class PeopleDetector:public Tracker{
 		/** Returns the last element in the data vector.
 		 */
 		std::tr1::shared_ptr<PeopleDetector::DataRow> popDataRow();
+		/** Returns the data info size.
+		 */
+		unsigned dataInfoSize();
 		//======================================================================
 		/** @var dataMutex_
 		 * Used to check if the data is produced or not.
