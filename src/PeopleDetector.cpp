@@ -391,6 +391,8 @@ void PeopleDetector::allForegroundPixels(std::deque<FeatureExtractor::people>\
 		cv::cvtColor(thsh,thsh,TO_IMG_FMT);
 		cv::cvtColor(thsh,thrsh,CV_BGR2GRAY);
 		cv::threshold(thrsh,thrsh,threshold,255,cv::THRESH_BINARY);
+		cv::equalizeHist(thrsh,thrsh);
+		cv::threshold(thrsh,thrsh,threshold,255,cv::THRESH_BINARY);
 	}
 	cv::Mat foregr(this->borderedIpl_.get());
 	// FOR EACH EXISTING TEMPLATE LOOK ON AN AREA OF 100 PIXELS AROUND IT
@@ -651,12 +653,13 @@ const std::deque<unsigned> &exi,float threshVal){
 		}
 
 		if(this->isTest_){
-			while(this->dataInfo_.size()>1){sleep(.1);}
+			while(this->dataInfo_.size()>1){
+				sleep(.1);
+				//std::cout<<"SLEEEP PRODUCE"<<std::endl;
+			}
+			std::cout<<this->dataInfo_.size()<<" >>> Produce...";
 			{
 				boost::mutex::scoped_lock lock(PeopleDetector::dataMutex_);
-				std::cout<<"Produce another test row..."<<\
-					(this->data_[0].rows+this->data_[1].rows+this->data_[2].rows)<<\
-					") "<<this->current_->sourceName_<<std::endl;
 				PeopleDetector::DataRow aRow(this->existing_[i].location_,\
 					this->existing_[i].groupNo_,this->current_->sourceName_,\
 					dataRow,this->targets_[this->existing_[i].groupNo_].row\
@@ -709,7 +712,7 @@ std::tr1::shared_ptr<PeopleDetector::DataRow> dataRow){
 	cv::Mat fin = AnnotationsHandle::drawOrientation(center,targA,\
 		tmp,cv::Scalar(0,0,255));
 	cv::imshow("orientation_image",fin);
-	cv::waitKey(0);
+	cv::waitKey(5);
 	load.release();
 	fin.release();
 	tmp.release();
@@ -1020,6 +1023,7 @@ const float logBGProb,const vnl_vector<float> &logSumPixelBGProb){
 		cvDilate(bg,bg,NULL,3);
 		cvErode(bg,bg,NULL,3);
 	}
+	cvErode(bg,bg,NULL,3);
 
 	//7) SHOW THE FOREGROUND POSSIBLE LOCATIONS AND PLOT THE TEMPLATES
 	cerr<<"no. of detected people: "<<exi.size()<<endl;

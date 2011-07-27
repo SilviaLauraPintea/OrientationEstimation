@@ -865,8 +865,10 @@ bool ClassifyImages::isClassiInit(int i){
  */
 std::deque<std::deque<cv::Point2f> > ClassifyImages::predict\
 (AnnotationsHandle::POSE what,bool fromFolder){
-	this->testData_.clear();
-	this->testTargets_.clear();
+	for(unsigned c=0;c<3;++c){
+		this->testData_[c].release();
+		this->testTargets_[c].release();
+	}
 
 	std::deque<std::deque<cv::Point2f> > allPreds(3,std::deque<cv::Point2f>());
 	PeopleDetector::dataIsProduced_ = true;
@@ -877,11 +879,13 @@ std::deque<std::deque<cv::Point2f> > ClassifyImages::predict\
 	// AS LONG AS THERE IS A ROW IN THE DATA MATRIX
 	std::tr1::shared_ptr<PeopleDetector::DataRow> dataRow;
 	while(PeopleDetector::dataIsProduced_ || this->features_->dataInfoSize()){
-		while(!this->features_->dataInfoSize()){sleep(.1);};
+		while(!this->features_->dataInfoSize() && PeopleDetector::dataIsProduced_){
+			sleep(.1);
+			//std::cout<<"SLEEEP COMSUME"<<std::endl;
+		};
+		if(!this->features_->dataInfoSize()){break;}
+		std::cout<<this->features_->dataInfoSize()<<" >>> Consume..."<<std::endl;
 		dataRow=this->features_->popDataRow();
-		std::cout<<"Consume another test row..."<<(this->testData_[0].rows+\
-			this->testData_[1].rows+this->testData_[2].rows)<<") "<<\
-			dataRow->imgName_<<std::endl;
 		std::deque<cv::Point2f> predictions = this->doPredict(dataRow,what,\
 			fromFolder);
 		for(std::size_t p=0;p<predictions.size();++p){
@@ -983,7 +987,8 @@ float &error,float &normError,float &meanDiff){
 	names.push_back("CLOSE");names.push_back("MEDIUM");	names.push_back("FAR");
 	for(PeopleDetector::CLASSES i=PeopleDetector::CLOSE;i<=PeopleDetector::FAR;++i){
 		std::cout<<"Class "<<names[i]<<">>> targets:"<<this->testTargets_[i].size()<<\
-			" data:"<<this->testData_[i].size()<<std::endl;
+			" data:"<<this->testData_[i].size()<<" predictions:"<<\
+			prediAngles[i].size()<<std::endl;
 		assert(this->testData_[i].rows == this->testTargets_[i].rows &&\
 			this->testTargets_[i].rows == prediAngles[i].size());
 		for(int y=0;y<this->testTargets_[i].rows;++y){
@@ -1526,11 +1531,11 @@ AnnotationsHandle::POSE what,GaussianProcess::kernelFunction kernel,unsigned fol
 			float errorTest = 0.0f;
 			if(classi.what() == ClassifyImages::EVALUATE){
 				errorTest = classi.runCrossValidation(folds,what,colorSp,false,\
-					FeatureExtractor::TOP);
+					FeatureExtractor::HEAD);
 				test<<v<<" "<<l<<" "<<errorTest<<std::endl;
 			}else if(classi.what() == ClassifyImages::TEST){
 				classi.runTest(-1,AnnotationsHandle::LONGITUDE,errorTest,\
-					FeatureExtractor::TOP);
+					FeatureExtractor::HEAD);
 				test<<v<<" "<<l<<" "<<errorTest<<std::endl;
 				continue;
 			}
@@ -1538,7 +1543,7 @@ AnnotationsHandle::POSE what,GaussianProcess::kernelFunction kernel,unsigned fol
 			classi.init(v,l,l,feat,kernel,useGt);
 			float errorTrain = 0.0f;
 			errorTrain = classi.runCrossValidation(folds,what,colorSp,true,\
-				FeatureExtractor::TOP);
+				FeatureExtractor::HEAD);
 			train<<v<<" "<<l<<" "<<errorTrain<<std::endl;
 		}
 	}
@@ -1609,7 +1614,7 @@ int main(int argc,char **argv){
 	classi.buildPCAModels(-1,FeatureExtractor::HEAD);
 */
 	//--------------------------------------------------------------------------
-
+/*
 	// test
 	float normError = 0.0f;
  	ClassifyImages classi(argc,argv,ClassifyImages::TEST,\
@@ -1617,11 +1622,11 @@ int main(int argc,char **argv){
 //	classi.init(1e-05,5e+06,1e+07,feat,&GaussianProcess::sqexp,true);
 // 	classi.init(1.0,100.0,125.0,feat,&GaussianProcess::sqexp,true);
 // 	classi.init(1.0,625.0,125.0,feat,&GaussianProcess::sqexp,true);
- 	classi.init(1e-05,1e+07,5e+06,feat,&GaussianProcess::sqexp,true);
-	classi.runTest(-1,AnnotationsHandle::LONGITUDE,normError,FeatureExtractor::TOP);
-
+ 	classi.init(1,1000,625,feat,&GaussianProcess::sqexp,false);
+	classi.runTest(-1,AnnotationsHandle::LONGITUDE,normError,FeatureExtractor::HEAD);
+*/
 	//--------------------------------------------------------------------------
-/*
+
 	// evaluate
  	ClassifyImages classi(argc,argv,ClassifyImages::EVALUATE,\
  		ClassifyImages::GAUSSIAN_PROCESS);
@@ -1629,8 +1634,8 @@ int main(int argc,char **argv){
  	classi.init(1.0,100.0,125.0,feat,&GaussianProcess::sqexp,false);
 // 	classi.init(1e-5,5e+4,1e+4,feat,&GaussianProcess::sqexp,true);
 	classi.runCrossValidation(12,AnnotationsHandle::LONGITUDE,-1,false,\
-		FeatureExtractor::TOP);
-*/
+		FeatureExtractor::WHOLE);
+
 	//--------------------------------------------------------------------------
 /*
 	// BUILD THE SIFT DICTIONARY
