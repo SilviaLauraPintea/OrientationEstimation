@@ -713,7 +713,8 @@ std::tr1::shared_ptr<PeopleDetector::DataRow> dataRow){
 	cv::waitKey(5);
 	std::string path   = this->datasetPath_+"predictions/";
 	unsigned pos       = dataRow->imgName_.find_last_of("/\\");
-	std::string imName = dataRow->imgName_.substr(pos+1);
+	std::string imName = Auxiliary::int2string(dataRow->location_.x)+\
+		Auxiliary::int2string(dataRow->location_.y)+dataRow->imgName_.substr(pos+1);
 	Auxiliary::file_exists(path.c_str(),true);
 	cv::imwrite(path+imName,fin);
 	load.release();
