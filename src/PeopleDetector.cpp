@@ -391,8 +391,6 @@ void PeopleDetector::allForegroundPixels(std::deque<FeatureExtractor::people>\
 		cv::cvtColor(thsh,thsh,TO_IMG_FMT);
 		cv::cvtColor(thsh,thrsh,CV_BGR2GRAY);
 		cv::threshold(thrsh,thrsh,threshold,255,cv::THRESH_BINARY);
-		cv::equalizeHist(thrsh,thrsh);
-		cv::threshold(thrsh,thrsh,threshold,255,cv::THRESH_BINARY);
 	}
 	cv::Mat foregr(this->borderedIpl_.get());
 	// FOR EACH EXISTING TEMPLATE LOOK ON AN AREA OF 100 PIXELS AROUND IT
@@ -441,13 +439,13 @@ void PeopleDetector::allForegroundPixels(std::deque<FeatureExtractor::people>\
 		allPeople[k].borders_[1] = maxX;
 		allPeople[k].borders_[2] = minY;
 		allPeople[k].borders_[3] = maxY;
-		if(this->plot_){
+//		if(this->plot_){
 			cv::imshow("people",allPeople[k].pixels_);
 			if(!allPeople[k].thresh_.empty()){
 				cv::imshow("threshold",allPeople[k].thresh_);
 			}
 			cv::waitKey(5);
-		}
+//		}
 		colorRoi.release();
 	}
 	thrsh.release();
@@ -713,6 +711,11 @@ std::tr1::shared_ptr<PeopleDetector::DataRow> dataRow){
 		tmp,cv::Scalar(0,0,255));
 	cv::imshow("orientation_image",fin);
 	cv::waitKey(5);
+	std::string path   = this->datasetPath_+"predictions/";
+	unsigned pos       = dataRow->imgName_.find_last_of("/\\");
+	std::string imName = dataRow->imgName_.substr(pos+1);
+	Auxiliary::file_exists(path.c_str(),true);
+	cv::imwrite(path+imName,fin);
 	load.release();
 	fin.release();
 	tmp.release();
@@ -838,7 +841,6 @@ unsigned k,float distance,std::deque<int> &assignment){
  */
 float PeopleDetector::fixAngle(const cv::Point2f &headLocation,\
 const cv::Point2f &feetLocation,float angle,bool flip){
-	return angle;
 	float camAngle = std::atan2(headLocation.y-feetLocation.y,\
 		headLocation.x-feetLocation.x);
 	camAngle      += M_PI/2.0;
@@ -864,9 +866,6 @@ const cv::Point2f &feetLocation,float angle,bool flip){
  */
 float PeopleDetector::unfixAngle(const cv::Point2f &headLocation,\
 const cv::Point2f &feetLocation,float angle){
-
-return angle;
-
 	float camAngle = std::atan2(headLocation.y-feetLocation.y,\
 		headLocation.x-feetLocation.x);
 	camAngle      += M_PI/2.0;

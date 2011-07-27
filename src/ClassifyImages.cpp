@@ -994,9 +994,9 @@ float &error,float &normError,float &meanDiff){
 		for(int y=0;y<this->testTargets_[i].rows;++y){
 			float targetAngle = std::atan2(this->testTargets_[i].at<float>(y,0),\
 				this->testTargets_[i].at<float>(y,1));
+			float angle       = std::atan2(prediAngles[i][y].y,prediAngles[i][y].x);
 			float targetAngleSin = std::asin(this->testTargets_[i].at<float>(y,0));
 			float targetAngleCos = std::acos(this->testTargets_[i].at<float>(y,1));
-			float angle    = std::atan2(prediAngles[i][y].y,prediAngles[i][y].x);
 			std::cout<<"sin="<<prediAngles[i][y].y<<" cos="<<\
 				prediAngles[i][y].y<<std::endl<<std::endl;
 			float angleSin = std::asin(prediAngles[i][y].y);
@@ -1614,7 +1614,7 @@ int main(int argc,char **argv){
 	classi.buildPCAModels(-1,FeatureExtractor::HEAD);
 */
 	//--------------------------------------------------------------------------
-/*
+
 	// test
 	float normError = 0.0f;
  	ClassifyImages classi(argc,argv,ClassifyImages::TEST,\
@@ -1624,9 +1624,9 @@ int main(int argc,char **argv){
 // 	classi.init(1.0,625.0,125.0,feat,&GaussianProcess::sqexp,true);
  	classi.init(1,1000,625,feat,&GaussianProcess::sqexp,false);
 	classi.runTest(-1,AnnotationsHandle::LONGITUDE,normError,FeatureExtractor::HEAD);
-*/
-	//--------------------------------------------------------------------------
 
+	//--------------------------------------------------------------------------
+/*
 	// evaluate
  	ClassifyImages classi(argc,argv,ClassifyImages::EVALUATE,\
  		ClassifyImages::GAUSSIAN_PROCESS);
@@ -1634,8 +1634,8 @@ int main(int argc,char **argv){
  	classi.init(1.0,100.0,125.0,feat,&GaussianProcess::sqexp,false);
 // 	classi.init(1e-5,5e+4,1e+4,feat,&GaussianProcess::sqexp,true);
 	classi.runCrossValidation(12,AnnotationsHandle::LONGITUDE,-1,false,\
-		FeatureExtractor::WHOLE);
-
+		FeatureExtractor::TOP);
+*/
 	//--------------------------------------------------------------------------
 /*
 	// BUILD THE SIFT DICTIONARY
