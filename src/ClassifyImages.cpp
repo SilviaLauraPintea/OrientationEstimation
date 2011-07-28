@@ -29,6 +29,7 @@ ClassifyImages::CLASSIFIER classi){
 		(FeatureExtractor::EDGES);
 	this->foldSize_		    = 5;
 	this->modelName_        = "";
+	this->tmpModelName_     = "";
 	this->what_             = use;
 	this->useGroundTruth_   = false;
 	this->dimRed_           = false;
@@ -112,7 +113,7 @@ ClassifyImages::CLASSIFIER classi){
 				files2check.push_back(this->annotationsTrain_);
 				files2check.push_back(this->testFolder_);
 				files2check.push_back(this->annotationsTest_);
-				this->modelName_ = "data/TEST/";
+				this->tmpModelName_ = "data/TEST/";
 				break;
 			case(ClassifyImages::EVALUATE):
 				// IF WE WANT TO EVALUATE WITH CORSSVALIDATION
@@ -120,7 +121,7 @@ ClassifyImages::CLASSIFIER classi){
 				this->annotationsTrain_ = this->trainDir_+"annotated_train.txt";
 				files2check.push_back(this->trainFolder_);
 				files2check.push_back(this->annotationsTrain_);
-				this->modelName_ = "data/EVALUATE/";
+				this->tmpModelName_ = "data/EVALUATE/";
 				break;
 			case(ClassifyImages::BUILD_DATA):
 				// IF WE WANT TO EVALUATE WITH CORSSVALIDATION
@@ -128,7 +129,7 @@ ClassifyImages::CLASSIFIER classi){
 				this->annotationsTrain_ = this->trainDir_+"annotated_train.txt";
 				files2check.push_back(this->trainFolder_);
 				files2check.push_back(this->annotationsTrain_);
-				this->modelName_ = "data/BUILD_DATA/";
+				this->tmpModelName_ = "data/BUILD_DATA/";
 				break;
 			case(ClassifyImages::BUILD_DICTIONARY):
 				// IF WE WANT TO BUILD SIFT DICTIONARY
@@ -144,7 +145,7 @@ ClassifyImages::CLASSIFIER classi){
 				exit(1);
 			}
 		}
-		Helpers::file_exists(this->modelName_.c_str(),true);
+		Helpers::file_exists(this->tmpModelName_.c_str(),true);
 	}
 }
 //==============================================================================
@@ -220,31 +221,31 @@ GaussianProcess::kernelFunction theKFunction,bool toUseGT){
 		if(!FeatureExtractor::isFeatureIn(this->feature_,f)){continue;}
 		switch(f){
 			case(FeatureExtractor::IPOINTS):
-				this->modelName_ += "IPOINTS_";
+				this->modelName_ = this->tmpModelName_+"IPOINTS_";
 				break;
 			case(FeatureExtractor::EDGES):
-				this->modelName_ += "EDGES_";
+				this->modelName_ = this->tmpModelName_+"EDGES_";
 				break;
 			case(FeatureExtractor::SURF):
-				this->modelName_ += "SURF_";
+				this->modelName_ = this->tmpModelName_+"SURF_";
 				break;
 			case(FeatureExtractor::GABOR):
-				this->modelName_ += "GABOR_";
+				this->modelName_ = this->tmpModelName_+"GABOR_";
 				break;
 			case(FeatureExtractor::SIFT):
-				this->modelName_ += "SIFT_";
+				this->modelName_ = this->tmpModelName_+"SIFT_";
 				break;
 			case(FeatureExtractor::TEMPL_MATCHES):
-				this->modelName_ += "TEMPL_MATCHES_";
+				this->modelName_ = this->tmpModelName_+"TEMPL_MATCHES_";
 				break;
 			case(FeatureExtractor::RAW_PIXELS):
-				this->modelName_ += "RAW_PIXELS_";
+				this->modelName_ = this->tmpModelName_+"RAW_PIXELS_";
 				break;
 			case(FeatureExtractor::SKIN_BINS):
-				this->modelName_ += "SKIN_BINS_";
+				this->modelName_ = this->tmpModelName_+"SKIN_BINS_";
 				break;
 			case(FeatureExtractor::HOG):
-				this->modelName_ += "HOG_";
+				this->modelName_ = this->tmpModelName_+"HOG_";
 				break;
 		}
 	}
@@ -1598,13 +1599,13 @@ int main(int argc,char **argv){
 //	feat.push_back(FeatureExtractor::TEMPL_MATCHES);
 //	feat.push_back(FeatureExtractor::SKIN_BINS);
 //	feat.push_back(FeatureExtractor::IPOINTS);
-/*
+
 	// build data matrix
  	ClassifyImages classi(argc,argv,ClassifyImages::BUILD_DATA,\
  		ClassifyImages::GAUSSIAN_PROCESS);
 	classi.init(1.0,100.0,125.0,feat,&GaussianProcess::sqexp,false);
-	classi.buildDataMatrix(-1,FeatureExtractor::TOP);
-*/
+	classi.buildDataMatrix(-1,FeatureExtractor::HEAD);
+
 	//--------------------------------------------------------------------------
 /*
 	// build PCA models
@@ -1614,17 +1615,17 @@ int main(int argc,char **argv){
 	classi.buildPCAModels(-1,FeatureExtractor::HEAD);
 */
 	//--------------------------------------------------------------------------
-
+/*
 	// test
 	float normError = 0.0f;
  	ClassifyImages classi(argc,argv,ClassifyImages::TEST,\
  		ClassifyImages::GAUSSIAN_PROCESS);
-//	classi.init(1e-05,5e+06,1e+07,feat,&GaussianProcess::sqexp,true);
+	classi.init(1e-05,5e+06,1e+07,feat,&GaussianProcess::sqexp,true);
 // 	classi.init(1.0,100.0,125.0,feat,&GaussianProcess::sqexp,true);
-// 	classi.init(1.0,625.0,625.0,feat,&GaussianProcess::sqexp,true);
-	classi.init(1,1000,625,feat,&GaussianProcess::sqexp,false);
+// 	classi.init(1.0,625.0,625.0,feat,&GaussianProcess::sqexp,false);
+//	classi.init(1,1000,625,feat,&GaussianProcess::sqexp,false);
 	classi.runTest(-1,AnnotationsHandle::LONGITUDE,normError,FeatureExtractor::HEAD);
-
+*/
 	//--------------------------------------------------------------------------
 /*
 	// evaluate

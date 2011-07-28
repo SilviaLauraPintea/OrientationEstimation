@@ -708,8 +708,8 @@ std::tr1::shared_ptr<PeopleDetector::DataRow> dataRow){
 		load,cv::Scalar(0,255,0));
 	cv::Mat fin = AnnotationsHandle::drawOrientation(center,targA,\
 		tmp,cv::Scalar(0,0,255));
-	cv::imshow("orientation_image",fin);
-	cv::waitKey(5);
+//	cv::imshow("orientation_image",fin);
+//	cv::waitKey(5);
 	std::string path   = this->datasetPath_+"predictions/";
 	unsigned pos       = dataRow->imgName_.find_last_of("/\\");
 	std::string imName = Auxiliary::int2string(dataRow->location_.x)+\
@@ -1399,10 +1399,11 @@ void PeopleDetector::extractHeadArea(int i,FeatureExtractor::people &person){
 	float headSize2 = Helpers::dist(this->templates_[i].points_[13],\
 		this->templates_[i].points_[14]);
 	int radius = static_cast<int>(std::max(headSize1,headSize2))*0.75;
+	int shift  = static_cast<int>(std::max(headSize1,headSize2)/4.0);
 	if(!person.thresh_.empty()){
 		int minX,maxX,minY,maxY;
 		this->extractor_->getThresholdBorderes(minX,maxX,minY,maxY,person.thresh_);
-		minY += static_cast<int>(headSize1/3.0);
+		minY += shift;
 		headPosition = cv::Point2f((minX+maxX)/2,std::max(headSize1,headSize2)/2+minY);
 		cv::circle(headMask,headPosition,radius,cv::Scalar(255,255,255),-1);
 		cv::Mat tmpThresh;
@@ -1413,8 +1414,7 @@ void PeopleDetector::extractHeadArea(int i,FeatureExtractor::people &person){
 	}else{
 	//ELSE FIX ONLY THE TEMPLATE
 		headPosition = cv::Point2f(this->templates_[i].head_.x-person.borders_[0],\
-			this->templates_[i].head_.y-person.borders_[2]+\
-			static_cast<int>(headSize1/3.0));
+			this->templates_[i].head_.y-person.borders_[2]+shift);
 		cv::circle(headMask,headPosition,radius,cv::Scalar(255,255,255),-1);
 	}
 	//UPDATE THE TEMPLATE POINTS
