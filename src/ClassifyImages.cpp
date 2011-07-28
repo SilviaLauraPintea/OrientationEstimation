@@ -880,8 +880,8 @@ std::deque<std::deque<cv::Point2f> > ClassifyImages::predict\
 	std::tr1::shared_ptr<PeopleDetector::DataRow> dataRow;
 	while(PeopleDetector::dataIsProduced_ || this->features_->dataInfoSize()){
 		while(!this->features_->dataInfoSize() && PeopleDetector::dataIsProduced_){
-			sleep(.1);
-			//std::cout<<"SLEEEP COMSUME"<<std::endl;
+			sleep(.5);
+//			std::cout<<"SLEEEP COMSUNE"<<std::endl;
 		};
 		if(!this->features_->dataInfoSize()){break;}
 		std::cout<<this->features_->dataInfoSize()<<" >>> Consume..."<<std::endl;
@@ -1621,8 +1621,8 @@ int main(int argc,char **argv){
  		ClassifyImages::GAUSSIAN_PROCESS);
 //	classi.init(1e-05,5e+06,1e+07,feat,&GaussianProcess::sqexp,true);
 // 	classi.init(1.0,100.0,125.0,feat,&GaussianProcess::sqexp,true);
-// 	classi.init(1.0,625.0,125.0,feat,&GaussianProcess::sqexp,true);
- 	classi.init(1,1000,625,feat,&GaussianProcess::sqexp,false);
+// 	classi.init(1.0,625.0,625.0,feat,&GaussianProcess::sqexp,true);
+	classi.init(1,1000,625,feat,&GaussianProcess::sqexp,false);
 	classi.runTest(-1,AnnotationsHandle::LONGITUDE,normError,FeatureExtractor::HEAD);
 
 	//--------------------------------------------------------------------------
@@ -1646,8 +1646,9 @@ int main(int argc,char **argv){
 /*
 	// find parmeteres
 	ClassifyImages classi(argc,argv,ClassifyImages::TEST,ClassifyImages::GAUSSIAN_PROCESS);
-	parameterSetting("train_japanese.txt","test_japanese.txt",classi,argc,argv,feat,\
-		-1,true,AnnotationsHandle::LONGITUDE,&GaussianProcess::sqexp,0);
+	parameterSetting("train_japanese_head.txt","test_japanese_head.txt",\
+		classi,argc,argv,feat,-1,true,AnnotationsHandle::LONGITUDE,\
+		&GaussianProcess::sqexp,0);
 */
 	//-------------------------------------------------------------------------
 /*

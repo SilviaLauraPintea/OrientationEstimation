@@ -285,7 +285,10 @@ int &minY,int &maxY,const FeatureExtractor::templ &aTempl){
 void PeopleDetector::pixels2Templates(int maxX,int minX,int maxY,int minY,\
 int k,const cv::Mat &thresh,float tmplHeight,cv::Mat &colorRoi){
 	// LOOP OVER THE AREA OF OUR TEMPLATE AND THERESHOLD ONLY THOSE PIXELS
-	float tmpSize = std::max(this->templates_[k].extremes_[1]-\
+//	float tmpSize = std::max(this->templates_[k].extremes_[1]-\
+		this->templates_[k].extremes_[0],this->templates_[k].extremes_[3]-\
+		this->templates_[k].extremes_[2])/8;
+	float tmpSize = std::min(this->templates_[k].extremes_[1]-\
 		this->templates_[k].extremes_[0],this->templates_[k].extremes_[3]-\
 		this->templates_[k].extremes_[2])/8;
 
@@ -651,17 +654,13 @@ const std::deque<unsigned> &exi,float threshVal){
 		}
 
 		if(this->isTest_){
-			while(this->dataInfo_.size()>1){
-				sleep(.1);
-				//std::cout<<"SLEEEP PRODUCE"<<std::endl;
-			}
 			std::cout<<this->dataInfo_.size()<<" >>> Produce...";
+			PeopleDetector::DataRow aRow(this->existing_[i].location_,\
+				this->existing_[i].groupNo_,this->current_->sourceName_,\
+				dataRow,this->targets_[this->existing_[i].groupNo_].row\
+				(this->data_[this->existing_[i].groupNo_].rows-1));
 			{
 				boost::mutex::scoped_lock lock(PeopleDetector::dataMutex_);
-				PeopleDetector::DataRow aRow(this->existing_[i].location_,\
-					this->existing_[i].groupNo_,this->current_->sourceName_,\
-					dataRow,this->targets_[this->existing_[i].groupNo_].row\
-					(this->data_[this->existing_[i].groupNo_].rows-1));
 				this->dataInfo_.push_back(aRow);
 			}
 		}
@@ -736,10 +735,10 @@ std::tr1::shared_ptr<PeopleDetector::DataRow> PeopleDetector::popDataRow(){
 		std::tr1::shared_ptr<PeopleDetector::DataRow> ptRow;
 		{
 			boost::mutex::scoped_lock lock(PeopleDetector::dataMutex_);
-			PeopleDetector::DataRow aRow = this->dataInfo_.back();
+			PeopleDetector::DataRow aRow = this->dataInfo_.front();
 			ptRow = std::tr1::shared_ptr<PeopleDetector::DataRow>\
 				(new PeopleDetector::DataRow(aRow));
-			this->dataInfo_.pop_back();
+			this->dataInfo_.pop_front();
 		}
 		return ptRow;
 	}
