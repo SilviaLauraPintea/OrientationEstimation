@@ -428,7 +428,7 @@ const cv::Rect &roi,bool color){
 		Auxiliary::normalizeMat(gray);
 	}else{
 		gray = large.reshape(1,0);
-		cv::equalizeHist(gray,gray);
+//		cv::equalizeHist(gray,gray);
 	}
 	if(this->plot_){
 		cv::imshow("image",large);

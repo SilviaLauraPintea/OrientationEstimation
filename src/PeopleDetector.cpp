@@ -285,12 +285,10 @@ int &minY,int &maxY,const FeatureExtractor::templ &aTempl){
 void PeopleDetector::pixels2Templates(int maxX,int minX,int maxY,int minY,\
 int k,const cv::Mat &thresh,float tmplHeight,cv::Mat &colorRoi){
 	// LOOP OVER THE AREA OF OUR TEMPLATE AND THERESHOLD ONLY THOSE PIXELS
-//	float tmpSize = std::max(this->templates_[k].extremes_[1]-\
+//	float tmpSize = std::min(this->templates_[k].extremes_[1]-\
 		this->templates_[k].extremes_[0],this->templates_[k].extremes_[3]-\
 		this->templates_[k].extremes_[2])/8;
-	float tmpSize = std::min(this->templates_[k].extremes_[1]-\
-		this->templates_[k].extremes_[0],this->templates_[k].extremes_[3]-\
-		this->templates_[k].extremes_[2])/8;
+	float tmpSize = 0;
 
 	int x1Border = std::max(minX,static_cast<int>(this->templates_[k].extremes_[0]-\
 		tmpSize));

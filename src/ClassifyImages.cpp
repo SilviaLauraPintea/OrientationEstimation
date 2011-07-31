@@ -1599,13 +1599,13 @@ int main(int argc,char **argv){
 //	feat.push_back(FeatureExtractor::TEMPL_MATCHES);
 //	feat.push_back(FeatureExtractor::SKIN_BINS);
 //	feat.push_back(FeatureExtractor::IPOINTS);
-
+/*
 	// build data matrix
  	ClassifyImages classi(argc,argv,ClassifyImages::BUILD_DATA,\
  		ClassifyImages::GAUSSIAN_PROCESS);
 	classi.init(1.0,100.0,125.0,feat,&GaussianProcess::sqexp,false);
 	classi.buildDataMatrix(-1,FeatureExtractor::HEAD);
-
+*/
 	//--------------------------------------------------------------------------
 /*
 	// build PCA models
@@ -1620,10 +1620,10 @@ int main(int argc,char **argv){
 	float normError = 0.0f;
  	ClassifyImages classi(argc,argv,ClassifyImages::TEST,\
  		ClassifyImages::GAUSSIAN_PROCESS);
-	classi.init(1e-05,5e+06,1e+07,feat,&GaussianProcess::sqexp,true);
+//	classi.init(1e-05,5e+06,1e+07,feat,&GaussianProcess::sqexp,true);
 // 	classi.init(1.0,100.0,125.0,feat,&GaussianProcess::sqexp,true);
-// 	classi.init(1.0,625.0,625.0,feat,&GaussianProcess::sqexp,false);
-//	classi.init(1,1000,625,feat,&GaussianProcess::sqexp,false);
+// 	classi.init(1.0,1000.0,625.0,feat,&GaussianProcess::sqexp,true);
+	classi.init(0.01,3125,3125,feat,&GaussianProcess::sqexp,true);
 	classi.runTest(-1,AnnotationsHandle::LONGITUDE,normError,FeatureExtractor::HEAD);
 */
 	//--------------------------------------------------------------------------
@@ -1644,13 +1644,13 @@ int main(int argc,char **argv){
 	classi.buildDictionary(-1,true);
 */
 	//--------------------------------------------------------------------------
-/*
+
 	// find parmeteres
 	ClassifyImages classi(argc,argv,ClassifyImages::TEST,ClassifyImages::GAUSSIAN_PROCESS);
-	parameterSetting("train_japanese_head.txt","test_japanese_head.txt",\
+	parameterSetting("train_japanese_head_Gt.txt","test_japanese_head_Gt.txt",\
 		classi,argc,argv,feat,-1,true,AnnotationsHandle::LONGITUDE,\
 		&GaussianProcess::sqexp,0);
-*/
+
 	//-------------------------------------------------------------------------
 /*
 	// multiple classifiers
