@@ -3,15 +3,24 @@ Orientation Estimation
 
 Short Description:
 ______________________
-For the orientation estimation task the locations at which people are present in the image need to be determined and the
-orientation of each person needs to be estimated. The data used in this project is video data obtained from a single
-ceiling-mounted camera. This fact has two favorable properties: people do not occlude each other as much as in the situation 
-in which the camera is positioned at human-level and the segmentation of people might be easier in crowded scenarios. 
-On the other hand, this fact also entails two less favorable characteristics: occlusion by the background can affect 
-substantially the position estimation and another problem is that the same person situated at different positions with 
-respect to the camera will have different appearances due to the projection in the image plane. Unfortunately the last 
-issue has a dramatical influence on the orientation estimation task.
+For the orientation estimation task the locations at which people 
+are present in the image need to be determined and the orientation 
+of each person needs to be estimated. The data used in this project 
+is video data obtained from a single ceiling-mounted camera. This 
+fact has two favorable properties: people do not occlude each other 
+as much as in the situation in which the camera is positioned at 
+human-level and the segmentation of people might be easier in 
+crowded scenarios. On the other hand, this fact also entails two 
+less favorable characteristics: occlusion by the background can 
+affect substantially the position estimation and another problem 
+is that the same person situated at different positions with respect 
+to the camera will have different appearances due to the projection 
+in the image plane. Unfortunately the last issue has a dramatical 
+influence on the orientation estimation task.
 
-A number of features and object recognition techniques have been investigated in order to discover an efficient one.
-The orientation estimation task was carried out by employing supervised learning techniques -- data has been annotated and
-learners have been trained on a set of features that were found to be useful for the goal of this project.
+A number of features and object recognition techniques have been 
+investigated in order to discover an efficient one. The orientation 
+estimation task was carried out by employing supervised learning 
+techniques -- data has been annotated and learners have been 
+trained on a set of features that were found to be useful for the 
+goal of this project.
