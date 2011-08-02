@@ -1615,7 +1615,7 @@ int main(int argc,char **argv){
 	classi.buildPCAModels(-1,FeatureExtractor::HEAD);
 */
 	//--------------------------------------------------------------------------
-/*
+
 	// test
 	float normError = 0.0f;
  	ClassifyImages classi(argc,argv,ClassifyImages::TEST,\
@@ -1623,9 +1623,9 @@ int main(int argc,char **argv){
 //	classi.init(1e-05,5e+06,1e+07,feat,&GaussianProcess::sqexp,true);
 // 	classi.init(1.0,100.0,125.0,feat,&GaussianProcess::sqexp,true);
 // 	classi.init(1.0,1000.0,625.0,feat,&GaussianProcess::sqexp,true);
-	classi.init(0.01,3125,3125,feat,&GaussianProcess::sqexp,true);
+	classi.init(0.001,3125,3125,feat,&GaussianProcess::sqexp,true);
 	classi.runTest(-1,AnnotationsHandle::LONGITUDE,normError,FeatureExtractor::HEAD);
-*/
+
 	//--------------------------------------------------------------------------
 /*
 	// evaluate
@@ -1644,13 +1644,13 @@ int main(int argc,char **argv){
 	classi.buildDictionary(-1,true);
 */
 	//--------------------------------------------------------------------------
-
+/*
 	// find parmeteres
 	ClassifyImages classi(argc,argv,ClassifyImages::TEST,ClassifyImages::GAUSSIAN_PROCESS);
 	parameterSetting("train_japanese_head_Gt.txt","test_japanese_head_Gt.txt",\
 		classi,argc,argv,feat,-1,true,AnnotationsHandle::LONGITUDE,\
 		&GaussianProcess::sqexp,0);
-
+*/
 	//-------------------------------------------------------------------------
 /*
 	// multiple classifiers
