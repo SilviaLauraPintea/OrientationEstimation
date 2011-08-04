@@ -731,6 +731,7 @@ unsigned PeopleDetector::dataInfoSize(){
 std::tr1::shared_ptr<PeopleDetector::DataRow> PeopleDetector::popDataRow(){
 	if(!this->dataInfo_.empty()){
 		std::tr1::shared_ptr<PeopleDetector::DataRow> ptRow;
+		std::size_t sizeu = this->dataInfo_.size();
 		{
 			boost::mutex::scoped_lock lock(PeopleDetector::dataMutex_);
 			PeopleDetector::DataRow aRow = this->dataInfo_.front();
@@ -738,6 +739,7 @@ std::tr1::shared_ptr<PeopleDetector::DataRow> PeopleDetector::popDataRow(){
 				(new PeopleDetector::DataRow(aRow));
 			this->dataInfo_.pop_front();
 		}
+		if(sizeu == 1){this->dataInfo_ = std::deque<PeopleDetector::DataRow>();}
 		return ptRow;
 	}
 	return std::tr1::shared_ptr<PeopleDetector::DataRow>(static_cast\

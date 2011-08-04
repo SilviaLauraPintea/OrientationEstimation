@@ -1621,19 +1621,20 @@ int main(int argc,char **argv){
  	ClassifyImages classi(argc,argv,ClassifyImages::TEST,\
  		ClassifyImages::GAUSSIAN_PROCESS);
 //	classi.init(1e-05,5e+06,1e+07,feat,&GaussianProcess::sqexp,true);
-// 	classi.init(1.0,100.0,125.0,feat,&GaussianProcess::sqexp,true);
+ 	classi.init(1.0,100.0,125.0,feat,&GaussianProcess::sqexp,false);
 // 	classi.init(1.0,1000.0,625.0,feat,&GaussianProcess::sqexp,true);
-	classi.init(0.001,3125,3125,feat,&GaussianProcess::sqexp,true);
-	classi.runTest(-1,AnnotationsHandle::LONGITUDE,normError,FeatureExtractor::HEAD);
+//	classi.init(0.001,3125,3125,feat,&GaussianProcess::sqexp,true);
+	classi.runTest(-1,AnnotationsHandle::LONGITUDE,normError,FeatureExtractor::TOP);
 
 	//--------------------------------------------------------------------------
 /*
 	// evaluate
  	ClassifyImages classi(argc,argv,ClassifyImages::EVALUATE,\
  		ClassifyImages::GAUSSIAN_PROCESS);
-// 	classi.init(1e-5,1e+5,5e+4,feat,&GaussianProcess::sqexp,true);
- 	classi.init(1.0,100.0,125.0,feat,&GaussianProcess::sqexp,false);
+//	classi.init(1e-5,1e+5,5e+4,feat,&GaussianProcess::sqexp,true);
+// 	classi.init(1.0,100.0,125.0,feat,&GaussianProcess::sqexp,false);
 // 	classi.init(1e-5,5e+4,1e+4,feat,&GaussianProcess::sqexp,true);
+ 	classi.init(1e-5,40000.0,50000.0,feat,&GaussianProcess::sqexp,true);
 	classi.runCrossValidation(12,AnnotationsHandle::LONGITUDE,-1,false,\
 		FeatureExtractor::TOP);
 */

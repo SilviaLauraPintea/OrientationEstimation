@@ -325,6 +325,12 @@ const cv::Rect &roi){
 cv::Mat FeatureExtractor::getSkinBins(bool flip,\
 const FeatureExtractor::people &person,const FeatureExtractor::templ &aTempl,\
 const cv::Rect &roi){
+	if(person.thresh_.empty()){
+		std::cerr<<"Skin pixels can not be computed without a background mask"<<std::endl;
+		std::abort();
+	}
+	this->resizedImgSize_ = 20;
+
 	cv::Rect cutROI;
 	if(!person.thresh_.empty()){
 		this->getThresholdBorderes(cutROI.x,cutROI.width,cutROI.y,cutROI.height,\
@@ -379,18 +385,6 @@ const cv::Rect &roi){
 		cv::waitKey(5);
 	}
 	cv::Mat result = final.reshape(0,1);
-/*
-	cv::Mat result = cv::Mat::zeros(cv::Size(3,1),CV_32FC1);
-	for(int c=0;c<final.cols;++c){
-		for(int r=0;r<final.rows;++r){
-			if(static_cast<int>(final.at<uchar>(r,c))!=0){
-				++result.at<float>(0,0);
-			}
-		}
-	}
-	result /= static_cast<float>(final.cols*final.rows);
-	final.release();
-*/
 	return result;
 }
 //==============================================================================
@@ -502,6 +496,8 @@ const cv::Mat &thresh,const cv::Rect &roi,const cv::Mat &feature){
 cv::Mat FeatureExtractor::getEdges(bool flip,cv::Mat &feature,\
 const FeatureExtractor::people &person,const cv::Rect &roi,\
 const FeatureExtractor::templ &aTempl,float rotAngle,bool contours){
+	this->resizedImgSize_ = 25;
+
 	// RTOATE THE FEATURE WRT THE CAMERA
 	cv::Point2f rotBorders;
 	feature.convertTo(feature,CV_8UC1);
@@ -1416,6 +1412,8 @@ std::vector<cv::Point2f> &keys){
 cv::Mat FeatureExtractor::getHOG(bool flip,\
 const FeatureExtractor::people &person,const FeatureExtractor::templ &aTempl,\
 const cv::Rect &roi){
+	this->resizedImgSize_ = 50;
+
 	// JUST COPY THE PIXELS THAT ARE LARGER THAN 0 INTO
 	cv::Rect cutROI;
 	if(!person.thresh_.empty()){
