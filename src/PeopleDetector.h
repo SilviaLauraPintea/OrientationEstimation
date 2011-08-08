@@ -207,7 +207,7 @@ class PeopleDetector:public Tracker{
 		std::tr1::shared_ptr<PeopleDetector::DataRow> popDataRow();
 		/** Returns the data info size.
 		 */
-		unsigned dataInfoSize();
+		bool dataInfoEmpty();
 		//======================================================================
 		/** @var dataMutex_
 		 * Used to check if the data is produced or not.

@@ -879,16 +879,17 @@ std::deque<std::deque<cv::Point2f> > ClassifyImages::predict\
 
 	// AS LONG AS THERE IS A ROW IN THE DATA MATRIX
 	std::tr1::shared_ptr<PeopleDetector::DataRow> dataRow;
-	while(PeopleDetector::dataIsProduced_ || this->features_->dataInfoSize()){
-		while(!this->features_->dataInfoSize() && PeopleDetector::dataIsProduced_){
+	while(PeopleDetector::dataIsProduced_ || !this->features_->dataInfoEmpty()){
+		while(this->features_->dataInfoEmpty() && PeopleDetector::dataIsProduced_){
 			sleep(.5);
-//			std::cout<<"SLEEEP COMSUNE"<<std::endl;
 		};
-		if(!this->features_->dataInfoSize()){break;}
-		std::cout<<this->features_->dataInfoSize()<<" >>> Consume..."<<std::endl;
-		dataRow=this->features_->popDataRow();
+		if(this->features_->dataInfoEmpty()){break;}
+		dataRow = this->features_->popDataRow();
+		if(!dataRow.get()) continue;
 		std::deque<cv::Point2f> predictions = this->doPredict(dataRow,what,\
 			fromFolder);
+		std::cout<<this->features_->dataInfoEmpty()<<") >>> Consume"<<\
+			dataRow->imgName_<<"..."<<std::endl;
 		for(std::size_t p=0;p<predictions.size();++p){
 			if(predictions[p] != cv::Point2f(1e+10,1e+10)){
 				allPreds[p].push_back(predictions[p]);
@@ -976,13 +977,12 @@ std::deque<cv::Point2f> ClassifyImages::doPredict(std::tr1::shared_ptr\
 /** Evaluate one prediction versus its target.
  */
 void ClassifyImages::evaluate(const std::deque<std::deque<cv::Point2f> > &prediAngles,\
-float &error,float &normError,float &meanDiff){
+float &error,float &normError,float &meanDiff,cv::Mat &bins){
 	error = 0.0;normError = 0.0;meanDiff = 0.0;
 	float errorSin = 0.0,normErrorSin = 0.0,meanDiffSin = 0.0;
 	float errorCos = 0.0,normErrorCos = 0.0,meanDiffCos = 0.0;
 	unsigned noPeople = 0;
 	std::deque<std::string> names;
-	cv::Mat bins = cv::Mat::zeros(cv::Size(18,1),CV_32FC1);
 	cv::Mat binsSin = cv::Mat::zeros(cv::Size(18,1),CV_32FC1);
 	cv::Mat binsCos = cv::Mat::zeros(cv::Size(18,1),CV_32FC1);
 	names.push_back("CLOSE");names.push_back("MEDIUM");	names.push_back("FAR");
@@ -1075,7 +1075,6 @@ float &error,float &normError,float &meanDiff){
 	std::cout<<"bins >>> "<<bins<<""<<std::endl;
 	std::cout<<"binsSin >>> "<<binsSin<<""<<std::endl;
 	std::cout<<"binsCos >>> "<<binsCos<<""<<std::endl;
-	bins.release();
 }
 //==============================================================================
 /** Try to optimize the prediction of the angle considering the variance of sin
@@ -1191,12 +1190,10 @@ void ClassifyImages::buildDictionary(int colorSp,bool toUseGT){
 float ClassifyImages::runCrossValidation(unsigned k,AnnotationsHandle::POSE what,\
 int colorSp,bool onTrain,FeatureExtractor::FEATUREPART part){
 	float finalError=0.0,finalNormError=0.0,finalMeanDiff=0.0;
-
+	cv::Mat finalBins = cv::Mat::zeros(cv::Size(18,1),CV_32FC1);
 	// SET THE CALIBRATION ONLY ONCE (ALL IMAGES ARE READ FROM THE SAME DIR)
 	this->resetFeatures(this->trainDir_,this->trainImgString_,colorSp,part);
-
 	for(unsigned i=0;i<k;++i){
-//for(unsigned i=5;i<k;i+=6){
 		std::cout<<"Round "<<i<<"___________________________________________"<<\
 			"_____________________________________________________"<<std::endl;
 		// SPLIT TRAINING AND TESTING ACCORDING TO THE CURRENT FOLD
@@ -1212,10 +1209,13 @@ int colorSp,bool onTrain,FeatureExtractor::FEATUREPART part){
 			predicted = this->predict(AnnotationsHandle::LONGITUDE,false);
 			// EVALUATE PREDICITONS
 			float errorLong,normErrorLong,meanDiffLong;
-			this->evaluate(predicted,errorLong,normErrorLong,meanDiffLong);
+			cv::Mat bins = cv::Mat::zeros(cv::Size(18,1),CV_32FC1);
+			this->evaluate(predicted,errorLong,normErrorLong,meanDiffLong,bins);
 			finalError     += errorLong;
 			finalNormError += normErrorLong;
 			finalMeanDiff  += meanDiffLong;
+			finalBins      += bins;
+			bins.release();
 			predicted.clear();
 		//______________________________________________________________________
 		}else if(what == AnnotationsHandle::LATITUDE){
@@ -1227,43 +1227,57 @@ int colorSp,bool onTrain,FeatureExtractor::FEATUREPART part){
 			predicted = this->predict(AnnotationsHandle::LATITUDE,false);
 			// EVALUATE PREDICITONS
 			float errorLat,normErrorLat,meanDiffLat;
-			this->evaluate(predicted,errorLat,normErrorLat,meanDiffLat);
+			cv::Mat bins = cv::Mat::zeros(cv::Size(18,1),CV_32FC1);
+			this->evaluate(predicted,errorLat,normErrorLat,meanDiffLat,bins);
 			finalError     += errorLat;
 			finalNormError += normErrorLat;
 			finalMeanDiff  += meanDiffLat;
+			finalBins      += bins;
 			predicted.clear();
+			bins.release();
 		}
 		sleep(6);
 	}
 	finalError     /= static_cast<float>(k);
 	finalNormError /= static_cast<float>(k);
 	finalMeanDiff  /= static_cast<float>(k);
-/*
-finalError     /= static_cast<float>(2);
-finalNormError /= static_cast<float>(2);
-finalMeanDiff  /= static_cast<float>(2);
-*/
+	finalBins      /= static_cast<float>(k);
+
 	std::cout<<">>> final-RMS-error:"<<finalError<<std::endl;
 	std::cout<<">>> final-RMS-normalized-error:"<<finalNormError<<std::endl;
 	std::cout<<">>> final-avg-difference:"<<finalMeanDiff<<std::endl;
+	std::cout<<">>> final-bins:"<<finalBins<<std::endl;
 	return finalNormError;
+}
+//==============================================================================
+/** Reorder a vector to a given ordering.
+ */
+void ClassifyImages::reorderDeque(const std::vector<unsigned> &order,\
+std::deque<std::string> &input){
+	std::deque<std::string> copyInput = input;
+	input.clear();
+	for(std::size_t s=0; s<order.size();++s){
+			input.push_back(copyInput[order[s]]);
+	}
 }
 //==============================================================================
 /** Do k-fold cross-validation by splitting the training folder into training-set
  * and validation-set.
  */
-void ClassifyImages::crossValidation(unsigned k,unsigned fold,bool onTrain){
+void ClassifyImages::crossValidation(unsigned k,unsigned fold,bool onTrain,bool
+rndm){
 	// READ ALL IMAGES ONCE AND NOT THEY ARE SORTED
 	if(this->imageList_.empty()){
+		std::vector<unsigned> order;
 		this->imageList_ = Helpers::readImages(this->trainFolder_.c_str());
 		this->foldSize_  = this->imageList_.size()/k;
-
 		std::ifstream annoIn(this->annotationsTrain_.c_str());
 		if(annoIn.is_open()){
 			while(annoIn.good()){
 				std::string line;
 				std::getline(annoIn,line);
 				if(!line.empty()){
+					order.push_back(this->annoList_.size());
 					this->annoList_.push_back(line);
 				}
 				line.clear();
@@ -1275,6 +1289,13 @@ void ClassifyImages::crossValidation(unsigned k,unsigned fold,bool onTrain){
 			std::cerr<<"The number of images != The number of annotations!"<<\
 				std::endl;
 			exit(1);
+		}
+
+		// define a random order
+		if(rndm){
+			std::random_shuffle(order.begin(),order.end());
+			ClassifyImages::reorderDeque(order,this->imageList_);
+			ClassifyImages::reorderDeque(order,this->annoList_);
 		}
 	}
 
@@ -1351,6 +1372,7 @@ std::deque<std::deque<cv::Point2f> > ClassifyImages::runTest(int colorSp,\
 AnnotationsHandle::POSE what,float &normError,FeatureExtractor::FEATUREPART part){
 	// LONGITUDE TRAINING AND PREDICTING
 	std::deque<std::deque<cv::Point2f> > predicted;
+	cv::Mat finalBins = cv::Mat::zeros(cv::Size(18,1),CV_32FC1);
 	if(what == AnnotationsHandle::LONGITUDE){
 		std::cout<<"Longitude >>> ______________________________________________"<<\
 			"_____________________________________________________"<<std::endl;
@@ -1362,7 +1384,7 @@ AnnotationsHandle::POSE what,float &normError,FeatureExtractor::FEATUREPART part
 		predicted = this->predict(AnnotationsHandle::LONGITUDE,true);
 		// EVALUATE PREDICTIONS
 		float errorLong,normErrorLong,meanDiffLong;
-		this->evaluate(predicted,errorLong,normErrorLong,meanDiffLong);
+		this->evaluate(predicted,errorLong,normErrorLong,meanDiffLong,finalBins);
 		normError = normErrorLong;
 	}else if(what == AnnotationsHandle::LATITUDE){
 		//__________________________________________________________________________
@@ -1377,7 +1399,7 @@ AnnotationsHandle::POSE what,float &normError,FeatureExtractor::FEATUREPART part
 		predicted = this->predict(AnnotationsHandle::LATITUDE,true);
 		// EVALUATE PREDICTIONS
 		float errorLat,normErrorLat,meanDiffLat;
-		this->evaluate(predicted,errorLat,normErrorLat,meanDiffLat);
+		this->evaluate(predicted,errorLat,normErrorLat,meanDiffLat,finalBins);
 		normError = normErrorLat;
 	}
 	return predicted;
@@ -1509,7 +1531,8 @@ FeatureExtractor::FEATUREPART part){
 	std::cout<<"FINAL EVALUATION____________________________________________"<<\
 		"________________________"<<std::endl;
 	float error = 0.0,normError=0.0,meanDiff=0.0;
-	classi.evaluate(finalPreds,error,normError,meanDiff);
+	cv::Mat finalBins = cv::Mat::zeros(cv::Size(18,1),CV_32FC1);
+	classi.evaluate(finalPreds,error,normError,meanDiff,finalBins);
 }
 //==============================================================================
 /** Run over multiple settings of the parameters to find the best ones.
@@ -1615,29 +1638,37 @@ int main(int argc,char **argv){
 	classi.buildPCAModels(-1,FeatureExtractor::HEAD);
 */
 	//--------------------------------------------------------------------------
-
+/*
 	// test
 	float normError = 0.0f;
  	ClassifyImages classi(argc,argv,ClassifyImages::TEST,\
  		ClassifyImages::GAUSSIAN_PROCESS);
 //	classi.init(1e-05,5e+06,1e+07,feat,&GaussianProcess::sqexp,true);
- 	classi.init(1.0,100.0,125.0,feat,&GaussianProcess::sqexp,false);
+	// DATASET 2
+// 	classi.init(1.0,100.0,125.0,feat,&GaussianProcess::sqexp,false);
 // 	classi.init(1.0,1000.0,625.0,feat,&GaussianProcess::sqexp,true);
-//	classi.init(0.001,3125,3125,feat,&GaussianProcess::sqexp,true);
-	classi.runTest(-1,AnnotationsHandle::LONGITUDE,normError,FeatureExtractor::TOP);
+//	classi.runTest(-1,AnnotationsHandle::LONGITUDE,normError,FeatureExtractor::HEAD);
 
+ 	// JAPANESE
+	classi.init(0.001,3125,3125,feat,&GaussianProcess::sqexp,true);
+	classi.runTest(-1,AnnotationsHandle::LONGITUDE,normError,FeatureExtractor::HEAD);
+*/
 	//--------------------------------------------------------------------------
-/*
+
 	// evaluate
  	ClassifyImages classi(argc,argv,ClassifyImages::EVALUATE,\
  		ClassifyImages::GAUSSIAN_PROCESS);
 //	classi.init(1e-5,1e+5,5e+4,feat,&GaussianProcess::sqexp,true);
-// 	classi.init(1.0,100.0,125.0,feat,&GaussianProcess::sqexp,false);
+ 	classi.init(1.0,100.0,125.0,feat,&GaussianProcess::sqexp,false);
 // 	classi.init(1e-5,5e+4,1e+4,feat,&GaussianProcess::sqexp,true);
- 	classi.init(1e-5,40000.0,50000.0,feat,&GaussianProcess::sqexp,true);
-	classi.runCrossValidation(12,AnnotationsHandle::LONGITUDE,-1,false,\
+// 	classi.init(1e-5,40000.0,50000.0,feat,&GaussianProcess::sqexp,true);
+//	classi.runCrossValidation(12,AnnotationsHandle::LONGITUDE,-1,false,\
 		FeatureExtractor::TOP);
-*/
+
+	// DATASET 1 experiments
+//	classi.init(1e-5,200000.0,200000.0,feat,&GaussianProcess::sqexp,false);
+	classi.runCrossValidation(5,AnnotationsHandle::LONGITUDE,-1,false,\
+		FeatureExtractor::HEAD);
 	//--------------------------------------------------------------------------
 /*
 	// BUILD THE SIFT DICTIONARY

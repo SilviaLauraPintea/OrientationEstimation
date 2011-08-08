@@ -65,13 +65,13 @@ class ClassifyImages {
 		/** Evaluate one prediction versus its target.
 		 */
 		void evaluate(const std::deque<std::deque<cv::Point2f> > &prediAngles,\
-			float &error,float &normError,float &meanDiff);
+			float &error,float &normError,float &meanDiff,cv::Mat &bins);
 
 		/** Do k-fold cross-validation by splitting the training folder into
 		 * training-set and validation-set.
 		 */
-		void crossValidation(unsigned k,unsigned fold,bool onTrain=false);
-
+		void crossValidation(unsigned k,unsigned fold,bool onTrain=false,\
+			bool rndm = true);
 		/** Does the cross-validation and computes the average error over all folds.
 		 */
 		float runCrossValidation(unsigned k,AnnotationsHandle::POSE what,\
@@ -167,6 +167,10 @@ class ClassifyImages {
 		/** Build a class model for each one of the 4 classes.
 		 */
 		void buildPCAModels(int colorSp,FeatureExtractor::FEATUREPART part);
+		/** Reorder a vector to a given ordering.
+		 */
+		static void reorderDeque(const std::vector<unsigned> &order,\
+			std::deque<std::string> &input);
 		//======================================================================
 	private:
 		/** @var nn_

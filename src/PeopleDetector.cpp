@@ -652,7 +652,8 @@ const std::deque<unsigned> &exi,float threshVal){
 		}
 
 		if(this->isTest_){
-			std::cout<<this->dataInfo_.size()<<" >>> Produce...";
+			std::cout<<this->dataInfo_.size()<<") >>> Produce "<<\
+				this->current_->sourceName_<<"...";
 			PeopleDetector::DataRow aRow(this->existing_[i].location_,\
 				this->existing_[i].groupNo_,this->current_->sourceName_,\
 				dataRow,this->targets_[this->existing_[i].groupNo_].row\
@@ -707,7 +708,7 @@ std::tr1::shared_ptr<PeopleDetector::DataRow> dataRow){
 	cv::Mat fin = AnnotationsHandle::drawOrientation(center,targA,\
 		tmp,cv::Scalar(0,0,255));
 //	cv::imshow("orientation_image",fin);
-//	cv::waitKey(5);
+//	cv::waitKey(0);
 	std::string path   = this->datasetPath_+"predictions/";
 	unsigned pos       = dataRow->imgName_.find_last_of("/\\");
 	std::string imName = Auxiliary::int2string(dataRow->location_.x)+\
@@ -722,8 +723,8 @@ std::tr1::shared_ptr<PeopleDetector::DataRow> dataRow){
 //==============================================================================
 /** Returns the data info size.
  */
-unsigned PeopleDetector::dataInfoSize(){
-	return this->dataInfo_.size();
+bool PeopleDetector::dataInfoEmpty(){
+	return this->dataInfo_.empty();
 }
 //==============================================================================
 /** Returns the last element in the data vector.

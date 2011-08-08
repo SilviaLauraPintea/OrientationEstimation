@@ -42,7 +42,7 @@ FeatureExtractor::FeatureExtractor(){
 	this->featureFile_    = "none";
 	this->print_          = false;
 	this->plot_           = true;
-	this->resizedImgSize_ = 10;
+	this->resizedImgSize_ = 5;
 }
 //==============================================================================
 FeatureExtractor::~FeatureExtractor(){
@@ -392,7 +392,7 @@ const cv::Rect &roi){
  */
 cv::Mat FeatureExtractor::getRawPixels(bool flip,\
 const FeatureExtractor::people &person,const FeatureExtractor::templ &aTempl,\
-const cv::Rect &roi,bool color){
+const cv::Rect &roi,bool color,bool saturation){
 	cv::Rect cutROI;
 	if(!person.thresh_.empty()){
 		this->getThresholdBorderes(cutROI.x,cutROI.width,cutROI.y,cutROI.height,\
@@ -414,15 +414,18 @@ const cv::Rect &roi,bool color){
 	// IF THE IMAGE SHOULD BE GRAY THAN USE THE VALUE CHANNEL
 	cv::Mat gray;
 	std::vector<cv::Mat> threeChannels;
+	if(saturation){
+		cv::cvtColor(large,large,CV_BGR2HSV);
+		cv::split(large,threeChannels);
+		threeChannels[1].copyTo(gray);
+		cv::cvtColor(large,gray,CV_BGR2GRAY);
+		Auxiliary::normalizeMat(gray);
+	}
 	if(!color){
-//		cv::cvtColor(large,large,CV_BGR2HSV);
-//		cv::split(large,threeChannels);
-//		threeChannels[1].copyTo(gray);
 		cv::cvtColor(large,gray,CV_BGR2GRAY);
 		Auxiliary::normalizeMat(gray);
 	}else{
 		gray = large.reshape(1,0);
-//		cv::equalizeHist(gray,gray);
 	}
 	if(this->plot_){
 		cv::imshow("image",large);
