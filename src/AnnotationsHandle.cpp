@@ -434,8 +434,7 @@ int AnnotationsHandle::runAnn(int argc,char **argv,unsigned step,const std::stri
 	/* while 'q' was not pressed,annotate images and store the info in
 	 * the annotation file */
 	int key = 0;
-
-int extra = 37;
+	int extra = 160;
 
 	while((char)key != 'q' && (char)key != 'Q' && index<imgs.size()) {
 		std::cerr<<"Annotations for image: "<<imgs[index].substr\
@@ -445,7 +444,7 @@ int extra = 37;
 		 * for the current image */
 		if((char)key == 's'){
 //			annoOut<<imgs[index].substr(imgs[index].rfind("/")+1);
-std::string tmpName = "japanese_00"+Auxiliary::int2string(index+extra)+".jpg";
+std::string tmpName = "final_00"+Auxiliary::int2string(index+extra)+".jpg";
 annoOut<<tmpName;
 
 			for(unsigned i=0;i!=annotations_.size();++i){

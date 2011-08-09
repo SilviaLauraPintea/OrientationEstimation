@@ -42,7 +42,7 @@ FeatureExtractor::FeatureExtractor(){
 	this->featureFile_    = "none";
 	this->print_          = false;
 	this->plot_           = true;
-	this->resizedImgSize_ = 5;
+	this->resizedImgSize_ = 10;
 }
 //==============================================================================
 FeatureExtractor::~FeatureExtractor(){

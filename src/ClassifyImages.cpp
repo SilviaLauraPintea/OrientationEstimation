@@ -1193,7 +1193,11 @@ int colorSp,bool onTrain,FeatureExtractor::FEATUREPART part){
 	cv::Mat finalBins = cv::Mat::zeros(cv::Size(18,1),CV_32FC1);
 	// SET THE CALIBRATION ONLY ONCE (ALL IMAGES ARE READ FROM THE SAME DIR)
 	this->resetFeatures(this->trainDir_,this->trainImgString_,colorSp,part);
-	for(unsigned i=0;i<k;++i){
+//	for(unsigned i=0;i<k;++i){
+
+	int counts = 0;
+		for(unsigned i=0;i<k;i+=3){
+			++counts;
 		std::cout<<"Round "<<i<<"___________________________________________"<<\
 			"_____________________________________________________"<<std::endl;
 		// SPLIT TRAINING AND TESTING ACCORDING TO THE CURRENT FOLD
@@ -1236,12 +1240,17 @@ int colorSp,bool onTrain,FeatureExtractor::FEATUREPART part){
 			predicted.clear();
 			bins.release();
 		}
-		sleep(6);
 	}
+/*
 	finalError     /= static_cast<float>(k);
 	finalNormError /= static_cast<float>(k);
 	finalMeanDiff  /= static_cast<float>(k);
 	finalBins      /= static_cast<float>(k);
+*/
+	finalError     /= static_cast<float>(counts);
+	finalNormError /= static_cast<float>(counts);
+	finalMeanDiff  /= static_cast<float>(counts);
+	finalBins      /= static_cast<float>(counts);
 
 	std::cout<<">>> final-RMS-error:"<<finalError<<std::endl;
 	std::cout<<">>> final-RMS-normalized-error:"<<finalNormError<<std::endl;
@@ -1540,7 +1549,8 @@ FeatureExtractor::FEATUREPART part){
 void parameterSetting(const std::string &errorsOnTrain,const std::string &errorsOnTest,\
 ClassifyImages &classi,int argc,char** argv,\
 const std::deque<FeatureExtractor::FEATURE> &feat,int colorSp,bool useGt,\
-AnnotationsHandle::POSE what,GaussianProcess::kernelFunction kernel,unsigned folds){
+AnnotationsHandle::POSE what,GaussianProcess::kernelFunction kernel,unsigned folds,\
+FeatureExtractor::FEATUREPART part){
   	std::ofstream train,test;
 	test.open(errorsOnTest.c_str(),std::ios::out | std::ios::app);
 	if(classi.what() == ClassifyImages::EVALUATE){
@@ -1550,24 +1560,20 @@ AnnotationsHandle::POSE what,GaussianProcess::kernelFunction kernel,unsigned fol
 		for(float l=1;l<1e+10;l*=5.0){
 //		for(float v=1e-10;v<1.1;v+=0.1){
 //			for(float l=1;l<1100;l+=100.0){
-
 			classi.init(v,l,l,feat,kernel,useGt);
 			float errorTest = 0.0f;
 			if(classi.what() == ClassifyImages::EVALUATE){
-				errorTest = classi.runCrossValidation(folds,what,colorSp,false,\
-					FeatureExtractor::HEAD);
+				errorTest = classi.runCrossValidation(folds,what,colorSp,false,part);
 				test<<v<<" "<<l<<" "<<errorTest<<std::endl;
 			}else if(classi.what() == ClassifyImages::TEST){
-				classi.runTest(-1,AnnotationsHandle::LONGITUDE,errorTest,\
-					FeatureExtractor::HEAD);
+				classi.runTest(-1,AnnotationsHandle::LONGITUDE,errorTest,part);
 				test<<v<<" "<<l<<" "<<errorTest<<std::endl;
 				continue;
 			}
 			//-------------------------------------------
 			classi.init(v,l,l,feat,kernel,useGt);
 			float errorTrain = 0.0f;
-			errorTrain = classi.runCrossValidation(folds,what,colorSp,true,\
-				FeatureExtractor::HEAD);
+			errorTrain = classi.runCrossValidation(folds,what,colorSp,true,part);
 			train<<v<<" "<<l<<" "<<errorTrain<<std::endl;
 		}
 	}
@@ -1575,6 +1581,11 @@ AnnotationsHandle::POSE what,GaussianProcess::kernelFunction kernel,unsigned fol
 	if(classi.what() == ClassifyImages::EVALUATE){
 		train.close();
 	}
+}
+//==============================================================================
+/** Set the use of the classifier */
+void ClassifyImages::setWhat(ClassifyImages::USES use){
+	this->what_ = use;
 }
 //==============================================================================
 /** Applies PCA on top of a data-row to reduce its dimensionality.
@@ -1612,6 +1623,9 @@ bool train,int nEigens,int reshapeRows){
 }
 //==============================================================================
 int main(int argc,char **argv){
+	float normError = 0.0f;
+	ClassifyImages classi(argc,argv,ClassifyImages::TEST,ClassifyImages::GAUSSIAN_PROCESS);
+	//--------------------------------------------------------------------------
 	std::deque<FeatureExtractor::FEATURE> feat;
 //	feat.push_back(FeatureExtractor::SIFT);
 //	feat.push_back(FeatureExtractor::EDGES);
@@ -1622,74 +1636,67 @@ int main(int argc,char **argv){
 //	feat.push_back(FeatureExtractor::TEMPL_MATCHES);
 //	feat.push_back(FeatureExtractor::SKIN_BINS);
 //	feat.push_back(FeatureExtractor::IPOINTS);
-/*
-	// build data matrix
- 	ClassifyImages classi(argc,argv,ClassifyImages::BUILD_DATA,\
- 		ClassifyImages::GAUSSIAN_PROCESS);
-	classi.init(1.0,100.0,125.0,feat,&GaussianProcess::sqexp,false);
-	classi.buildDataMatrix(-1,FeatureExtractor::HEAD);
-*/
 	//--------------------------------------------------------------------------
-/*
-	// build PCA models
-	ClassifyImages classi(argc,argv,ClassifyImages::TEST,\
- 		ClassifyImages::GAUSSIAN_PROCESS);
-	classi.init(1e-5,200000.0,200000.0,feat,&GaussianProcess::sqexp,true);
-	classi.buildPCAModels(-1,FeatureExtractor::HEAD);
+/*	// DATASET 1
+	float sinGP                        = 1000;
+	float cosGP                        = 1000;
+	float noiseGP                      = 1000;
 */
-	//--------------------------------------------------------------------------
-/*
-	// test
-	float normError = 0.0f;
- 	ClassifyImages classi(argc,argv,ClassifyImages::TEST,\
- 		ClassifyImages::GAUSSIAN_PROCESS);
-//	classi.init(1e-05,5e+06,1e+07,feat,&GaussianProcess::sqexp,true);
 	// DATASET 2
-// 	classi.init(1.0,100.0,125.0,feat,&GaussianProcess::sqexp,false);
-// 	classi.init(1.0,1000.0,625.0,feat,&GaussianProcess::sqexp,true);
-//	classi.runTest(-1,AnnotationsHandle::LONGITUDE,normError,FeatureExtractor::HEAD);
-
- 	// JAPANESE
-	classi.init(0.001,3125,3125,feat,&GaussianProcess::sqexp,true);
-	classi.runTest(-1,AnnotationsHandle::LONGITUDE,normError,FeatureExtractor::HEAD);
-*/
+	float sinGP                        = 1000;
+	float cosGP                        = 1000;
+	float noiseGP                      = 1000;
+	FeatureExtractor::FEATUREPART part = FeatureExtractor::TOP;
+	ClassifyImages::TORUN what         = ClassifyImages::run_test;
+	bool useGT                         = false;
+	unsigned noFolds                   = 12;
+	std::string fileTrain              = "dataset2_train_topGt.txt";
+	std::string fileTest               = "dataset2_test_topGt.txt";
 	//--------------------------------------------------------------------------
-
-	// evaluate
- 	ClassifyImages classi(argc,argv,ClassifyImages::EVALUATE,\
- 		ClassifyImages::GAUSSIAN_PROCESS);
-//	classi.init(1e-5,1e+5,5e+4,feat,&GaussianProcess::sqexp,true);
- 	classi.init(1.0,100.0,125.0,feat,&GaussianProcess::sqexp,false);
-// 	classi.init(1e-5,5e+4,1e+4,feat,&GaussianProcess::sqexp,true);
-// 	classi.init(1e-5,40000.0,50000.0,feat,&GaussianProcess::sqexp,true);
-//	classi.runCrossValidation(12,AnnotationsHandle::LONGITUDE,-1,false,\
-		FeatureExtractor::TOP);
-
-	// DATASET 1 experiments
-//	classi.init(1e-5,200000.0,200000.0,feat,&GaussianProcess::sqexp,false);
-	classi.runCrossValidation(5,AnnotationsHandle::LONGITUDE,-1,false,\
-		FeatureExtractor::HEAD);
-	//--------------------------------------------------------------------------
-/*
-	// BUILD THE SIFT DICTIONARY
-  	ClassifyImages classi(argc,argv,ClassifyImages::BUILD_DICTIONARY);
-	classi.buildDictionary(-1,true);
-*/
-	//--------------------------------------------------------------------------
-/*
-	// find parmeteres
-	ClassifyImages classi(argc,argv,ClassifyImages::TEST,ClassifyImages::GAUSSIAN_PROCESS);
-	parameterSetting("train_japanese_head_Gt.txt","test_japanese_head_Gt.txt",\
-		classi,argc,argv,feat,-1,true,AnnotationsHandle::LONGITUDE,\
-		&GaussianProcess::sqexp,0);
-*/
-	//-------------------------------------------------------------------------
-/*
-	// multiple classifiers
-	ClassifyImages classi(argc,argv,ClassifyImages::TEST,\
-		ClassifyImages::GAUSSIAN_PROCESS);
-	multipleClassifier(-1,AnnotationsHandle::LONGITUDE,classi,0.85,\
-		85,&GaussianProcess::sqexp,false);
-*/
+	switch(what){
+		case(ClassifyImages::run_build_data):
+			// build data matrix
+			classi.setWhat(ClassifyImages::BUILD_DATA);
+			classi.init(noiseGP,sinGP,cosGP,feat,&GaussianProcess::sqexp,useGT);
+			classi.buildDataMatrix(-1,part);
+			break;
+		case(ClassifyImages::run_build_pca):
+			// build PCA models
+			classi.setWhat(ClassifyImages::TEST);
+			classi.init(noiseGP,sinGP,cosGP,feat,&GaussianProcess::sqexp,useGT);
+			classi.buildPCAModels(-1,part);
+			break;
+		case(ClassifyImages::run_build_dictionary):
+			// BUILD THE SIFT DICTIONARY
+			classi.setWhat(ClassifyImages::BUILD_DICTIONARY);
+			classi.buildDictionary(-1,useGT);
+			break;
+		case(ClassifyImages::run_test):
+			// test
+			classi.setWhat(ClassifyImages::TEST);
+			classi.init(noiseGP,sinGP,cosGP,feat,&GaussianProcess::sqexp,useGT);
+			classi.runTest(-1,AnnotationsHandle::LONGITUDE,normError,part);
+			break;
+		case(ClassifyImages::run_evaluate):
+			// evaluate
+			classi.setWhat(ClassifyImages::EVALUATE);
+		 	classi.init(noiseGP,sinGP,cosGP,feat,&GaussianProcess::sqexp,useGT);
+			classi.runCrossValidation(noFolds,AnnotationsHandle::LONGITUDE,-1,\
+				false,part);
+			break;
+		case(ClassifyImages::run_find_params):
+			// find parameters
+			classi.setWhat(ClassifyImages::EVALUATE);
+			parameterSetting(fileTrain,fileTest,classi,argc,argv,feat,-1,\
+				useGT,AnnotationsHandle::LONGITUDE,&GaussianProcess::sqexp,\
+				noFolds,part);
+			break;
+		case(ClassifyImages::run_multiple_class):
+			// multiple classifiers
+			classi.setWhat(ClassifyImages::TEST);
+			multipleClassifier(-1,AnnotationsHandle::LONGITUDE,classi,noiseGP,\
+				sinGP,cosGP,&GaussianProcess::sqexp,useGT,part);
+			break;
+	}
 }
 

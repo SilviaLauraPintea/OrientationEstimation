@@ -203,7 +203,7 @@ class FeatureExtractor {
 		 */
 		cv::Mat getRawPixels(bool flip,const FeatureExtractor::people &person,\
 			const FeatureExtractor::templ &aTempl,const cv::Rect &roi,\
-			bool color=false,bool saturation=false);
+			bool color=true,bool saturation=false);
 		/** Creates a gabor with the parameters given by the parameter vector.
 		 */
 		void createGabor(cv::Mat &gabor,float *params = NULL);

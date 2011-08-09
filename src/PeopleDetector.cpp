@@ -842,6 +842,8 @@ unsigned k,float distance,std::deque<int> &assignment){
  */
 float PeopleDetector::fixAngle(const cv::Point2f &headLocation,\
 const cv::Point2f &feetLocation,float angle,bool flip){
+//	return angle;
+
 	float camAngle = std::atan2(headLocation.y-feetLocation.y,\
 		headLocation.x-feetLocation.x);
 	camAngle      += M_PI/2.0;
@@ -1366,7 +1368,6 @@ const cv::Point2f &head,bool oneClass){
 			std::cout<<"previousRange:"<<previous<<" currentRange"<<in<<std::endl;
 			previous = in;
 		}
-		sleep(6);
 	}
 
 	float distance = Helpers::dist(feet,head);

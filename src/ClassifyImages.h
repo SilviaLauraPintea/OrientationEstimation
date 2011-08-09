@@ -15,6 +15,10 @@
 class ClassifyImages {
 	public:
 		//======================================================================
+		/** Options for the main
+		 */
+		enum TORUN {run_build_data,run_test,run_evaluate,run_build_dictionary,\
+			run_build_pca,run_find_params,run_multiple_class};
 		/** All available uses of this class.
 		 */
 		enum CLASSIFIER {GAUSSIAN_PROCESS,NEURAL_NETWORK,K_NEAREST_NEIGHBORS,\
@@ -71,7 +75,7 @@ class ClassifyImages {
 		 * training-set and validation-set.
 		 */
 		void crossValidation(unsigned k,unsigned fold,bool onTrain=false,\
-			bool rndm = true);
+			bool rndm = false);
 		/** Does the cross-validation and computes the average error over all folds.
 		 */
 		float runCrossValidation(unsigned k,AnnotationsHandle::POSE what,\
@@ -108,7 +112,8 @@ class ClassifyImages {
 			const std::string &errorsOnTest,ClassifyImages &classi,int argc,\
 			char** argv,const std::deque<FeatureExtractor::FEATURE> &feat,\
 			int colorSp,bool useGt,AnnotationsHandle::POSE what,\
-			GaussianProcess::kernelFunction kernel,unsigned folds=0);
+			GaussianProcess::kernelFunction kernel,unsigned folds=0,\
+			FeatureExtractor::FEATUREPART part=FeatureExtractor::TOP);
 		/** Combine the output of multiple classifiers (only on testing,no multiple
 		 * predictions).
 		 */
@@ -171,6 +176,8 @@ class ClassifyImages {
 		 */
 		static void reorderDeque(const std::vector<unsigned> &order,\
 			std::deque<std::string> &input);
+		/** Set the use of the classifier */
+		void setWhat(ClassifyImages::USES use);
 		//======================================================================
 	private:
 		/** @var nn_
