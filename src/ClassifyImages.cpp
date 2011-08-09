@@ -66,7 +66,12 @@ ClassifyImages::CLASSIFIER classi){
 	}
 	this->pca_ = std::vector<std::tr1::shared_ptr<cv::PCA> >\
 		(3,std::tr1::shared_ptr<cv::PCA>());
-
+	this->doWhat(argc,argv);
+}
+//==============================================================================
+/** Implements all the file/folder actions.
+ */
+void ClassifyImages::doWhat(int argc,char **argv){
 	// READ THE COMMAND LINE ARGUMENTS
 	if(argc != 3 && argc != 5){
 		cerr<<"Usage: classifier datasetFolder/ textOfImageName [testsetFolder/ "<<\
@@ -1193,11 +1198,7 @@ int colorSp,bool onTrain,FeatureExtractor::FEATUREPART part){
 	cv::Mat finalBins = cv::Mat::zeros(cv::Size(18,1),CV_32FC1);
 	// SET THE CALIBRATION ONLY ONCE (ALL IMAGES ARE READ FROM THE SAME DIR)
 	this->resetFeatures(this->trainDir_,this->trainImgString_,colorSp,part);
-//	for(unsigned i=0;i<k;++i){
-
-	int counts = 0;
-		for(unsigned i=0;i<k;i+=3){
-			++counts;
+	for(unsigned i=0;i<k;++i){
 		std::cout<<"Round "<<i<<"___________________________________________"<<\
 			"_____________________________________________________"<<std::endl;
 		// SPLIT TRAINING AND TESTING ACCORDING TO THE CURRENT FOLD
@@ -1241,16 +1242,10 @@ int colorSp,bool onTrain,FeatureExtractor::FEATUREPART part){
 			bins.release();
 		}
 	}
-/*
 	finalError     /= static_cast<float>(k);
 	finalNormError /= static_cast<float>(k);
 	finalMeanDiff  /= static_cast<float>(k);
 	finalBins      /= static_cast<float>(k);
-*/
-	finalError     /= static_cast<float>(counts);
-	finalNormError /= static_cast<float>(counts);
-	finalMeanDiff  /= static_cast<float>(counts);
-	finalBins      /= static_cast<float>(counts);
 
 	std::cout<<">>> final-RMS-error:"<<finalError<<std::endl;
 	std::cout<<">>> final-RMS-normalized-error:"<<finalNormError<<std::endl;
@@ -1584,8 +1579,9 @@ FeatureExtractor::FEATUREPART part){
 }
 //==============================================================================
 /** Set the use of the classifier */
-void ClassifyImages::setWhat(ClassifyImages::USES use){
+void ClassifyImages::setWhat(int argc,char **argv,ClassifyImages::USES use){
 	this->what_ = use;
+	this->doWhat(argc,argv);
 }
 //==============================================================================
 /** Applies PCA on top of a data-row to reduce its dimensionality.
@@ -1624,30 +1620,33 @@ bool train,int nEigens,int reshapeRows){
 //==============================================================================
 int main(int argc,char **argv){
 	float normError = 0.0f;
-	ClassifyImages classi(argc,argv,ClassifyImages::TEST,ClassifyImages::GAUSSIAN_PROCESS);
+	ClassifyImages classi(argc,argv,ClassifyImages::BUILD_DATA,ClassifyImages::GAUSSIAN_PROCESS);
 	//--------------------------------------------------------------------------
 	std::deque<FeatureExtractor::FEATURE> feat;
-//	feat.push_back(FeatureExtractor::SIFT);
 //	feat.push_back(FeatureExtractor::EDGES);
-//	feat.push_back(FeatureExtractor::SURF);
-//	feat.push_back(FeatureExtractor::GABOR);
-	feat.push_back(FeatureExtractor::RAW_PIXELS);
-//	feat.push_back(FeatureExtractor::HOG);
 //	feat.push_back(FeatureExtractor::TEMPL_MATCHES);
-//	feat.push_back(FeatureExtractor::SKIN_BINS);
+//	feat.push_back(FeatureExtractor::GABOR);
+//	feat.push_back(FeatureExtractor::HOG);
+//	feat.push_back(FeatureExtractor::SURF);
+//	feat.push_back(FeatureExtractor::SIFT);
 //	feat.push_back(FeatureExtractor::IPOINTS);
+//	feat.push_back(FeatureExtractor::SKIN_BINS);
+	feat.push_back(FeatureExtractor::RAW_PIXELS);
 	//--------------------------------------------------------------------------
-/*	// DATASET 1
-	float sinGP                        = 1000;
-	float cosGP                        = 1000;
-	float noiseGP                      = 1000;
+/*
+	// DATASET 1
+	float sinGP                        = 100.0;
+	float cosGP                        = 125.0;
+	float noiseGP                      = 1e-05;
 */
+
 	// DATASET 2
-	float sinGP                        = 1000;
-	float cosGP                        = 1000;
-	float noiseGP                      = 1000;
+	float sinGP                        = 70000;
+	float cosGP                        = 80000;
+	float noiseGP                      = 0.0001;
+
 	FeatureExtractor::FEATUREPART part = FeatureExtractor::TOP;
-	ClassifyImages::TORUN what         = ClassifyImages::run_test;
+	ClassifyImages::TORUN what         = ClassifyImages::run_evaluate;
 	bool useGT                         = false;
 	unsigned noFolds                   = 12;
 	std::string fileTrain              = "dataset2_train_topGt.txt";
@@ -1656,44 +1655,44 @@ int main(int argc,char **argv){
 	switch(what){
 		case(ClassifyImages::run_build_data):
 			// build data matrix
-			classi.setWhat(ClassifyImages::BUILD_DATA);
+			classi.setWhat(argc,argv,ClassifyImages::BUILD_DATA);
 			classi.init(noiseGP,sinGP,cosGP,feat,&GaussianProcess::sqexp,useGT);
 			classi.buildDataMatrix(-1,part);
 			break;
 		case(ClassifyImages::run_build_pca):
 			// build PCA models
-			classi.setWhat(ClassifyImages::TEST);
+			classi.setWhat(argc,argv,ClassifyImages::TEST);
 			classi.init(noiseGP,sinGP,cosGP,feat,&GaussianProcess::sqexp,useGT);
 			classi.buildPCAModels(-1,part);
 			break;
 		case(ClassifyImages::run_build_dictionary):
 			// BUILD THE SIFT DICTIONARY
-			classi.setWhat(ClassifyImages::BUILD_DICTIONARY);
+			classi.setWhat(argc,argv,ClassifyImages::BUILD_DICTIONARY);
 			classi.buildDictionary(-1,useGT);
 			break;
 		case(ClassifyImages::run_test):
 			// test
-			classi.setWhat(ClassifyImages::TEST);
+			classi.setWhat(argc,argv,ClassifyImages::TEST);
 			classi.init(noiseGP,sinGP,cosGP,feat,&GaussianProcess::sqexp,useGT);
 			classi.runTest(-1,AnnotationsHandle::LONGITUDE,normError,part);
 			break;
 		case(ClassifyImages::run_evaluate):
 			// evaluate
-			classi.setWhat(ClassifyImages::EVALUATE);
+			classi.setWhat(argc,argv,ClassifyImages::EVALUATE);
 		 	classi.init(noiseGP,sinGP,cosGP,feat,&GaussianProcess::sqexp,useGT);
 			classi.runCrossValidation(noFolds,AnnotationsHandle::LONGITUDE,-1,\
 				false,part);
 			break;
 		case(ClassifyImages::run_find_params):
 			// find parameters
-			classi.setWhat(ClassifyImages::EVALUATE);
+			classi.setWhat(argc,argv,ClassifyImages::EVALUATE);
 			parameterSetting(fileTrain,fileTest,classi,argc,argv,feat,-1,\
 				useGT,AnnotationsHandle::LONGITUDE,&GaussianProcess::sqexp,\
 				noFolds,part);
 			break;
 		case(ClassifyImages::run_multiple_class):
 			// multiple classifiers
-			classi.setWhat(ClassifyImages::TEST);
+			classi.setWhat(argc,argv,ClassifyImages::TEST);
 			multipleClassifier(-1,AnnotationsHandle::LONGITUDE,classi,noiseGP,\
 				sinGP,cosGP,&GaussianProcess::sqexp,useGT,part);
 			break;

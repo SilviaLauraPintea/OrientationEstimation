@@ -440,13 +440,13 @@ void PeopleDetector::allForegroundPixels(std::deque<FeatureExtractor::people>\
 		allPeople[k].borders_[1] = maxX;
 		allPeople[k].borders_[2] = minY;
 		allPeople[k].borders_[3] = maxY;
-//		if(this->plot_){
+		if(this->plot_){
 			cv::imshow("people",allPeople[k].pixels_);
 			if(!allPeople[k].thresh_.empty()){
 				cv::imshow("threshold",allPeople[k].thresh_);
 			}
 			cv::waitKey(5);
-//		}
+		}
 		colorRoi.release();
 	}
 	thrsh.release();
@@ -707,8 +707,10 @@ std::tr1::shared_ptr<PeopleDetector::DataRow> dataRow){
 		load,cv::Scalar(0,255,0));
 	cv::Mat fin = AnnotationsHandle::drawOrientation(center,targA,\
 		tmp,cv::Scalar(0,0,255));
-//	cv::imshow("orientation_image",fin);
-//	cv::waitKey(0);
+	if(this->plot_){
+		cv::imshow("orientation_image",fin);
+		cv::waitKey(0);
+	}
 	std::string path   = this->datasetPath_+"predictions/";
 	unsigned pos       = dataRow->imgName_.find_last_of("/\\");
 	std::string imName = Auxiliary::int2string(dataRow->location_.x)+\
@@ -1025,7 +1027,6 @@ const float logBGProb,const vnl_vector<float> &logSumPixelBGProb){
 		cvDilate(bg,bg,NULL,3);
 		cvErode(bg,bg,NULL,3);
 	}
-	cvErode(bg,bg,NULL,3);
 
 	//7) SHOW THE FOREGROUND POSSIBLE LOCATIONS AND PLOT THE TEMPLATES
 	cerr<<"no. of detected people: "<<exi.size()<<endl;

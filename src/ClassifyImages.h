@@ -177,7 +177,10 @@ class ClassifyImages {
 		static void reorderDeque(const std::vector<unsigned> &order,\
 			std::deque<std::string> &input);
 		/** Set the use of the classifier */
-		void setWhat(ClassifyImages::USES use);
+		void setWhat(int argc,char **argv,ClassifyImages::USES use);
+		/** Implements all the file/folder actions.
+		 */
+		void doWhat(int argc,char **argv);
 		//======================================================================
 	private:
 		/** @var nn_
