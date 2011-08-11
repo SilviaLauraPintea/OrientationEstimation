@@ -1645,12 +1645,12 @@ int main(int argc,char **argv){
 	float cosGP                        = 80000;
 	float noiseGP                      = 0.0001;
 
-	FeatureExtractor::FEATUREPART part = FeatureExtractor::TOP;
+	FeatureExtractor::FEATUREPART part = FeatureExtractor::HEAD;
 	ClassifyImages::TORUN what         = ClassifyImages::run_evaluate;
 	bool useGT                         = false;
-	unsigned noFolds                   = 12;
-	std::string fileTrain              = "dataset2_train_topGt.txt";
-	std::string fileTest               = "dataset2_test_topGt.txt";
+	unsigned noFolds                   = 5;
+	std::string fileTrain              = "train_topGt.txt";
+	std::string fileTest               = "test_topGt.txt";
 	//--------------------------------------------------------------------------
 	switch(what){
 		case(ClassifyImages::run_build_data):

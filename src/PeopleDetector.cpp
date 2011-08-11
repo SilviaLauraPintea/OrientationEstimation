@@ -844,7 +844,7 @@ unsigned k,float distance,std::deque<int> &assignment){
  */
 float PeopleDetector::fixAngle(const cv::Point2f &headLocation,\
 const cv::Point2f &feetLocation,float angle,bool flip){
-//	return angle;
+	return angle;
 
 	float camAngle = std::atan2(headLocation.y-feetLocation.y,\
 		headLocation.x-feetLocation.x);
@@ -1027,6 +1027,7 @@ const float logBGProb,const vnl_vector<float> &logSumPixelBGProb){
 		cvDilate(bg,bg,NULL,3);
 		cvErode(bg,bg,NULL,3);
 	}
+	cvErode(bg,bg,NULL,3);
 
 	//7) SHOW THE FOREGROUND POSSIBLE LOCATIONS AND PLOT THE TEMPLATES
 	cerr<<"no. of detected people: "<<exi.size()<<endl;
@@ -1343,7 +1344,7 @@ void PeopleDetector::readLocations(bool flip){
  */
 float PeopleDetector::rotationAngle(const cv::Point2f &headLocation,\
 const cv::Point2f &feetLocation){
-//	return 0;
+	return 0;
 	float rotAngle = std::atan2(headLocation.y-feetLocation.y,\
 		headLocation.x-feetLocation.x);
 	rotAngle += M_PI/2.0;
