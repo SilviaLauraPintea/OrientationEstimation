@@ -39,7 +39,7 @@ class ClassifyImages {
 		void buildDictionary(int colorSp=-1,bool toUseGT=true);
 		/** Trains on the training data using the indicated classifier.
 		 */
-		void train(AnnotationsHandle::POSE what,bool fromFolder,bool justLoad=false);
+		void train(AnnotationsHandle::POSE what,bool fromFolder,bool justLoad=true);
 		/** Creates the training data (according to the options),the labels and
 		 * trains the a \c GaussianProcess on the data.
 		 */

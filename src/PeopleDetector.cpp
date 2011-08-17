@@ -684,6 +684,10 @@ const std::deque<unsigned> &exi,float threshVal){
  */
 void PeopleDetector::drawPredictions(const cv::Point2f &pred,\
 std::tr1::shared_ptr<PeopleDetector::DataRow> dataRow){
+
+{
+boost::mutex::scoped_lock lock(PeopleDetector::dataMutex_);
+
 	cv::Mat load = cv::imread(dataRow->imgName_);
 	float pAngle = std::atan2(pred.y,pred.x);
 	float tAngle = std::atan2(dataRow->testTarg_.at<float>(0,0),\
@@ -707,19 +711,20 @@ std::tr1::shared_ptr<PeopleDetector::DataRow> dataRow){
 		load,cv::Scalar(0,255,0));
 	cv::Mat fin = AnnotationsHandle::drawOrientation(center,targA,\
 		tmp,cv::Scalar(0,0,255));
-	if(this->plot_){
+//	if(this->plot_){
 		cv::imshow("orientation_image",fin);
-		cv::waitKey(0);
-	}
+		cv::waitKey(10);
+//	}
 	std::string path   = this->datasetPath_+"predictions/";
 	unsigned pos       = dataRow->imgName_.find_last_of("/\\");
-	std::string imName = Auxiliary::int2string(dataRow->location_.x)+\
-		Auxiliary::int2string(dataRow->location_.y)+dataRow->imgName_.substr(pos+1);
+	std::string imName = Auxiliary::int2string(dataRow->location_.y)+\
+		Auxiliary::int2string(dataRow->location_.x)+dataRow->imgName_.substr(pos+1);
 	Auxiliary::file_exists(path.c_str(),true);
 	cv::imwrite(path+imName,fin);
 	load.release();
 	fin.release();
 	tmp.release();
+}
 	std::cout<<"==================================================="<<std::endl;
 }
 //==============================================================================
@@ -844,8 +849,7 @@ unsigned k,float distance,std::deque<int> &assignment){
  */
 float PeopleDetector::fixAngle(const cv::Point2f &headLocation,\
 const cv::Point2f &feetLocation,float angle,bool flip){
-	return angle;
-
+//	return angle;
 	float camAngle = std::atan2(headLocation.y-feetLocation.y,\
 		headLocation.x-feetLocation.x);
 	camAngle      += M_PI/2.0;
@@ -1344,7 +1348,7 @@ void PeopleDetector::readLocations(bool flip){
  */
 float PeopleDetector::rotationAngle(const cv::Point2f &headLocation,\
 const cv::Point2f &feetLocation){
-	return 0;
+//	return 0;
 	float rotAngle = std::atan2(headLocation.y-feetLocation.y,\
 		headLocation.x-feetLocation.x);
 	rotAngle += M_PI/2.0;

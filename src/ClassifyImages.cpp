@@ -655,6 +655,7 @@ void ClassifyImages::buildDataMatrix(int colorSp,FeatureExtractor::FEATUREPART p
 	this->features_->init(this->trainFolder_,this->annotationsTrain_,\
 		this->feature_,false,true);
 	this->features_->start(true,this->useGroundTruth_);
+
 	std::deque<std::string> names;
 	names.push_back("CLOSE");names.push_back("MEDIUM");	names.push_back("FAR");
 	for(PeopleDetector::CLASSES i=PeopleDetector::CLOSE;i<=PeopleDetector::FAR;++i){
@@ -1222,6 +1223,7 @@ int colorSp,bool onTrain,FeatureExtractor::FEATUREPART part){
 			finalBins      += bins;
 			bins.release();
 			predicted.clear();
+			this->features_->setFlip(this->withFlip_);
 		//______________________________________________________________________
 		}else if(what == AnnotationsHandle::LATITUDE){
 			//LATITUDE TRAINING AND PREDICTING
@@ -1240,6 +1242,7 @@ int colorSp,bool onTrain,FeatureExtractor::FEATUREPART part){
 			finalBins      += bins;
 			predicted.clear();
 			bins.release();
+			this->features_->setFlip(this->withFlip_);
 		}
 	}
 	finalError     /= static_cast<float>(k);
@@ -1633,22 +1636,22 @@ int main(int argc,char **argv){
 //	feat.push_back(FeatureExtractor::SKIN_BINS);
 	feat.push_back(FeatureExtractor::RAW_PIXELS);
 	//--------------------------------------------------------------------------
-/*
+
 	// DATASET 1
 	float sinGP                        = 100.0;
 	float cosGP                        = 125.0;
 	float noiseGP                      = 1e-05;
-*/
 
+/*
 	// DATASET 2
 	float sinGP                        = 70000;
 	float cosGP                        = 80000;
 	float noiseGP                      = 0.0001;
-
+*/
 	FeatureExtractor::FEATUREPART part = FeatureExtractor::HEAD;
-	ClassifyImages::TORUN what         = ClassifyImages::run_evaluate;
+	ClassifyImages::TORUN what         = ClassifyImages::run_test;
 	bool useGT                         = false;
-	unsigned noFolds                   = 5;
+	unsigned noFolds                   = 0;
 	std::string fileTrain              = "train_topGt.txt";
 	std::string fileTest               = "test_topGt.txt";
 	//--------------------------------------------------------------------------
